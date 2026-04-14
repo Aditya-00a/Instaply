@@ -1,0 +1,13 @@
+{
+  "name": "instaply-mcp",
+  "description": "Instaply private MCP server for search, packet generation, answer memory, supported auto-apply planning, and workflow introspection.",
+  "command": "python",
+  "args": [
+    "-m",
+    "instaply_mcp.server"
+  ],
+  "env": {
+    "INSTAPLY_ENVIRONMENT": "development",
+    "PYTHONPATH": "src"
+  }
+}

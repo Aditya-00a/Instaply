@@ -1,0 +1,23 @@
+[project]
+name = "instaply-mcp"
+version = "0.1.0"
+description = "Instaply MCP server"
+requires-python = ">=3.11"
+dependencies = [
+  "mcp>=1.9.0",
+  "pydantic>=2.9.0",
+  "httpx>=0.28.0"
+]
+
+[project.scripts]
+instaply-mcp = "instaply_mcp.server:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,0 +1,1 @@
+"""Instaply MCP package."""
