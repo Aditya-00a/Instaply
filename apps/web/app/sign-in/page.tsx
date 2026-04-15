@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Chrome, LockKeyhole, Mail, MoveRight, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { getBrowserSupabase, isSupabaseConfigured } from "../lib/supabase-browser";
 
 const DEMO_EMAIL = "demo@instaply.app";
@@ -11,7 +11,17 @@ const DEMO_PASSWORD = "InstaplyDemo123!";
 const POLICY_VERSION = "2026-04-14";
 
 export default function SignInPage() {
+  return (
+    <Suspense fallback={<main className="auth-shell auth-shell-brand" />}>
+      <SignInContent />
+    </Suspense>
+  );
+}
+
+function SignInContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = searchParams.get("next") || "/dashboard";
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -48,7 +58,7 @@ export default function SignInPage() {
           emailValue.trim().toLowerCase() === DEMO_EMAIL.toLowerCase() &&
           passwordValue === DEMO_PASSWORD
         ) {
-          router.push("/dashboard");
+          router.push(nextPath);
           return;
         }
         setError(
@@ -57,7 +67,7 @@ export default function SignInPage() {
         return;
       }
       // signup demo: just take them to dashboard
-      router.push("/dashboard");
+      router.push(nextPath);
       return;
     }
 
@@ -80,7 +90,7 @@ export default function SignInPage() {
           setLoading(false);
           return;
         }
-        router.push("/dashboard");
+        router.push(nextPath);
         router.refresh();
         return;
       }
@@ -119,7 +129,7 @@ export default function SignInPage() {
       }
 
       if (data.session) {
-        router.push("/dashboard");
+        router.push(nextPath);
         router.refresh();
       } else {
         setNotice(

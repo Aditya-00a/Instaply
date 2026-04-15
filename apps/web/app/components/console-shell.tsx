@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { Cable, ChevronRight, LogOut } from "lucide-react";
+import { Cable, ChevronRight } from "lucide-react";
 
 import { consoleNavItems } from "../console-data";
+import { SignOutButton } from "./sign-out-button";
 
 interface ConsoleAction {
   href: string;
@@ -78,10 +79,7 @@ export function ConsoleShell({
         </div>
 
         <div className="console-sidebar-footer-row">
-          <Link className="console-logout-button" href="/sign-in">
-            <LogOut size={15} />
-            <span>Log out</span>
-          </Link>
+          <SignOutButton />
         </div>
 
       </aside>
