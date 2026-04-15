@@ -272,11 +272,76 @@ function SignInContent() {
             </div>
 
             <div className="auth-actions">
-              <button className="auth-button auth-button-secondary" type="button">
+              <button
+                className="auth-button auth-button-secondary"
+                type="button"
+                disabled={loading}
+                onClick={async () => {
+                  setError("");
+                  if (!supabaseReady) {
+                    setError(
+                      "Google sign-in is unavailable in preview mode. Use the demo credentials."
+                    );
+                    return;
+                  }
+                  const supabase = getBrowserSupabase();
+                  if (!supabase) {
+                    setError("Auth service unavailable.");
+                    return;
+                  }
+                  const redirectTo =
+                    typeof window !== "undefined"
+                      ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`
+                      : undefined;
+                  const { error: err } = await supabase.auth.signInWithOAuth({
+                    provider: "google",
+                    options: { redirectTo },
+                  });
+                  if (err) setError(err.message);
+                }}
+              >
                 <Chrome size={16} />
                 Continue with Google
               </button>
-              <button className="auth-button auth-button-secondary" type="button">
+              <button
+                className="auth-button auth-button-secondary"
+                type="button"
+                disabled={loading || !email}
+                onClick={async () => {
+                  setError("");
+                  setNotice("");
+                  if (!email) {
+                    setError("Enter your email first to receive a magic link.");
+                    return;
+                  }
+                  if (!supabaseReady) {
+                    setError(
+                      "Magic-link sign-in is unavailable in preview mode."
+                    );
+                    return;
+                  }
+                  const supabase = getBrowserSupabase();
+                  if (!supabase) {
+                    setError("Auth service unavailable.");
+                    return;
+                  }
+                  const emailRedirectTo =
+                    typeof window !== "undefined"
+                      ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`
+                      : undefined;
+                  const { error: err } = await supabase.auth.signInWithOtp({
+                    email: email.trim(),
+                    options: { emailRedirectTo },
+                  });
+                  if (err) {
+                    setError(err.message);
+                  } else {
+                    setNotice(
+                      `Magic link sent to ${email}. Check your inbox.`
+                    );
+                  }
+                }}
+              >
                 <Mail size={16} />
                 Continue with email link
               </button>

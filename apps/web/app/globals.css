@@ -4383,6 +4383,203 @@ p {
   font-weight: 500;
 }
 
+/* ---------- Billing page ---------- */
+
+.billing-toast {
+  padding: 14px 18px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--line));
+  color: var(--text);
+  border-radius: 12px;
+  font-size: 13.5px;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.billing-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.billing-summary-card {
+  padding: 22px;
+  background: var(--panel-strong);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.billing-summary-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 20%, var(--line));
+}
+
+.billing-summary-accent {
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--accent) 6%, var(--panel-strong)),
+    var(--panel-strong));
+  border-color: color-mix(in srgb, var(--accent) 25%, var(--line));
+}
+
+.billing-summary-ico {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.billing-summary-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.billing-summary-body span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.billing-summary-body strong {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+
+.billing-summary-body strong em {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+  font-style: normal;
+  margin-left: 4px;
+}
+
+.billing-summary-body p {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin: 2px 0 0;
+}
+
+.billing-pack-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.billing-pack-card {
+  position: relative;
+  padding: 24px;
+  background: var(--panel-strong);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.billing-pack-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--line));
+  box-shadow: 0 12px 28px -16px rgba(0, 82, 255, 0.2);
+}
+
+.billing-pack-card-featured {
+  border-color: var(--accent);
+  background: linear-gradient(180deg, #fff 0%, color-mix(in srgb, var(--accent) 3%, #fff) 100%);
+  box-shadow: 0 0 0 1px var(--accent) inset,
+              0 14px 36px -18px rgba(0, 82, 255, 0.28);
+}
+
+.billing-pack-card button {
+  margin-top: 12px;
+}
+
+.billing-ledger {
+  padding: 4px;
+}
+
+.billing-ledger-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.billing-ledger-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  transition: border-color 0.15s ease;
+}
+
+.billing-ledger-row:hover {
+  border-color: color-mix(in srgb, var(--accent) 20%, var(--line));
+}
+
+.billing-ledger-row > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.billing-ledger-row strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.billing-ledger-row p {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.billing-ledger-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.billing-ledger-delta {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.billing-ledger-delta-pos {
+  color: #047857;
+}
+
+.billing-ledger-delta-neg {
+  color: #b91c1c;
+}
+
+.billing-ledger-date {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
 .auth-visual-panel {
   display: grid;
   min-height: 720px;
