@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BriefcaseBusiness, Mail, MapPin, Phone, ShieldCheck, Sparkles, UserRound, X } from "lucide-react";
+import { emptyCandidateWorkspaceProfile } from "../lib/empty-profile";
+import { getBrowserSupabase, isSupabaseConfigured } from "../lib/supabase-browser";
 
 import {
   instaplyCoverLetterFormats,
@@ -20,10 +22,12 @@ import {
 
 import { ConsoleShell } from "../components/console-shell";
 import { OnboardingSaveBar } from "../components/onboarding-save-bar";
+import { ResumeUploadCard } from "../components/resume-upload-card";
 
 const humanize = (value: string) => value.replaceAll("_", " ");
 
 const cloneProfile = (): CandidateWorkspaceProfile => JSON.parse(JSON.stringify(starterCandidateWorkspaceProfile));
+const cloneEmpty = (): CandidateWorkspaceProfile => JSON.parse(JSON.stringify(emptyCandidateWorkspaceProfile));
 
 type ArrayEditorProps = {
   label: string;
@@ -181,7 +185,55 @@ function TextField({ label, icon: Icon, value, placeholder, onChange, textarea =
 }
 
 export default function OnboardingPage() {
-  const [profile, setProfile] = useState<CandidateWorkspaceProfile>(cloneProfile);
+  // Signed-in users start with an empty profile and hydrate from
+  // Supabase if they have saved data. Preview/demo users see the
+  // fixture starter profile so the marketing shell stays alive.
+  const [profile, setProfile] = useState<CandidateWorkspaceProfile>(
+    isSupabaseConfigured() ? cloneEmpty : cloneProfile
+  );
+
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+    let cancelled = false;
+    (async () => {
+      const supabase = getBrowserSupabase();
+      if (!supabase) return;
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select(
+          "full_name, phone, linkedin_url, github_url, website_url, current_city, current_state, current_country, needs_sponsorship, willing_to_relocate, email"
+        )
+        .eq("id", user.id)
+        .single();
+      if (error || !data || cancelled) return;
+
+      setProfile((prev) => {
+        const next = cloneEmpty();
+        const parts = (data.full_name || "").split(" ");
+        next.identity.firstName = parts[0] || "";
+        next.identity.lastName = parts.slice(1).join(" ") || "";
+        next.identity.legalFullName = data.full_name || "";
+        next.identity.primaryEmail = data.email || user.email || "";
+        next.identity.phoneNumber = data.phone || "";
+        next.identity.linkedinUrl = data.linkedin_url || "";
+        next.identity.githubUrl = data.github_url || "";
+        next.identity.portfolioUrl = data.website_url || "";
+        next.identity.currentCity = data.current_city || "";
+        next.identity.currentRegion = data.current_state || "";
+        next.identity.currentCountry = data.current_country || "United States";
+        next.authorization.requiresSponsorship = !!data.needs_sponsorship;
+        next.authorization.willingToRelocate = data.willing_to_relocate ?? true;
+        return next;
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const initials = useMemo(
     () => `${profile.identity.firstName.slice(0, 1)}${profile.identity.lastName.slice(0, 1)}`,
@@ -201,6 +253,11 @@ export default function OnboardingPage() {
     >
       <section className="console-section">
         <OnboardingSaveBar profile={profile} />
+      </section>
+
+      <section className="console-section onboarding-uploads-grid">
+        <ResumeUploadCard kind="resume" />
+        <ResumeUploadCard kind="cover_letter" />
       </section>
 
       <section className="console-section">

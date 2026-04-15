@@ -1,0 +1,90 @@
+import type { CandidateWorkspaceProfile } from "@instaply/contracts";
+
+/**
+ * A blank CandidateWorkspaceProfile for real users.
+ * The starter profile in @instaply/contracts is intentionally seeded
+ * with dev fixture data for marketing previews; signed-in users should
+ * see empty fields they can fill in themselves.
+ */
+export const emptyCandidateWorkspaceProfile: CandidateWorkspaceProfile = {
+  identity: {
+    firstName: "",
+    lastName: "",
+    legalFullName: "",
+    primaryEmail: "",
+    secondaryEmail: "",
+    phoneNumber: "",
+    currentCity: "",
+    currentRegion: "",
+    currentCountry: "United States",
+    linkedinUrl: "",
+    portfolioUrl: "",
+    githubUrl: "",
+  },
+  authorization: {
+    workAuthorizationSummary: "",
+    requiresSponsorship: false,
+    needsStemOptSupport: false,
+    eligibleCountries: ["United States"],
+    willingToRelocate: true,
+    openToHybrid: true,
+    openToRemote: true,
+  },
+  jobSearch: {
+    targetRoles: [],
+    targetIndustries: [],
+    preferredLocations: [],
+    excludedLocations: [],
+    experienceLevel: "entry_level",
+    workModes: ["remote", "hybrid", "onsite"],
+    portalSelections: ["greenhouse", "lever"],
+    suggestedCompanies: [],
+    userAddedCompanies: [],
+    companyAllowlist: [],
+    companyDenylist: [],
+    companyRecommendationMode: "hybrid",
+    requireRecentPostingDays: 30,
+    minimumRevenueUsd: 0,
+    entryLevelStrict: false,
+  },
+  resume: {
+    format: "modern_analyst",
+    pageTarget: "one_page",
+    emphasizeTracks: [],
+    keepPinnedBullets: [],
+    avoidTopics: [],
+    voiceNotes: "",
+  },
+  coverLetter: {
+    format: "concise_confident",
+    toneTags: [],
+    includePersonalStory: false,
+    includeCompanyResearch: true,
+    maxParagraphs: 3,
+    avoidPhrases: [],
+  },
+  application: {
+    currentTitle: "",
+    yearsOfExperienceClaim: 0,
+    educationSummary: "",
+    educationEntries: [],
+    workExperienceEntries: [],
+    projectEntries: [],
+    researchPaperEntries: [],
+    compensationNotes: "",
+    signatureDefault: "",
+    experienceHighlights: [],
+    projectHighlights: [],
+    coreSkills: [],
+    defaultResponses: [],
+  },
+  automation: {
+    autoApplyEnabled: false,
+    allowOutreachAgent: false,
+    preferredRunMode: "search_and_packet",
+    dryRunDefault: true,
+    maxApplicationsPerRun: 5,
+    dailyApplyCap: 10,
+    dailyOutreachCap: 5,
+  },
+};

@@ -1,6 +1,6 @@
 "use client";
 
-import { FileUp, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import { useState } from "react";
 import type { CandidateWorkspaceProfile } from "@instaply/contracts";
 import { getBrowserSupabase, isSupabaseConfigured } from "../lib/supabase-browser";
@@ -29,18 +29,6 @@ type Status =
 export function OnboardingSaveBar({ profile }: Props) {
   const ready = isSupabaseConfigured();
   const [status, setStatus] = useState<Status>({ kind: "idle" });
-  const [resume, setResume] = useState<File | null>(null);
-
-  const onResumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0] ?? null;
-    if (f && f.size > 10 * 1024 * 1024) {
-      setStatus({ kind: "error", message: "Resume must be under 10 MB." });
-      setResume(null);
-      return;
-    }
-    setResume(f);
-    setStatus({ kind: "idle" });
-  };
 
   const save = async () => {
     setStatus({ kind: "saving" });
@@ -96,26 +84,6 @@ export function OnboardingSaveBar({ profile }: Props) {
 
       if (profileErr) throw profileErr;
 
-      // Upload the resume (optional)
-      if (resume) {
-        const path = `${user.id}/${Date.now()}-${resume.name}`;
-        const { error: uploadErr } = await supabase.storage
-          .from("resumes")
-          .upload(path, resume, { upsert: false, contentType: resume.type });
-        if (uploadErr) throw uploadErr;
-
-        const { error: rowErr } = await supabase.from("resumes").insert({
-          user_id: user.id,
-          storage_path: path,
-          file_name: resume.name,
-          file_size_bytes: resume.size,
-          is_primary: false,
-        });
-        if (rowErr) throw rowErr;
-
-        setResume(null);
-      }
-
       setStatus({ kind: "saved" });
       setTimeout(() => setStatus({ kind: "idle" }), 2400);
     } catch (e) {
@@ -131,23 +99,12 @@ export function OnboardingSaveBar({ profile }: Props) {
       <div className="onboarding-save-info">
         <strong>Save to your Instaply profile</strong>
         <span>
-          Updates your profile row and optionally uploads a new resume.
-          Your data is private and scoped to your account.
+          Updates your profile row. Your data is private and scoped to
+          your account.
         </span>
       </div>
 
       <div className="onboarding-save-actions">
-        <label className="onboarding-resume-pick">
-          <FileUp size={14} />
-          {resume ? resume.name.slice(0, 32) : "Choose resume (PDF / DOCX)"}
-          <input
-            type="file"
-            accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            onChange={onResumeChange}
-            hidden
-          />
-        </label>
-
         <button
           type="button"
           className="btn-primary"
@@ -168,9 +125,7 @@ export function OnboardingSaveBar({ profile }: Props) {
       )}
 
       {status.kind === "saved" && (
-        <div className="onboarding-save-ok">
-          Profile saved{resume ? " and resume uploaded" : ""}.
-        </div>
+        <div className="onboarding-save-ok">Profile saved.</div>
       )}
     </div>
   );
