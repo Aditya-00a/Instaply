@@ -4208,6 +4208,92 @@ p {
   background: rgba(254, 242, 242, 0.6);
 }
 
+/* ---------- Dashboard empty / states ---------- */
+
+.dashboard-loading,
+.dashboard-error {
+  padding: 32px 24px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+}
+
+.dashboard-error {
+  color: #7f1d1d;
+  background: rgba(254, 242, 242, 0.6);
+  border-color: rgba(127, 29, 29, 0.2);
+}
+
+.dashboard-empty-hero {
+  padding: 36px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  text-align: center;
+  align-items: center;
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--accent) 8%, transparent), transparent 60%),
+    var(--panel-strong);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+}
+
+.dashboard-empty-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.dashboard-empty-copy {
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dashboard-empty-copy h2 {
+  font-size: clamp(22px, 2.6vw, 28px);
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin: 0;
+  font-weight: 700;
+}
+
+.dashboard-empty-copy p {
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--muted);
+  margin: 0;
+}
+
+.dashboard-empty-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.workspace-empty {
+  padding: 22px 18px;
+  font-size: 13.5px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.55;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: rgba(247, 249, 252, 0.5);
+}
+
 .auth-visual-panel {
   display: grid;
   min-height: 720px;
