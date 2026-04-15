@@ -14,7 +14,7 @@ type AppRow = {
   created_at: string;
   jobs: {
     title: string | null;
-    company: string | null;
+    company_name: string | null;
   } | null;
 };
 
@@ -78,7 +78,7 @@ export default function DashboardPage() {
         // Applications summary
         const { data: apps, error: appsErr } = await supabase
           .from("applications")
-          .select("id, status, created_at, jobs(title, company)")
+          .select("id, status, created_at, jobs(title, company_name)")
           .order("created_at", { ascending: false });
 
         if (appsErr) {
@@ -244,7 +244,7 @@ export default function DashboardPage() {
                     <div>
                       <span className="workspace-list-kicker">{app.status.replace("_", " ")}</span>
                       <strong>{app.jobs?.title || "Untitled role"}</strong>
-                      <p>{app.jobs?.company || "—"}</p>
+                      <p>{app.jobs?.company_name || "—"}</p>
                     </div>
                     <span className="workspace-inline-pill">
                       {new Date(app.created_at).toLocaleDateString()}
