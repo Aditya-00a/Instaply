@@ -5060,3 +5060,129 @@ p {
   background: var(--bg);
 }
 
+/* ---------- Landing page (public home) ---------- */
+
+.landing-hero {
+  text-align: center;
+  padding: 64px 24px 40px;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.landing-eyebrow {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  padding: 6px 12px;
+  border-radius: 999px;
+  margin-bottom: 20px;
+}
+
+.landing-title {
+  font-size: clamp(36px, 5vw, 56px);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 20px;
+}
+
+.landing-lede {
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--muted);
+  max-width: 640px;
+  margin: 0 auto 32px;
+}
+
+.landing-cta-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.landing-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 28px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 15px;
+  transition: opacity 0.15s ease;
+}
+
+.landing-cta:hover {
+  opacity: 0.9;
+}
+
+.landing-cta-secondary {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+
+.landing-sub {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.landing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  max-width: 1080px;
+  margin: 40px auto;
+  padding: 0 24px;
+}
+
+.landing-card {
+  padding: 28px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.landing-card-title {
+  font-weight: 600;
+  font-size: 17px;
+  color: var(--text);
+  margin-bottom: 10px;
+  letter-spacing: -0.01em;
+}
+
+.landing-card p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+  margin: 0;
+}
+
+.landing-legal-row {
+  text-align: center;
+  padding: 24px;
+  font-size: 14px;
+  color: var(--muted);
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.landing-legal-row a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.landing-legal-row a:hover {
+  text-decoration: underline;
+}
+
