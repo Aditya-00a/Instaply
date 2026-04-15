@@ -5220,38 +5220,54 @@ p {
 .info-hero {
   max-width: 820px;
   margin: 0 auto;
-  padding: 56px 24px 24px;
+  padding: 72px 32px 32px;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
 }
 
 .info-eyebrow {
-  display: inline-block;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
   color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  padding: 6px 12px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  padding: 6px 14px;
   border-radius: 999px;
-  margin-bottom: 18px;
+  letter-spacing: -0.005em;
+  text-transform: none;
+  margin: 0;
+}
+
+.info-eyebrow::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse-dot 1.8s infinite;
 }
 
 .info-title {
-  font-size: clamp(30px, 4.2vw, 44px);
-  line-height: 1.1;
-  letter-spacing: -0.025em;
+  font-size: clamp(36px, 4.6vw, 52px);
+  line-height: 1.05;
+  letter-spacing: -0.035em;
   font-weight: 700;
   color: var(--text);
-  margin: 0 0 18px;
+  margin: 0;
+  text-wrap: balance;
 }
 
 .info-lede {
-  font-size: 17px;
+  font-size: 17.5px;
   line-height: 1.6;
   color: var(--muted);
   max-width: 640px;
-  margin: 0 auto;
+  margin: 0;
 }
 
 .info-section {
@@ -5261,10 +5277,10 @@ p {
 }
 
 .info-section h2 {
-  font-size: 22px;
-  font-weight: 600;
+  font-size: 24px;
+  font-weight: 700;
   color: var(--text);
-  letter-spacing: -0.015em;
+  letter-spacing: -0.02em;
   margin: 0 0 16px;
 }
 
@@ -5293,10 +5309,17 @@ p {
 }
 
 .info-card {
-  padding: 22px;
-  background: var(--panel);
+  padding: 24px;
+  background: var(--panel-strong);
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+  border-radius: 16px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.info-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--line));
+  box-shadow: 0 12px 28px -16px rgba(0, 82, 255, 0.18);
 }
 
 .info-card-title {
@@ -5304,6 +5327,7 @@ p {
   font-size: 16px;
   color: var(--text);
   margin-bottom: 8px;
+  letter-spacing: -0.01em;
 }
 
 .info-card p {
@@ -5372,10 +5396,17 @@ p {
 .info-step {
   display: flex;
   gap: 18px;
-  padding: 20px;
-  background: var(--panel);
+  padding: 22px;
+  background: var(--panel-strong);
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+  border-radius: 16px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.info-step:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent) 25%, var(--line));
+  box-shadow: 0 10px 24px -16px rgba(0, 82, 255, 0.15);
 }
 
 .info-step-num {
@@ -5383,13 +5414,14 @@ p {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
   font-size: 16px;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 .info-step-body {
@@ -5611,10 +5643,34 @@ p {
 }
 
 .changelog-entry {
-  padding: 22px;
-  background: var(--panel);
+  padding: 24px;
+  background: var(--panel-strong);
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+  border-radius: 16px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  position: relative;
+}
+
+.changelog-entry::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 24px;
+  bottom: 24px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, var(--accent), var(--accent-2));
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.changelog-entry:hover {
+  border-color: color-mix(in srgb, var(--accent) 25%, var(--line));
+  box-shadow: 0 10px 24px -16px rgba(0, 82, 255, 0.15);
+}
+
+.changelog-entry:hover::before {
+  opacity: 1;
 }
 
 .changelog-entry-head {
@@ -5657,12 +5713,17 @@ p {
 .status-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 14px 18px;
-  background: var(--panel);
+  gap: 12px;
+  padding: 16px 20px;
+  background: var(--panel-strong);
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+  border-radius: 14px;
   margin-bottom: 10px;
+  transition: border-color 0.15s ease;
+}
+
+.status-row:hover {
+  border-color: color-mix(in srgb, var(--accent) 20%, var(--line));
 }
 
 .status-dot {
@@ -5675,6 +5736,12 @@ p {
 .status-dot-up {
   background: #10b981;
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+  animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2); }
+  50% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.08); }
 }
 
 .status-dot-degraded {
