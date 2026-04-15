@@ -217,8 +217,8 @@ export default function HomePage() {
           <div className="stat-label">free applications on signup</div>
         </div>
         <div className="stat-item">
-          <div className="stat-num">24/7</div>
-          <div className="stat-label">submission worker</div>
+          <div className="stat-num">10</div>
+          <div className="stat-label">free job searches per day</div>
         </div>
       </section>
 

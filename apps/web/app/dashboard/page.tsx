@@ -21,6 +21,7 @@ type AppRow = {
 type LiveData = {
   mode: "live";
   balance: number;
+  searchesToday: number;
   counts: {
     queued: number;
     submitted: number;
@@ -30,6 +31,8 @@ type LiveData = {
   recent: AppRow[];
   email: string | null;
 };
+
+const DAILY_SEARCH_QUOTA = 10;
 
 type State =
   | { kind: "demo" }
@@ -70,10 +73,12 @@ export default function DashboardPage() {
         }
 
         // Credit balance via RPC (function added in 0001_init.sql)
-        const { data: balanceData } = await supabase.rpc("get_credit_balance", {
-          p_user_id: user.id,
-        });
+        const [{ data: balanceData }, { data: searchData }] = await Promise.all([
+          supabase.rpc("get_credit_balance", { p_user_id: user.id }),
+          supabase.rpc("get_search_usage_today", { p_user_id: user.id }),
+        ]);
         const balance = typeof balanceData === "number" ? balanceData : 0;
+        const searchesToday = typeof searchData === "number" ? searchData : 0;
 
         // Applications summary
         const { data: apps, error: appsErr } = await supabase
@@ -101,6 +106,7 @@ export default function DashboardPage() {
             data: {
               mode: "live",
               balance,
+              searchesToday,
               counts,
               recent: all.slice(0, 3),
               email: user.email ?? null,
@@ -171,7 +177,10 @@ export default function DashboardPage() {
             {state.kind === "live"
               ? [
                   { label: "Credits", value: String(state.data.balance) },
-                  { label: "Queued", value: String(state.data.counts.queued) },
+                  {
+                    label: "Searches today",
+                    value: `${state.data.searchesToday}/${DAILY_SEARCH_QUOTA}`,
+                  },
                   { label: "Submitted", value: String(state.data.counts.submitted) },
                   { label: "Confirmed", value: String(state.data.counts.confirmed) },
                 ].map((m) => (

@@ -99,6 +99,10 @@ export default function HowItWorksPage() {
             active.
           </li>
           <li>
+            <strong>10 free job searches every day</strong>, on top of
+            your 3 free signup application credits — no card required.
+          </li>
+          <li>
             <strong>You stay in control.</strong> You can pause auto-submit,
             block specific companies, or cancel any time from your
             settings.

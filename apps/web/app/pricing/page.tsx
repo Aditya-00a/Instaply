@@ -93,6 +93,7 @@ export default function PricingPage() {
         </p>
         <div className="pricing-hero-chips">
           <span className="pricing-hero-chip">3 free applications on signup</span>
+          <span className="pricing-hero-chip">10 free searches per day</span>
           <span className="pricing-hero-chip">Minimum top-up $10</span>
           <span className="pricing-hero-chip">Credits never expire</span>
         </div>
