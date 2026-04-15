@@ -14,6 +14,8 @@ export function PublicShell({ children }: { children: ReactNode }) {
       <header className="public-header">
         <Link href="/" className="public-brand">Instaply</Link>
         <nav className="public-nav">
+          <Link href="/about">Product</Link>
+          <Link href="/how-it-works">How it works</Link>
           <Link href="/pricing">Pricing</Link>
           <a href="mailto:hello@asion.ai">Contact</a>
           <Link href="/sign-in" className="public-nav-cta">Sign in</Link>
@@ -24,6 +26,8 @@ export function PublicShell({ children }: { children: ReactNode }) {
 
       <footer className="public-footer">
         <div className="public-footer-links">
+          <Link href="/about">Product</Link>
+          <Link href="/how-it-works">How it works</Link>
           <Link href="/pricing">Pricing</Link>
           <Link href="/terms">Terms of Service</Link>
           <Link href="/privacy">Privacy Policy</Link>
