@@ -17,7 +17,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
           <Link href="/about">Product</Link>
           <Link href="/how-it-works">How it works</Link>
           <Link href="/pricing">Pricing</Link>
-          <a href="mailto:hello@asion.ai">Contact</a>
+          <Link href="/contact">Contact</Link>
           <Link href="/sign-in" className="public-nav-cta">Sign in</Link>
         </nav>
       </header>
@@ -37,7 +37,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
           <Link href="/terms">Terms of Service</Link>
           <Link href="/privacy">Privacy Policy</Link>
           <Link href="/refund">Refund Policy</Link>
-          <a href="mailto:hello@asion.ai">Contact</a>
+          <Link href="/contact">Contact</Link>
         </div>
         <div className="public-footer-note">
           © {new Date().getFullYear()} Ravendise. Instaply is a product of
