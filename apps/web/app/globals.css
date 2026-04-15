@@ -4294,6 +4294,95 @@ p {
   background: rgba(247, 249, 252, 0.5);
 }
 
+/* ---------- Onboarding save bar ---------- */
+
+.onboarding-save-bar {
+  padding: 18px 22px;
+  background: linear-gradient(
+    180deg,
+    var(--panel-strong) 0%,
+    color-mix(in srgb, var(--accent) 3%, var(--panel-strong)) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--line));
+  border-radius: 16px;
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  align-items: center;
+  box-shadow: 0 12px 32px -20px rgba(0, 82, 255, 0.18);
+}
+
+.onboarding-save-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 220px;
+}
+
+.onboarding-save-info strong {
+  color: var(--text);
+  font-size: 14.5px;
+  letter-spacing: -0.01em;
+}
+
+.onboarding-save-info span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.onboarding-save-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.onboarding-resume-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  background: #fff;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.onboarding-resume-pick:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.onboarding-save-error {
+  flex-basis: 100%;
+  margin-top: 4px;
+  padding: 10px 12px;
+  background: rgba(254, 242, 242, 0.8);
+  border: 1px solid rgba(127, 29, 29, 0.15);
+  color: #7f1d1d;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.onboarding-save-ok {
+  flex-basis: 100%;
+  margin-top: 4px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, #10b981 10%, transparent);
+  border: 1px solid color-mix(in srgb, #10b981 25%, transparent);
+  color: #047857;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
 .auth-visual-panel {
   display: grid;
   min-height: 720px;

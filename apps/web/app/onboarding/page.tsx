@@ -19,6 +19,7 @@ import {
 } from "@instaply/contracts";
 
 import { ConsoleShell } from "../components/console-shell";
+import { OnboardingSaveBar } from "../components/onboarding-save-bar";
 
 const humanize = (value: string) => value.replaceAll("_", " ");
 
@@ -198,6 +199,10 @@ export default function OnboardingPage() {
         { href: "/review", label: "Review answers", variant: "secondary" }
       ]}
     >
+      <section className="console-section">
+        <OnboardingSaveBar profile={profile} />
+      </section>
+
       <section className="console-section">
         <article className="glass profile-hero-card">
           <div className="profile-hero-banner">
