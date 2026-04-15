@@ -37,9 +37,10 @@ const ATS = [
 ];
 
 const WHO = [
-  "New grads and early-career candidates doing volume outreach",
+  "Candidates at any level — new grads, mid-career, senior, and executive — running a high-volume search",
   "International candidates needing visa-friendly employers at scale",
   "Career switchers testing multiple role categories",
+  "Senior ICs and managers targeting specific companies across the full open-role pool, not just the handful on job boards",
   "Anyone tired of retyping the same answers into 40 ATS forms a week",
 ];
 

@@ -22,7 +22,7 @@ const STEPS = [
   {
     n: 3,
     title: "Set your preferences",
-    body: "Tell us what roles you want (e.g. 'risk analyst', 'product manager, early career'), target locations, companies to exclude, and the minimum match-score threshold. You can adjust any of these at any time.",
+    body: "Tell us what roles you want (e.g. 'risk analyst', 'senior product manager', 'director of engineering'), target seniority levels, locations, companies to exclude, and the minimum match-score threshold. You can adjust any of these at any time.",
   },
   {
     n: 4,
