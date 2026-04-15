@@ -3979,6 +3979,22 @@ p {
   font-weight: 500;
 }
 
+.auth-notice {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.auth-button-primary[disabled] {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 .auth-visual-panel {
   display: grid;
   min-height: 720px;

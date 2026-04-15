@@ -4,38 +4,134 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Chrome, LockKeyhole, Mail, MoveRight, Sparkles } from "lucide-react";
 import { useState } from "react";
+import { getBrowserSupabase, isSupabaseConfigured } from "../lib/supabase-browser";
 
 const DEMO_EMAIL = "demo@instaply.app";
 const DEMO_PASSWORD = "InstaplyDemo123!";
+const POLICY_VERSION = "2026-04-14";
 
 export default function SignInPage() {
   const router = useRouter();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
-  const [email, setEmail] = useState(DEMO_EMAIL);
-  const [password, setPassword] = useState(DEMO_PASSWORD);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [acceptLegal, setAcceptLegal] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState("");
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const supabaseReady = isSupabaseConfigured();
+
+  // In demo mode (no env vars), prefill demo creds so local previews
+  // still let you through.
+  const emailValue = !supabaseReady && mode === "signin" && !email
+    ? DEMO_EMAIL : email;
+  const passwordValue = !supabaseReady && mode === "signin" && !password
+    ? DEMO_PASSWORD : password;
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setError("");
+    setNotice("");
 
-    if (mode === "signup") {
-      if (!acceptLegal) {
-        setError("You must accept the Terms of Service, Privacy Policy, and Refund Policy to create an account.");
+    if (mode === "signup" && !acceptLegal) {
+      setError(
+        "You must accept the Terms of Service, Privacy Policy, and Refund Policy to create an account."
+      );
+      return;
+    }
+
+    // Demo fallback when Supabase isn't configured (local dev, preview builds)
+    if (!supabaseReady) {
+      if (mode === "signin") {
+        if (
+          emailValue.trim().toLowerCase() === DEMO_EMAIL.toLowerCase() &&
+          passwordValue === DEMO_PASSWORD
+        ) {
+          router.push("/dashboard");
+          return;
+        }
+        setError(
+          "Supabase is not configured in this environment. Use the demo credentials shown below."
+        );
         return;
       }
-      setError("");
+      // signup demo: just take them to dashboard
       router.push("/dashboard");
       return;
     }
 
-    if (email.trim().toLowerCase() === DEMO_EMAIL.toLowerCase() && password === DEMO_PASSWORD) {
-      setError("");
-      router.push("/dashboard");
+    // Real Supabase auth path
+    const supabase = getBrowserSupabase();
+    if (!supabase) {
+      setError("Auth service unavailable. Try again shortly.");
       return;
     }
 
-    setError("Use the demo email and password shown below.");
+    setLoading(true);
+    try {
+      if (mode === "signin") {
+        const { error: err } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+        if (err) {
+          setError(err.message);
+          setLoading(false);
+          return;
+        }
+        router.push("/dashboard");
+        router.refresh();
+        return;
+      }
+
+      // Signup
+      const { data, error: err } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          emailRedirectTo:
+            typeof window !== "undefined"
+              ? `${window.location.origin}/dashboard`
+              : undefined,
+          data: {
+            legal_accepted_at: new Date().toISOString(),
+            legal_accepted_version: POLICY_VERSION,
+          },
+        },
+      });
+      if (err) {
+        setError(err.message);
+        setLoading(false);
+        return;
+      }
+
+      // Write the acceptance details onto the profile row created by
+      // the handle_new_user trigger.
+      if (data.user) {
+        await supabase
+          .from("profiles")
+          .update({
+            legal_accepted_at: new Date().toISOString(),
+            legal_accepted_version: POLICY_VERSION,
+          })
+          .eq("id", data.user.id);
+      }
+
+      if (data.session) {
+        router.push("/dashboard");
+        router.refresh();
+      } else {
+        setNotice(
+          "Account created. Check your email to confirm your address, then sign in."
+        );
+        setMode("signin");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -51,7 +147,9 @@ export default function SignInPage() {
             </div>
 
             <div className="auth-copy-block">
-              <h1 className="auth-heading">{mode === "signin" ? "Welcome back" : "Create your account"}</h1>
+              <h1 className="auth-heading">
+                {mode === "signin" ? "Welcome back" : "Create your account"}
+              </h1>
               <p className="auth-copy">
                 {mode === "signin"
                   ? "Sign in to manage your applications, answers, documents, and billing in one place."
@@ -63,20 +161,20 @@ export default function SignInPage() {
               <button
                 className={`auth-tab${mode === "signin" ? " auth-tab-active" : ""}`}
                 type="button"
-                onClick={() => { setMode("signin"); setError(""); }}
+                onClick={() => { setMode("signin"); setError(""); setNotice(""); }}
               >
                 Sign in
               </button>
               <button
                 className={`auth-tab${mode === "signup" ? " auth-tab-active" : ""}`}
                 type="button"
-                onClick={() => { setMode("signup"); setError(""); }}
+                onClick={() => { setMode("signup"); setError(""); setNotice(""); }}
               >
                 Create account
               </button>
             </div>
 
-            {mode === "signin" && (
+            {mode === "signin" && !supabaseReady && (
               <div className="auth-demo-credentials">
                 <strong>Demo access</strong>
                 <span>{DEMO_EMAIL}</span>
@@ -84,12 +182,21 @@ export default function SignInPage() {
               </div>
             )}
 
+            {notice ? <div className="auth-notice">{notice}</div> : null}
+
             <form className="auth-form" onSubmit={handleSubmit}>
               <label className="auth-field">
                 <span>Email address</span>
                 <div className="auth-input-shell">
                   <Mail size={16} />
-                  <input placeholder="Enter your email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
+                  <input
+                    placeholder="you@domain.com"
+                    type="email"
+                    value={emailValue}
+                    onChange={(event) => setEmail(event.target.value)}
+                    required
+                    autoComplete="email"
+                  />
                 </div>
               </label>
 
@@ -98,10 +205,13 @@ export default function SignInPage() {
                 <div className="auth-input-shell">
                   <LockKeyhole size={16} />
                   <input
-                    placeholder="Enter your password"
+                    placeholder={mode === "signup" ? "At least 8 characters" : "Your password"}
                     type="password"
-                    value={password}
+                    value={passwordValue}
                     onChange={(event) => setPassword(event.target.value)}
+                    required
+                    minLength={mode === "signup" ? 8 : undefined}
+                    autoComplete={mode === "signup" ? "new-password" : "current-password"}
                   />
                 </div>
               </label>
@@ -133,8 +243,16 @@ export default function SignInPage() {
 
               {error ? <div className="auth-error">{error}</div> : null}
 
-              <button className="auth-button auth-button-primary" type="submit">
-                {mode === "signin" ? "Sign in" : "Create account"}
+              <button
+                className="auth-button auth-button-primary"
+                type="submit"
+                disabled={loading}
+              >
+                {loading
+                  ? "Working…"
+                  : mode === "signin"
+                  ? "Sign in"
+                  : "Create account"}
                 <MoveRight size={16} />
               </button>
             </form>
@@ -155,7 +273,11 @@ export default function SignInPage() {
             </div>
 
             <div className="auth-helper">
-              <span>Private beta accounts and tester seats can sign in here.</span>
+              <span>
+                {supabaseReady
+                  ? "Your account works across the web dashboard, Claude Desktop MCP, and the ChatGPT Connector."
+                  : "Preview mode — connect Supabase env vars to enable real accounts."}
+              </span>
               <Link href="/">Back to website</Link>
             </div>
           </div>
