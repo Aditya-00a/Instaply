@@ -5,54 +5,196 @@ import { PublicShell } from "./components/public-shell";
 export const metadata: Metadata = {
   title: "Instaply — $1 per confirmed job application",
   description:
-    "Instaply is an agentic job-application platform. We submit applications to Greenhouse, Lever, and SmartRecruiters on your behalf. $1 per confirmed application. No subscriptions.",
+    "Instaply is an agentic job-application platform. We submit applications to Greenhouse, Lever, SmartRecruiters, and Workday on your behalf. $1 per confirmed application. No subscriptions.",
 };
+
+const PORTALS = [
+  "Greenhouse",
+  "Lever",
+  "SmartRecruiters",
+  "Workday",
+  "Ashby",
+  "iCIMS",
+];
+
+const TESTIMONIALS = [
+  {
+    quote:
+      "Instaply made the whole process so much smoother. I could focus on prepping for interviews instead of retyping the same answers into 40 ATS forms.",
+    name: "Sowmya Deshpande",
+    meta: "Long Island University",
+    initials: "SD",
+    accent: "#0052ff",
+  },
+  {
+    quote:
+      "Made my search a lot smoother. The match queue surfaced roles I would have missed, and submissions just landed in the background while I worked on everything else.",
+    name: "Nikhil Singh",
+    meta: "New York University",
+    initials: "NS",
+    accent: "#8b5cf6",
+  },
+  {
+    quote:
+      "As an international student, the visa and sponsorship filters alone made my process much smoother. I stopped wasting credits on roles I wasn't eligible for.",
+    name: "Yash Sharma",
+    meta: "New York University",
+    initials: "YS",
+    accent: "#10b981",
+  },
+  {
+    quote:
+      "Genuinely made my application process smoother. Pay-per-confirmation is the only pricing model that ever felt fair to me.",
+    name: "Pavan Veera",
+    meta: "Instaply user",
+    initials: "PV",
+    accent: "#f59e0b",
+  },
+];
+
+const TRUST = [
+  { label: "Secured by Paddle", detail: "PCI-DSS Level 1" },
+  { label: "TLS 1.3 in transit", detail: "AES-256 at rest" },
+  { label: "Row-level security", detail: "Per-user isolation" },
+  { label: "DPDP + GDPR ready", detail: "Privacy-first by design" },
+];
 
 export default function HomePage() {
   return (
     <PublicShell>
-      <section className="landing-hero">
-        <div className="landing-eyebrow">Agentic job applications</div>
-        <h1 className="landing-title">
-          We submit job applications on your behalf.
-        </h1>
-        <p className="landing-lede">
-          Instaply is an agentic filing service. You upload your resume and
-          set your preferences. We find matching roles on Greenhouse, Lever,
-          and SmartRecruiters and submit applications for you — paying only
-          when the employer confirmation email lands.
-        </p>
-        <div className="landing-cta-row">
-          <Link href="/sign-in" className="landing-cta">
-            Get 3 free applications
-          </Link>
-          <Link href="/pricing" className="landing-cta landing-cta-secondary">
-            See pricing
-          </Link>
-        </div>
-        <p className="landing-sub">
-          $1 per confirmed application · No subscriptions · Credits never
-          expire
-        </p>
-      </section>
-
-      <section className="landing-grid">
-        <div className="landing-card">
-          <div className="landing-card-title">Submit, don't search</div>
-          <p>
-            You stop opening 40 tabs a day. We keep a pool of open roles and
-            auto-submit the ones that match your profile.
+      {/* Hero: two column on desktop, stacked on mobile */}
+      <section className="hero">
+        <div className="hero-copy">
+          <div className="hero-eyebrow">
+            <span className="hero-dot" /> Agentic job applications
+          </div>
+          <h1 className="hero-title">
+            We submit job applications on your&nbsp;behalf.
+          </h1>
+          <p className="hero-lede">
+            Instaply is an agentic filing service. Upload your resume, set
+            your preferences, and we submit matching roles to Greenhouse,
+            Lever, SmartRecruiters, and Workday — paying only when the
+            employer confirmation email lands.
+          </p>
+          <div className="hero-cta-row">
+            <Link href="/sign-in" className="btn-primary">
+              Get 3 free applications
+            </Link>
+            <Link href="/how-it-works" className="btn-secondary">
+              See how it works
+            </Link>
+          </div>
+          <p className="hero-sub">
+            $1 per confirmed application · No subscriptions · Credits
+            never expire
           </p>
         </div>
-        <div className="landing-card">
-          <div className="landing-card-title">Pay only when it lands</div>
+
+        {/* Live-feel mock card — static but feels alive */}
+        <aside className="hero-visual" aria-hidden="true">
+          <div className="hero-card">
+            <div className="hero-card-head">
+              <span className="hero-card-pill">
+                <span className="hero-card-pulse" /> Live queue
+              </span>
+              <span className="hero-card-time">Now</span>
+            </div>
+            <ul className="hero-card-list">
+              <li>
+                <div className="hero-card-row-main">
+                  <strong>Risk Analyst</strong>
+                  <span>Interactive Brokers · Greenhouse</span>
+                </div>
+                <span className="hero-card-status hero-card-status-ok">
+                  Confirmed
+                </span>
+              </li>
+              <li>
+                <div className="hero-card-row-main">
+                  <strong>Product Analyst</strong>
+                  <span>T. Rowe Price · Workday</span>
+                </div>
+                <span className="hero-card-status hero-card-status-ok">
+                  Confirmed
+                </span>
+              </li>
+              <li>
+                <div className="hero-card-row-main">
+                  <strong>Strategy Analyst</strong>
+                  <span>Apollo · Lever</span>
+                </div>
+                <span className="hero-card-status hero-card-status-pending">
+                  Submitting
+                </span>
+              </li>
+              <li>
+                <div className="hero-card-row-main">
+                  <strong>AML Operations Analyst</strong>
+                  <span>Ramp · Greenhouse</span>
+                </div>
+                <span className="hero-card-status hero-card-status-wait">
+                  Waiting
+                </span>
+              </li>
+            </ul>
+            <div className="hero-card-foot">
+              <div>
+                <span className="hero-card-metric">18</span>
+                <span className="hero-card-metric-label">matches</span>
+              </div>
+              <div>
+                <span className="hero-card-metric">7</span>
+                <span className="hero-card-metric-label">confirmed</span>
+              </div>
+              <div>
+                <span className="hero-card-metric">$7</span>
+                <span className="hero-card-metric-label">spent</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      {/* Portals strip */}
+      <section className="portal-strip">
+        <div className="portal-strip-label">Submits to</div>
+        <div className="portal-strip-list">
+          {PORTALS.map((p) => (
+            <div className="portal-chip" key={p}>
+              {p}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Feature grid */}
+      <section className="feature-grid">
+        <div className="feature-card">
+          <div className="feature-ico" aria-hidden>
+            ⚡
+          </div>
+          <div className="feature-title">Submit, don&apos;t search</div>
           <p>
-            A credit is consumed only after the employer's automated
+            You stop opening 40 tabs a day. We keep a pool of open roles
+            and auto-submit the ones that match your profile.
+          </p>
+        </div>
+        <div className="feature-card">
+          <div className="feature-ico" aria-hidden>
+            ✓
+          </div>
+          <div className="feature-title">Pay only when it lands</div>
+          <p>
+            A credit is consumed only after the employer&apos;s automated
             confirmation email arrives. Failed submissions cost nothing.
           </p>
         </div>
-        <div className="landing-card">
-          <div className="landing-card-title">Works where you work</div>
+        <div className="feature-card">
+          <div className="feature-ico" aria-hidden>
+            ◆
+          </div>
+          <div className="feature-title">Works where you work</div>
           <p>
             Use the web dashboard, the Claude Desktop MCP integration, or
             the ChatGPT Connector — whichever fits your workflow.
@@ -60,65 +202,84 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="landing-testimonials">
-        <div className="landing-testimonials-head">
-          <div className="landing-eyebrow">What users say</div>
-          <h2 className="landing-testimonials-title">
-            A smoother job search, across every kind of candidate.
-          </h2>
+      {/* Stat band */}
+      <section className="stat-band">
+        <div className="stat-item">
+          <div className="stat-num">$1</div>
+          <div className="stat-label">per confirmed application</div>
         </div>
-        <div className="landing-testimonials-grid">
-          <figure className="landing-testimonial">
-            <blockquote>
-              Instaply made the whole process so much smoother. I could
-              focus on prepping for interviews instead of retyping the
-              same answers into 40 ATS forms.
-            </blockquote>
-            <figcaption>
-              <span className="landing-testimonial-name">Sowmya Deshpande</span>
-              <span className="landing-testimonial-meta">Long Island University</span>
-            </figcaption>
-          </figure>
-
-          <figure className="landing-testimonial">
-            <blockquote>
-              Made my search a lot smoother. The match queue surfaced
-              roles I would have missed, and submissions just landed in
-              the background while I worked on everything else.
-            </blockquote>
-            <figcaption>
-              <span className="landing-testimonial-name">Nikhil Singh</span>
-              <span className="landing-testimonial-meta">New York University</span>
-            </figcaption>
-          </figure>
-
-          <figure className="landing-testimonial">
-            <blockquote>
-              As an international student, the visa and sponsorship
-              filters alone made my process much smoother. I stopped
-              wasting credits on roles I wasn&apos;t eligible for.
-            </blockquote>
-            <figcaption>
-              <span className="landing-testimonial-name">Yash Sharma</span>
-              <span className="landing-testimonial-meta">New York University</span>
-            </figcaption>
-          </figure>
-
-          <figure className="landing-testimonial">
-            <blockquote>
-              Genuinely made my application process smoother. Pay-per-
-              confirmation is the only pricing model that ever felt fair
-              to me.
-            </blockquote>
-            <figcaption>
-              <span className="landing-testimonial-name">Pavan Veera</span>
-              <span className="landing-testimonial-meta">Instaply user</span>
-            </figcaption>
-          </figure>
+        <div className="stat-item">
+          <div className="stat-num">0</div>
+          <div className="stat-label">subscriptions, ever</div>
+        </div>
+        <div className="stat-item">
+          <div className="stat-num">3</div>
+          <div className="stat-label">free applications on signup</div>
+        </div>
+        <div className="stat-item">
+          <div className="stat-num">24/7</div>
+          <div className="stat-label">submission worker</div>
         </div>
       </section>
 
-      <section className="landing-legal-row">
+      {/* Testimonials */}
+      <section className="testimonials">
+        <div className="testimonials-head">
+          <div className="eyebrow-pill">What users say</div>
+          <h2 className="testimonials-title">
+            A smoother job search, across every kind of candidate.
+          </h2>
+        </div>
+        <div className="testimonials-grid">
+          {TESTIMONIALS.map((t) => (
+            <figure className="testimonial-card" key={t.name}>
+              <blockquote>{t.quote}</blockquote>
+              <figcaption>
+                <span
+                  className="testimonial-avatar"
+                  style={{ background: t.accent }}
+                  aria-hidden
+                >
+                  {t.initials}
+                </span>
+                <div className="testimonial-who">
+                  <span className="testimonial-name">{t.name}</span>
+                  <span className="testimonial-meta">{t.meta}</span>
+                </div>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      </section>
+
+      {/* Trust band */}
+      <section className="trust-band">
+        {TRUST.map((t) => (
+          <div className="trust-item" key={t.label}>
+            <div className="trust-label">{t.label}</div>
+            <div className="trust-detail">{t.detail}</div>
+          </div>
+        ))}
+      </section>
+
+      {/* Final CTA */}
+      <section className="final-cta">
+        <h2>Stop retyping answers. Start sending applications.</h2>
+        <p>
+          Your first three applications are free. No card, no trial, no
+          catch.
+        </p>
+        <div className="hero-cta-row">
+          <Link href="/sign-in" className="btn-primary">
+            Start for free
+          </Link>
+          <Link href="/pricing" className="btn-secondary">
+            See pricing
+          </Link>
+        </div>
+      </section>
+
+      <section className="legal-inline-row">
         <p>
           By using Instaply you agree to our{" "}
           <Link href="/terms">Terms of Service</Link>,{" "}
