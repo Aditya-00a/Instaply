@@ -1,199 +1,110 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { BriefcaseBusiness, Mail, MapPin, Phone, ShieldCheck, Sparkles, UserRound, X } from "lucide-react";
-import { emptyCandidateWorkspaceProfile } from "../lib/empty-profile";
-import { getBrowserSupabase, isSupabaseConfigured } from "../lib/supabase-browser";
-
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
-  instaplyCoverLetterFormats,
-  instaplyExperienceLevels,
-  instaplyPortals,
-  instaplyResumeFormats,
-  instaplyWorkModes,
-  starterCandidateWorkspaceProfile,
-  type CandidateWorkspaceProfile,
-  type CoverLetterFormatId,
-  type ExperienceLevel,
-  type PortalId,
-  type ResumeFormatId,
-  type WorkMode
-} from "@instaply/contracts";
+  ArrowLeft,
+  ArrowRight,
+  Briefcase,
+  Check,
+  CircleAlert,
+  CircleCheck,
+  CircleX,
+  FileUp,
+  Loader2,
+  MapPin,
+  Sparkles,
+  Upload,
+  UserRound,
+  X,
+} from "lucide-react";
 
 import { ConsoleShell } from "../components/console-shell";
-import { OnboardingSaveBar } from "../components/onboarding-save-bar";
-import { ResumeUploadCard } from "../components/resume-upload-card";
+import { getBrowserSupabase, isSupabaseConfigured } from "../lib/supabase-browser";
+import { extractPdfText, scoreResumeText, type AtsReport } from "../lib/ats-score";
 
-const humanize = (value: string) => value.replaceAll("_", " ");
+type Step = 1 | 2 | 3;
 
-const cloneProfile = (): CandidateWorkspaceProfile => JSON.parse(JSON.stringify(starterCandidateWorkspaceProfile));
-const cloneEmpty = (): CandidateWorkspaceProfile => JSON.parse(JSON.stringify(emptyCandidateWorkspaceProfile));
+type WorkAuth = "citizen" | "green_card" | "h1b" | "opt" | "other";
 
-type ArrayEditorProps = {
-  label: string;
-  icon: typeof Sparkles;
-  values: string[];
-  placeholder: string;
-  onChange: (values: string[]) => void;
+type Identity = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  linkedinUrl: string;
+  githubUrl: string;
+  city: string;
+  state: string;
+  workAuth: WorkAuth;
+  needsSponsorship: boolean;
 };
 
-function ArrayEditor({ label, icon: Icon, values, placeholder, onChange }: ArrayEditorProps) {
-  const [draft, setDraft] = useState("");
+const SUGGESTED_ROLES = [
+  "Software Engineer",
+  "Product Manager",
+  "Data Analyst",
+  "Business Analyst",
+  "Risk Analyst",
+  "Marketing Manager",
+  "Operations Associate",
+  "Strategy Analyst",
+  "Designer",
+];
 
-  const addValue = () => {
-    const next = draft.trim();
-    if (!next) return;
-    if (values.some((value) => value.toLowerCase() === next.toLowerCase())) {
-      setDraft("");
-      return;
-    }
-    onChange([...values, next]);
-    setDraft("");
-  };
+const SUGGESTED_LOCATIONS = [
+  "New York, NY",
+  "San Francisco, CA",
+  "Remote",
+  "Los Angeles, CA",
+  "Chicago, IL",
+  "Boston, MA",
+  "Austin, TX",
+  "Seattle, WA",
+];
 
-  const removeValue = (target: string) => onChange(values.filter((value) => value !== target));
-
-  return (
-    <div className="profile-field profile-field-span-2">
-      <label>{label}</label>
-      <div className="profile-array-input">
-        <div className="profile-input-shell">
-          <Icon size={16} />
-          <input
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                addValue();
-              }
-            }}
-            placeholder={placeholder}
-          />
-        </div>
-        <button className="profile-chip-button" onClick={addValue} type="button">
-          Add
-        </button>
-      </div>
-      <div className="profile-option-row">
-        {values.map((value) => (
-          <button className="profile-option-chip profile-option-chip-active" key={`${label}-${value}`} onClick={() => removeValue(value)} type="button">
-            {value}
-            <X size={12} />
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-type SelectChipProps<T extends string> = {
-  label: string;
-  icon: typeof Sparkles;
-  selected: T;
-  options: readonly T[];
-  onChange: (value: T) => void;
+const EMPTY_IDENTITY: Identity = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  phone: "",
+  linkedinUrl: "",
+  githubUrl: "",
+  city: "",
+  state: "",
+  workAuth: "citizen",
+  needsSponsorship: false,
 };
-
-function SelectChipGroup<T extends string>({ label, icon: Icon, selected, options, onChange }: SelectChipProps<T>) {
-  return (
-    <div className="profile-field profile-field-span-2">
-      <label>{label}</label>
-      <div className="profile-field-value profile-field-value-static">
-        <Icon size={16} />
-        <span>{humanize(selected)}</span>
-      </div>
-      <div className="profile-option-row">
-        {options.map((option) => (
-          <button
-            className={option === selected ? "profile-option-chip profile-option-chip-active" : "profile-option-chip"}
-            key={`${label}-${option}`}
-            onClick={() => onChange(option)}
-            type="button"
-          >
-            {humanize(option)}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-type ToggleChipProps<T extends string> = {
-  label: string;
-  icon: typeof Sparkles;
-  selected: T[];
-  options: readonly T[];
-  onChange: (values: T[]) => void;
-};
-
-function ToggleChipGroup<T extends string>({ label, icon: Icon, selected, options, onChange }: ToggleChipProps<T>) {
-  const toggle = (value: T) => {
-    onChange(selected.includes(value) ? selected.filter((item) => item !== value) : [...selected, value]);
-  };
-
-  return (
-    <div className="profile-field profile-field-span-2">
-      <label>{label}</label>
-      <div className="profile-field-value profile-field-value-static">
-        <Icon size={16} />
-        <span>{selected.map(humanize).join(", ") || "Select options"}</span>
-      </div>
-      <div className="profile-option-row">
-        {options.map((option) => (
-          <button
-            className={selected.includes(option) ? "profile-option-chip profile-option-chip-active" : "profile-option-chip"}
-            key={`${label}-${option}`}
-            onClick={() => toggle(option)}
-            type="button"
-          >
-            {humanize(option)}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-type TextFieldProps = {
-  label: string;
-  icon: typeof UserRound;
-  value: string;
-  placeholder?: string;
-  onChange: (value: string) => void;
-  textarea?: boolean;
-  span?: 1 | 2;
-};
-
-function TextField({ label, icon: Icon, value, placeholder, onChange, textarea = false, span = 1 }: TextFieldProps) {
-  return (
-    <div className={span === 2 ? "profile-field profile-field-span-2" : "profile-field"}>
-      <label>{label}</label>
-      {textarea ? (
-        <div className="profile-textarea-shell">
-          <Icon size={16} />
-          <textarea placeholder={placeholder} value={value} onChange={(event) => onChange(event.target.value)} rows={4} />
-        </div>
-      ) : (
-        <div className="profile-input-shell">
-          <Icon size={16} />
-          <input placeholder={placeholder} value={value} onChange={(event) => onChange(event.target.value)} />
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function OnboardingPage() {
-  // Signed-in users start with an empty profile and hydrate from
-  // Supabase if they have saved data. Preview/demo users see the
-  // fixture starter profile so the marketing shell stays alive.
-  const [profile, setProfile] = useState<CandidateWorkspaceProfile>(
-    isSupabaseConfigured() ? cloneEmpty : cloneProfile
-  );
+  const router = useRouter();
+  const ready = isSupabaseConfigured();
+  const [step, setStep] = useState<Step>(1);
 
+  // Step 1 state
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [report, setReport] = useState<AtsReport | null>(null);
+  const [scoring, setScoring] = useState(false);
+
+  // Step 2 state
+  const [identity, setIdentity] = useState<Identity>(EMPTY_IDENTITY);
+
+  // Step 3 state
+  const [targetRoles, setTargetRoles] = useState<string[]>([]);
+  const [locations, setLocations] = useState<string[]>([]);
+  const [roleDraft, setRoleDraft] = useState("");
+  const [locDraft, setLocDraft] = useState("");
+
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [doneBanner, setDoneBanner] = useState(false);
+
+  // Pre-hydrate from Supabase profile (if user has saved before)
   useEffect(() => {
-    if (!isSupabaseConfigured()) return;
+    if (!ready) return;
     let cancelled = false;
     (async () => {
       const supabase = getBrowserSupabase();
@@ -202,329 +113,581 @@ export default function OnboardingPage() {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
-      const { data, error } = await supabase
+
+      const { data } = await supabase
         .from("profiles")
         .select(
-          "full_name, phone, linkedin_url, github_url, website_url, current_city, current_state, current_country, needs_sponsorship, willing_to_relocate, email"
+          "full_name, phone, linkedin_url, github_url, current_city, current_state, work_auth_status, needs_sponsorship, email"
         )
         .eq("id", user.id)
         .single();
-      if (error || !data || cancelled) return;
+      if (!data || cancelled) return;
 
-      setProfile((prev) => {
-        const next = cloneEmpty();
-        const parts = (data.full_name || "").split(" ");
-        next.identity.firstName = parts[0] || "";
-        next.identity.lastName = parts.slice(1).join(" ") || "";
-        next.identity.legalFullName = data.full_name || "";
-        next.identity.primaryEmail = data.email || user.email || "";
-        next.identity.phoneNumber = data.phone || "";
-        next.identity.linkedinUrl = data.linkedin_url || "";
-        next.identity.githubUrl = data.github_url || "";
-        next.identity.portfolioUrl = data.website_url || "";
-        next.identity.currentCity = data.current_city || "";
-        next.identity.currentRegion = data.current_state || "";
-        next.identity.currentCountry = data.current_country || "United States";
-        next.authorization.requiresSponsorship = !!data.needs_sponsorship;
-        next.authorization.willingToRelocate = data.willing_to_relocate ?? true;
-        return next;
-      });
+      const parts = (data.full_name || "").split(" ");
+      setIdentity((prev) => ({
+        ...prev,
+        firstName: parts[0] || "",
+        lastName: parts.slice(1).join(" ") || "",
+        email: data.email || user.email || "",
+        phone: data.phone || "",
+        linkedinUrl: data.linkedin_url || "",
+        githubUrl: data.github_url || "",
+        city: data.current_city || "",
+        state: data.current_state || "",
+        workAuth: (data.work_auth_status as WorkAuth) || "citizen",
+        needsSponsorship: !!data.needs_sponsorship,
+      }));
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [ready]);
 
-  const initials = useMemo(
-    () => `${profile.identity.firstName.slice(0, 1)}${profile.identity.lastName.slice(0, 1)}`,
-    [profile.identity.firstName, profile.identity.lastName]
-  );
+  // Resume upload + parse
+  const uploadAndParse = async (file: File) => {
+    setUploadError(null);
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError("Resume must be under 10 MB.");
+      return;
+    }
+    setResumeFile(file);
+
+    // Parse client-side for auto-fill even when not signed in
+    if (file.type === "application/pdf") {
+      setScoring(true);
+      try {
+        const { text, pageCount } = await extractPdfText(file);
+        const ats = scoreResumeText(text, pageCount);
+        setReport(ats);
+        autoFillFromText(text);
+      } catch (e) {
+        console.warn("parse failed", e);
+      } finally {
+        setScoring(false);
+      }
+    }
+
+    // Upload to Supabase if signed in
+    if (!ready) return;
+    const supabase = getBrowserSupabase();
+    if (!supabase) return;
+
+    setUploading(true);
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setUploadError("Please sign in first.");
+        return;
+      }
+
+      const path = `${user.id}/${Date.now()}-${file.name}`;
+      const { error: uploadErr } = await supabase.storage
+        .from("resumes")
+        .upload(path, file, { upsert: false, contentType: file.type });
+      if (uploadErr) throw uploadErr;
+
+      await supabase.from("resumes").insert({
+        user_id: user.id,
+        storage_path: path,
+        file_name: file.name,
+        file_size_bytes: file.size,
+        is_primary: true,
+      });
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : "Upload failed.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const autoFillFromText = (text: string) => {
+    // Email
+    const emailMatch = text.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i);
+    // Phone
+    const phoneMatch = text.match(
+      /(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/
+    );
+    // LinkedIn
+    const liMatch = text.match(/linkedin\.com\/in\/[a-z0-9_-]+/i);
+    // Name — first two capitalized words at top of resume
+    const firstLine = text.split("\n").find((l) => l.trim().length > 0) || "";
+    const nameMatch = firstLine.match(/^([A-Z][a-z]+)\s+([A-Z][a-z]+)/);
+
+    setIdentity((prev) => ({
+      ...prev,
+      email: prev.email || emailMatch?.[0] || "",
+      phone: prev.phone || phoneMatch?.[0] || "",
+      linkedinUrl:
+        prev.linkedinUrl ||
+        (liMatch ? `https://${liMatch[0]}` : ""),
+      firstName: prev.firstName || nameMatch?.[1] || "",
+      lastName: prev.lastName || nameMatch?.[2] || "",
+    }));
+  };
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (f) uploadAndParse(f);
+    e.target.value = "";
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const f = e.dataTransfer.files?.[0];
+    if (f) uploadAndParse(f);
+  };
+
+  const addRole = (v: string) => {
+    const s = v.trim();
+    if (!s) return;
+    if (targetRoles.includes(s)) return;
+    setTargetRoles([...targetRoles, s]);
+    setRoleDraft("");
+  };
+
+  const addLocation = (v: string) => {
+    const s = v.trim();
+    if (!s) return;
+    if (locations.includes(s)) return;
+    setLocations([...locations, s]);
+    setLocDraft("");
+  };
+
+  const canAdvance1 = !!resumeFile || !ready; // resume optional in demo
+  const canAdvance2 =
+    identity.firstName.trim().length > 0 && identity.email.trim().length > 0;
+
+  const finish = async () => {
+    setSaveError(null);
+    setSaving(true);
+
+    if (!ready) {
+      setDoneBanner(true);
+      setTimeout(() => router.push("/dashboard"), 1400);
+      return;
+    }
+
+    const supabase = getBrowserSupabase();
+    if (!supabase) {
+      setSaveError("Auth unavailable.");
+      setSaving(false);
+      return;
+    }
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not signed in.");
+
+      const fullName =
+        [identity.firstName, identity.lastName].filter(Boolean).join(" ") ||
+        null;
+
+      const { error: pErr } = await supabase
+        .from("profiles")
+        .update({
+          full_name: fullName,
+          phone: identity.phone || null,
+          linkedin_url: identity.linkedinUrl || null,
+          github_url: identity.githubUrl || null,
+          current_city: identity.city || null,
+          current_state: identity.state || null,
+          current_country: "US",
+          work_auth_status: identity.workAuth,
+          needs_sponsorship: identity.needsSponsorship,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", user.id);
+      if (pErr) throw pErr;
+
+      // Upsert preferences row
+      await supabase
+        .from("preferences")
+        .upsert({
+          user_id: user.id,
+          target_titles: targetRoles,
+          target_locations: locations,
+          updated_at: new Date().toISOString(),
+        });
+
+      setDoneBanner(true);
+      setTimeout(() => router.push("/dashboard"), 1400);
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : "Save failed.");
+      setSaving(false);
+    }
+  };
 
   return (
     <ConsoleShell
       activePath="/onboarding"
-      eyebrow="Profile"
-      title="My Profile"
-      description=""
-      actions={[
-        { href: "/settings", label: "Profile settings" },
-        { href: "/review", label: "Review answers", variant: "secondary" }
-      ]}
+      eyebrow="Setup"
+      title="Welcome to Instaply"
+      description="Three quick steps. Under two minutes. You can refine everything later from Settings."
+      actions={[{ href: "/settings", label: "Advanced settings", variant: "secondary" }]}
     >
       <section className="console-section">
-        <OnboardingSaveBar profile={profile} />
-      </section>
-
-      <section className="console-section onboarding-uploads-grid">
-        <ResumeUploadCard kind="resume" />
-        <ResumeUploadCard kind="cover_letter" />
-      </section>
-
-      <section className="console-section">
-        <article className="glass profile-hero-card">
-          <div className="profile-hero-banner">
-            <div className="profile-avatar">
-              <span>{initials}</span>
+        {/* Progress bar */}
+        <div className="wiz-progress">
+          {[1, 2, 3].map((n) => (
+            <div
+              key={n}
+              className={`wiz-step${step === n ? " wiz-step-active" : ""}${step > n ? " wiz-step-done" : ""}`}
+            >
+              <span className="wiz-step-num">{step > n ? <Check size={14} /> : n}</span>
+              <span className="wiz-step-label">
+                {n === 1 ? "Upload resume" : n === 2 ? "Confirm basics" : "Targets"}
+              </span>
             </div>
+          ))}
+        </div>
 
-            <div className="profile-hero-copy">
-              <h2>{profile.identity.legalFullName || "Candidate profile"}</h2>
-              <p>{profile.application.currentTitle || "Add your current role"}</p>
-              <div className="profile-hero-meta">
-                <span>
-                  <Mail size={14} />
-                  {profile.identity.primaryEmail || "Add email"}
-                </span>
-                <span>
-                  <MapPin size={14} />
-                  {[profile.identity.currentCity, profile.identity.currentRegion].filter(Boolean).join(", ") || "Add location"}
-                </span>
+        <article className="wiz-card">
+          {step === 1 && (
+            <>
+              <header className="wiz-head">
+                <div className="wiz-head-ico"><FileUp size={22} /></div>
+                <div>
+                  <h2>Upload your resume</h2>
+                  <p>
+                    We&apos;ll auto-fill your basics in the next step and
+                    score it for ATS-friendliness.
+                  </p>
+                </div>
+              </header>
+
+              <label
+                className={`wiz-drop${uploading ? " wiz-drop-busy" : ""}`}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={onDrop}
+              >
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,application/pdf"
+                  onChange={onFileChange}
+                  hidden
+                  disabled={uploading}
+                />
+                <div className="wiz-drop-ico">
+                  {uploading || scoring ? <Loader2 size={26} className="spin" /> : <Upload size={26} />}
+                </div>
+                <div>
+                  <strong>
+                    {uploading
+                      ? "Uploading…"
+                      : scoring
+                      ? "Analyzing…"
+                      : resumeFile
+                      ? resumeFile.name
+                      : "Drop your resume here or click to select"}
+                  </strong>
+                  <span>PDF or DOCX, max 10 MB</span>
+                </div>
+              </label>
+
+              {uploadError && <div className="wiz-error">{uploadError}</div>}
+
+              {report && (
+                <div className="wiz-ats-summary">
+                  <div
+                    className={`wiz-ats-badge${
+                      report.grade === "A" || report.grade === "B"
+                        ? " wiz-ats-good"
+                        : report.grade === "C"
+                        ? " wiz-ats-ok"
+                        : " wiz-ats-bad"
+                    }`}
+                  >
+                    <span className="wiz-ats-num">{report.score}</span>
+                    <span className="wiz-ats-label">ATS score</span>
+                  </div>
+                  <div className="wiz-ats-checks">
+                    {report.checks.slice(0, 4).map((c) => (
+                      <div key={c.id} className={`wiz-ats-check wiz-ats-check-${c.status}`}>
+                        {c.status === "pass" ? (
+                          <CircleCheck size={14} />
+                        ) : c.status === "warn" ? (
+                          <CircleAlert size={14} />
+                        ) : (
+                          <CircleX size={14} />
+                        )}
+                        <span>{c.title}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <footer className="wiz-foot">
+                <div />
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => setStep(2)}
+                  disabled={!canAdvance1 || uploading}
+                >
+                  Continue
+                  <ArrowRight size={14} />
+                </button>
+              </footer>
+
+              <p className="wiz-skip">
+                <button type="button" onClick={() => setStep(2)}>
+                  Skip for now
+                </button>
+                {" · "}You can always upload later from Settings.
+              </p>
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+              <header className="wiz-head">
+                <div className="wiz-head-ico"><UserRound size={22} /></div>
+                <div>
+                  <h2>Confirm your basics</h2>
+                  <p>We pre-filled what we could. Tweak anything that looks off.</p>
+                </div>
+              </header>
+
+              <div className="wiz-form-grid">
+                <label className="wiz-field">
+                  <span>First name</span>
+                  <input
+                    value={identity.firstName}
+                    onChange={(e) => setIdentity({ ...identity, firstName: e.target.value })}
+                    required
+                  />
+                </label>
+                <label className="wiz-field">
+                  <span>Last name</span>
+                  <input
+                    value={identity.lastName}
+                    onChange={(e) => setIdentity({ ...identity, lastName: e.target.value })}
+                  />
+                </label>
+                <label className="wiz-field wiz-field-span-2">
+                  <span>Email</span>
+                  <input
+                    type="email"
+                    value={identity.email}
+                    onChange={(e) => setIdentity({ ...identity, email: e.target.value })}
+                    required
+                  />
+                </label>
+                <label className="wiz-field">
+                  <span>Phone</span>
+                  <input
+                    value={identity.phone}
+                    onChange={(e) => setIdentity({ ...identity, phone: e.target.value })}
+                    placeholder="+1 (555) 555-5555"
+                  />
+                </label>
+                <label className="wiz-field">
+                  <span>LinkedIn</span>
+                  <input
+                    value={identity.linkedinUrl}
+                    onChange={(e) => setIdentity({ ...identity, linkedinUrl: e.target.value })}
+                    placeholder="https://linkedin.com/in/..."
+                  />
+                </label>
+                <label className="wiz-field">
+                  <span>City</span>
+                  <input
+                    value={identity.city}
+                    onChange={(e) => setIdentity({ ...identity, city: e.target.value })}
+                    placeholder="New York"
+                  />
+                </label>
+                <label className="wiz-field">
+                  <span>State</span>
+                  <input
+                    value={identity.state}
+                    onChange={(e) => setIdentity({ ...identity, state: e.target.value })}
+                    placeholder="NY"
+                  />
+                </label>
+                <div className="wiz-field wiz-field-span-2">
+                  <span>Work authorization</span>
+                  <div className="wiz-radio-row">
+                    {[
+                      { v: "citizen", l: "US Citizen" },
+                      { v: "green_card", l: "Green card" },
+                      { v: "h1b", l: "H-1B" },
+                      { v: "opt", l: "OPT / CPT" },
+                      { v: "other", l: "Other" },
+                    ].map((o) => (
+                      <button
+                        type="button"
+                        key={o.v}
+                        className={`wiz-radio${identity.workAuth === o.v ? " wiz-radio-active" : ""}`}
+                        onClick={() =>
+                          setIdentity({
+                            ...identity,
+                            workAuth: o.v as WorkAuth,
+                            needsSponsorship: o.v === "h1b" || o.v === "opt",
+                          })
+                        }
+                      >
+                        {o.l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <label className="wiz-checkbox wiz-field-span-2">
+                  <input
+                    type="checkbox"
+                    checked={identity.needsSponsorship}
+                    onChange={(e) => setIdentity({ ...identity, needsSponsorship: e.target.checked })}
+                  />
+                  <span>I&apos;ll need visa sponsorship for long-term employment</span>
+                </label>
               </div>
-            </div>
-          </div>
+
+              <footer className="wiz-foot">
+                <button type="button" className="btn-secondary" onClick={() => setStep(1)}>
+                  <ArrowLeft size={14} />
+                  Back
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => setStep(3)}
+                  disabled={!canAdvance2}
+                >
+                  Continue
+                  <ArrowRight size={14} />
+                </button>
+              </footer>
+            </>
+          )}
+
+          {step === 3 && (
+            <>
+              <header className="wiz-head">
+                <div className="wiz-head-ico"><Sparkles size={22} /></div>
+                <div>
+                  <h2>Where do you want to work?</h2>
+                  <p>
+                    Add target roles and locations. We&apos;ll match open
+                    positions against these and surface strong fits.
+                  </p>
+                </div>
+              </header>
+
+              <div className="wiz-tag-block">
+                <div className="wiz-tag-label">
+                  <Briefcase size={14} />
+                  Target roles
+                </div>
+                <div className="wiz-tag-list">
+                  {targetRoles.map((r) => (
+                    <span className="wiz-tag" key={r}>
+                      {r}
+                      <button
+                        type="button"
+                        onClick={() => setTargetRoles(targetRoles.filter((x) => x !== r))}
+                        aria-label={`Remove ${r}`}
+                      >
+                        <X size={12} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="wiz-tag-input-row">
+                  <input
+                    value={roleDraft}
+                    onChange={(e) => setRoleDraft(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addRole(roleDraft))}
+                    placeholder="e.g. Software Engineer"
+                  />
+                  <button type="button" className="btn-secondary" onClick={() => addRole(roleDraft)}>
+                    Add
+                  </button>
+                </div>
+                <div className="wiz-suggestion-row">
+                  {SUGGESTED_ROLES.filter((r) => !targetRoles.includes(r)).slice(0, 6).map((r) => (
+                    <button type="button" key={r} className="wiz-suggestion" onClick={() => addRole(r)}>
+                      + {r}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="wiz-tag-block">
+                <div className="wiz-tag-label">
+                  <MapPin size={14} />
+                  Locations
+                </div>
+                <div className="wiz-tag-list">
+                  {locations.map((l) => (
+                    <span className="wiz-tag" key={l}>
+                      {l}
+                      <button
+                        type="button"
+                        onClick={() => setLocations(locations.filter((x) => x !== l))}
+                        aria-label={`Remove ${l}`}
+                      >
+                        <X size={12} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="wiz-tag-input-row">
+                  <input
+                    value={locDraft}
+                    onChange={(e) => setLocDraft(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addLocation(locDraft))}
+                    placeholder="e.g. New York, NY or Remote"
+                  />
+                  <button type="button" className="btn-secondary" onClick={() => addLocation(locDraft)}>
+                    Add
+                  </button>
+                </div>
+                <div className="wiz-suggestion-row">
+                  {SUGGESTED_LOCATIONS.filter((l) => !locations.includes(l)).slice(0, 6).map((l) => (
+                    <button type="button" key={l} className="wiz-suggestion" onClick={() => addLocation(l)}>
+                      + {l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {saveError && <div className="wiz-error">{saveError}</div>}
+              {doneBanner && (
+                <div className="wiz-done">
+                  <Check size={16} />
+                  All set — redirecting to your dashboard…
+                </div>
+              )}
+
+              <footer className="wiz-foot">
+                <button type="button" className="btn-secondary" onClick={() => setStep(2)}>
+                  <ArrowLeft size={14} />
+                  Back
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={finish}
+                  disabled={saving}
+                >
+                  {saving ? "Saving…" : "Finish setup"}
+                  <ArrowRight size={14} />
+                </button>
+              </footer>
+            </>
+          )}
         </article>
-      </section>
 
-      <section className="console-section">
-        <article className="glass profile-section-card">
-          <div className="profile-section-header">
-            <div>
-              <div className="panel-kicker">Profile</div>
-              <h3>Personal information</h3>
-            </div>
-          </div>
-
-          <div className="profile-field-grid">
-            <TextField label="First name" icon={UserRound} value={profile.identity.firstName} onChange={(value) => setProfile((current) => ({ ...current, identity: { ...current.identity, firstName: value } }))} />
-            <TextField label="Last name" icon={UserRound} value={profile.identity.lastName} onChange={(value) => setProfile((current) => ({ ...current, identity: { ...current.identity, lastName: value } }))} />
-            <TextField label="Legal full name" icon={UserRound} value={profile.identity.legalFullName} onChange={(value) => setProfile((current) => ({ ...current, identity: { ...current.identity, legalFullName: value } }))} />
-            <TextField label="Current title" icon={BriefcaseBusiness} value={profile.application.currentTitle} onChange={(value) => setProfile((current) => ({ ...current, application: { ...current.application, currentTitle: value } }))} />
-            <TextField label="Primary email" icon={Mail} value={profile.identity.primaryEmail} onChange={(value) => setProfile((current) => ({ ...current, identity: { ...current.identity, primaryEmail: value } }))} />
-            <TextField label="School email" icon={Mail} value={profile.identity.secondaryEmail ?? ""} onChange={(value) => setProfile((current) => ({ ...current, identity: { ...current.identity, secondaryEmail: value } }))} />
-            <TextField label="Phone number" icon={Phone} value={profile.identity.phoneNumber} onChange={(value) => setProfile((current) => ({ ...current, identity: { ...current.identity, phoneNumber: value } }))} />
-            <TextField label="City" icon={MapPin} value={profile.identity.currentCity} onChange={(value) => setProfile((current) => ({ ...current, identity: { ...current.identity, currentCity: value } }))} />
-            <TextField label="Region / state" icon={MapPin} value={profile.identity.currentRegion} onChange={(value) => setProfile((current) => ({ ...current, identity: { ...current.identity, currentRegion: value } }))} />
-            <TextField label="Country" icon={MapPin} value={profile.identity.currentCountry} onChange={(value) => setProfile((current) => ({ ...current, identity: { ...current.identity, currentCountry: value } }))} />
-            <TextField label="LinkedIn" icon={Sparkles} value={profile.identity.linkedinUrl ?? ""} onChange={(value) => setProfile((current) => ({ ...current, identity: { ...current.identity, linkedinUrl: value } }))} />
-            <TextField label="Website link" icon={Sparkles} value={profile.identity.portfolioUrl ?? ""} onChange={(value) => setProfile((current) => ({ ...current, identity: { ...current.identity, portfolioUrl: value } }))} />
-            <TextField label="GitHub / portfolio" icon={Sparkles} value={profile.identity.githubUrl ?? profile.identity.portfolioUrl ?? ""} onChange={(value) => setProfile((current) => ({ ...current, identity: { ...current.identity, githubUrl: value } }))} />
-            <TextField
-              label="Work authorization"
-              icon={ShieldCheck}
-              value={profile.authorization.workAuthorizationSummary}
-              onChange={(value) => setProfile((current) => ({ ...current, authorization: { ...current.authorization, workAuthorizationSummary: value } }))}
-              textarea
-              span={2}
-            />
-          </div>
-        </article>
-      </section>
-
-      <section className="console-section">
-        <article className="glass profile-section-card">
-          <div className="profile-section-header">
-            <div>
-              <div className="panel-kicker">Search</div>
-              <h3>Job preferences</h3>
-            </div>
-          </div>
-
-          <div className="profile-field-grid">
-            <SelectChipGroup
-              label="Experience level"
-              icon={Sparkles}
-              selected={profile.jobSearch.experienceLevel}
-              options={instaplyExperienceLevels}
-              onChange={(value: ExperienceLevel) => setProfile((current) => ({ ...current, jobSearch: { ...current.jobSearch, experienceLevel: value } }))}
-            />
-            <ToggleChipGroup
-              label="Work modes"
-              icon={Sparkles}
-              selected={profile.jobSearch.workModes}
-              options={instaplyWorkModes}
-              onChange={(values: WorkMode[]) => setProfile((current) => ({ ...current, jobSearch: { ...current.jobSearch, workModes: values } }))}
-            />
-            <ToggleChipGroup
-              label="Portals"
-              icon={Sparkles}
-              selected={profile.jobSearch.portalSelections}
-              options={instaplyPortals}
-              onChange={(values: PortalId[]) => setProfile((current) => ({ ...current, jobSearch: { ...current.jobSearch, portalSelections: values } }))}
-            />
-            <ArrayEditor
-              label="Target roles"
-              icon={BriefcaseBusiness}
-              values={profile.jobSearch.targetRoles}
-              placeholder="Add a role you want on search and resume targeting"
-              onChange={(values) => setProfile((current) => ({ ...current, jobSearch: { ...current.jobSearch, targetRoles: values } }))}
-            />
-            <ArrayEditor
-              label="Preferred locations"
-              icon={MapPin}
-              values={profile.jobSearch.preferredLocations}
-              placeholder="Add a city, region, or remote preference"
-              onChange={(values) => setProfile((current) => ({ ...current, jobSearch: { ...current.jobSearch, preferredLocations: values } }))}
-            />
-            <ArrayEditor
-              label="Preferred companies"
-              icon={BriefcaseBusiness}
-              values={[...profile.jobSearch.suggestedCompanies, ...profile.jobSearch.userAddedCompanies]}
-              placeholder="Add companies you want the agent to prioritize"
-              onChange={(values) =>
-                setProfile((current) => ({
-                  ...current,
-                  jobSearch: {
-                    ...current.jobSearch,
-                    suggestedCompanies: values.slice(0, Math.min(6, values.length)),
-                    userAddedCompanies: values.slice(Math.min(6, values.length))
-                  }
-                }))
-              }
-            />
-          </div>
-        </article>
-      </section>
-
-      <section className="console-section">
-        <article className="glass profile-section-card">
-          <div className="profile-section-header">
-            <div>
-              <div className="panel-kicker">Documents</div>
-              <h3>Document preferences</h3>
-            </div>
-          </div>
-
-          <div className="profile-field-grid">
-            <SelectChipGroup
-              label="Resume format"
-              icon={Sparkles}
-              selected={profile.resume.format}
-              options={instaplyResumeFormats}
-              onChange={(value: ResumeFormatId) => setProfile((current) => ({ ...current, resume: { ...current.resume, format: value } }))}
-            />
-            <SelectChipGroup
-              label="Cover letter format"
-              icon={Sparkles}
-              selected={profile.coverLetter.format}
-              options={instaplyCoverLetterFormats}
-              onChange={(value: CoverLetterFormatId) => setProfile((current) => ({ ...current, coverLetter: { ...current.coverLetter, format: value } }))}
-            />
-            <SelectChipGroup
-              label="Resume length"
-              icon={Sparkles}
-              selected={profile.resume.pageTarget}
-              options={["one_page", "flex"] as const}
-              onChange={(value: "one_page" | "flex") => setProfile((current) => ({ ...current, resume: { ...current.resume, pageTarget: value } }))}
-            />
-            <SelectChipGroup
-              label="Cover letter length"
-              icon={Sparkles}
-              selected={`${profile.coverLetter.maxParagraphs}_paragraphs` as "2_paragraphs" | "3_paragraphs" | "4_paragraphs"}
-              options={["2_paragraphs", "3_paragraphs", "4_paragraphs"] as const}
-              onChange={(value: "2_paragraphs" | "3_paragraphs" | "4_paragraphs") =>
-                setProfile((current) => ({
-                  ...current,
-                  coverLetter: { ...current.coverLetter, maxParagraphs: Number(value.slice(0, 1)) as 2 | 3 | 4 }
-                }))
-              }
-            />
-            <TextField
-              label="Voice notes"
-              icon={Sparkles}
-              value={profile.resume.voiceNotes}
-              onChange={(value) => setProfile((current) => ({ ...current, resume: { ...current.resume, voiceNotes: value } }))}
-              textarea
-              span={2}
-            />
-            <ArrayEditor
-              label="Tone tags"
-              icon={Sparkles}
-              values={profile.coverLetter.toneTags}
-              placeholder="Add tone tags like analytical, direct, warm"
-              onChange={(values) => setProfile((current) => ({ ...current, coverLetter: { ...current.coverLetter, toneTags: values } }))}
-            />
-            <ArrayEditor
-              label="Emphasis tracks"
-              icon={Sparkles}
-              values={profile.resume.emphasizeTracks}
-              placeholder="Add tracks like analytics, strategy, operations"
-              onChange={(values) => setProfile((current) => ({ ...current, resume: { ...current.resume, emphasizeTracks: values } }))}
-            />
-          </div>
-        </article>
-      </section>
-
-      <section className="console-section">
-        <article className="glass profile-section-card">
-          <div className="profile-section-header">
-            <div>
-              <div className="panel-kicker">Resume inputs</div>
-              <h3>Anything that can go into the packet</h3>
-            </div>
-          </div>
-
-          <div className="profile-field-grid">
-            <TextField
-              label="Education summary"
-              icon={UserRound}
-              value={profile.application.educationSummary}
-              onChange={(value) => setProfile((current) => ({ ...current, application: { ...current.application, educationSummary: value } }))}
-              textarea
-              span={2}
-            />
-            <ArrayEditor
-              label="Education"
-              icon={UserRound}
-              values={profile.application.educationEntries}
-              placeholder="Add a degree, school, award, or academic highlight"
-              onChange={(values) => setProfile((current) => ({ ...current, application: { ...current.application, educationEntries: values } }))}
-            />
-            <ArrayEditor
-              label="Work experience"
-              icon={BriefcaseBusiness}
-              values={profile.application.workExperienceEntries}
-              placeholder="Add a role, company, and what should show up on the resume"
-              onChange={(values) => setProfile((current) => ({ ...current, application: { ...current.application, workExperienceEntries: values } }))}
-            />
-            <ArrayEditor
-              label="Projects"
-              icon={Sparkles}
-              values={profile.application.projectEntries}
-              placeholder="Add a project with impact, stack, or outcome"
-              onChange={(values) => setProfile((current) => ({ ...current, application: { ...current.application, projectEntries: values } }))}
-            />
-            <ArrayEditor
-              label="Research papers"
-              icon={Sparkles}
-              values={profile.application.researchPaperEntries}
-              placeholder="Add a paper title, venue, or publication status"
-              onChange={(values) => setProfile((current) => ({ ...current, application: { ...current.application, researchPaperEntries: values } }))}
-            />
-            <TextField label="Signature" icon={ShieldCheck} value={profile.application.signatureDefault} onChange={(value) => setProfile((current) => ({ ...current, application: { ...current.application, signatureDefault: value } }))} />
-            <TextField label="Compensation note" icon={BriefcaseBusiness} value={profile.application.compensationNotes} onChange={(value) => setProfile((current) => ({ ...current, application: { ...current.application, compensationNotes: value } }))} />
-            <ArrayEditor
-              label="Core skills"
-              icon={Sparkles}
-              values={profile.application.coreSkills}
-              placeholder="Add a skill that may appear on the resume"
-              onChange={(values) => setProfile((current) => ({ ...current, application: { ...current.application, coreSkills: values } }))}
-            />
-            <ArrayEditor
-              label="Experience highlights"
-              icon={BriefcaseBusiness}
-              values={profile.application.experienceHighlights}
-              placeholder="Add an experience bullet or accomplishment"
-              onChange={(values) => setProfile((current) => ({ ...current, application: { ...current.application, experienceHighlights: values } }))}
-            />
-            <ArrayEditor
-              label="Project highlights"
-              icon={Sparkles}
-              values={profile.application.projectHighlights}
-              placeholder="Add a project, result, or technical achievement"
-              onChange={(values) => setProfile((current) => ({ ...current, application: { ...current.application, projectHighlights: values } }))}
-            />
-          </div>
-        </article>
+        <p className="wiz-hint">
+          Need to tweak something deeper — resume templates, cover letter
+          tone, automation rules? <Link href="/settings">Open advanced
+          settings</Link>.
+        </p>
       </section>
     </ConsoleShell>
   );
