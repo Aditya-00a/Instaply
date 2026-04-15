@@ -3995,6 +3995,219 @@ p {
   cursor: not-allowed;
 }
 
+/* ---------- MCP tokens card ---------- */
+
+.mcp-tokens-intro {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--muted);
+  margin: 0 0 16px;
+}
+
+.mcp-token-reveal {
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  border-radius: 12px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mcp-token-reveal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.mcp-token-reveal-head strong {
+  color: var(--text);
+}
+
+.mcp-token-reveal-head span {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.mcp-token-reveal-value {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.mcp-token-reveal-value code {
+  flex: 1;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  overflow-x: auto;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.mcp-token-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.mcp-token-copy:hover {
+  background: var(--accent-2);
+}
+
+.mcp-token-dismiss {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 12.5px;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.mcp-token-dismiss:hover {
+  color: var(--text);
+}
+
+.mcp-token-create-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.mcp-token-label-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 14px;
+  background: #fff;
+  color: var(--text);
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mcp-token-label-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.mcp-token-error {
+  padding: 10px 12px;
+  background: rgba(254, 242, 242, 0.9);
+  border: 1px solid rgba(127, 29, 29, 0.15);
+  color: #7f1d1d;
+  border-radius: 10px;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+.mcp-token-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mcp-token-empty {
+  padding: 18px 16px;
+  background: var(--panel);
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  font-size: 13.5px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.5;
+}
+
+.mcp-token-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  transition: border-color 0.15s ease;
+}
+
+.mcp-token-row:hover {
+  border-color: color-mix(in srgb, var(--accent) 25%, var(--line));
+}
+
+.mcp-token-row-main {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mcp-token-row-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.mcp-token-row-meta {
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.mcp-token-row-meta code {
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+
+.mcp-token-revoke {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.mcp-token-revoke:hover {
+  border-color: #dc2626;
+  color: #dc2626;
+  background: rgba(254, 242, 242, 0.6);
+}
+
 .auth-visual-panel {
   display: grid;
   min-height: 720px;
