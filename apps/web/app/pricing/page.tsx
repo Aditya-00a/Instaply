@@ -4,7 +4,7 @@ import { PublicShell } from "../components/public-shell";
 import { PricingCustom } from "../components/pricing-custom";
 
 export const metadata: Metadata = {
-  title: "Pricing",
+  title: "Pricing — $1 per confirmed application",
   description:
     "Instaply pricing. $1 per confirmed application. Prepaid credit packs starting at $10. No subscriptions, no recurring charges.",
 };
@@ -27,7 +27,7 @@ const PACKS = [
     credits: 30,
     bonus: 17,
     per: 0.83,
-    note: "Most popular. 30 applications — enough for a focused job search sprint.",
+    note: "Most popular. 30 applications — enough for a focused job-search sprint.",
     featured: true,
   },
   {
@@ -41,6 +41,13 @@ const PACKS = [
     featured: false,
   },
 ] as const;
+
+const TRUST = [
+  { label: "Secured by Paddle", detail: "PCI-DSS Level 1" },
+  { label: "No subscriptions", detail: "One-time credit packs" },
+  { label: "Credits never expire", detail: "Account stays active" },
+  { label: "Refundable", detail: "14-day unused-credit refund" },
+];
 
 const FAQ = [
   {
@@ -72,38 +79,48 @@ const FAQ = [
 export default function PricingPage() {
   return (
     <PublicShell>
-      <section className="pricing-hero">
-        <div className="pricing-eyebrow">Pricing</div>
-        <h1 className="pricing-title">$1 per confirmed application.</h1>
-        <p className="pricing-lede">
-          Prepaid credit packs. No subscriptions. Credits are deducted only
-          after the employer confirmation email lands — if it never comes,
-          you pay nothing.
+      <section className="pricing-hero-v2">
+        <div className="hero-eyebrow">
+          <span className="hero-dot" /> Pricing
+        </div>
+        <h1 className="pricing-title-v2">
+          $1 per confirmed application.
+        </h1>
+        <p className="pricing-lede-v2">
+          Prepaid credit packs. No subscriptions, no recurring charges.
+          Credits are deducted only after the employer confirmation email
+          lands — if it never comes, you pay nothing.
         </p>
+        <div className="pricing-hero-chips">
+          <span className="pricing-hero-chip">3 free applications on signup</span>
+          <span className="pricing-hero-chip">Minimum top-up $10</span>
+          <span className="pricing-hero-chip">Credits never expire</span>
+        </div>
       </section>
 
-      <section className="pricing-grid">
+      <section className="pricing-grid-v2">
         {PACKS.map((p) => (
           <div
             key={p.id}
-            className={`pricing-card${p.featured ? " pricing-card-featured" : ""}`}
+            className={`pack-card${p.featured ? " pack-card-featured" : ""}`}
           >
-            <div className="pricing-card-label">{p.label}</div>
-            <div className="pricing-card-price">
+            {p.featured && <div className="pack-card-tag">Most popular</div>}
+            <div className="pack-card-label">{p.label}</div>
+            <div className="pack-card-price">
               <strong>${p.usd}</strong>
               <span>USD, one-time</span>
             </div>
-            <div className="pricing-card-credits">{p.credits} applications</div>
-            <div className="pricing-card-per">
+            <div className="pack-card-credits">{p.credits} applications</div>
+            <div className="pack-card-per">
               ${p.per.toFixed(2)} effective per application
             </div>
             {p.bonus > 0 && (
-              <div className="pricing-card-bonus">+{p.bonus}% bonus credits</div>
+              <div className="pack-card-bonus">+{p.bonus}% bonus credits</div>
             )}
-            <p className="pricing-card-note">{p.note}</p>
+            <p className="pack-card-note">{p.note}</p>
             <Link
               href="/sign-in"
-              className={`pricing-card-cta${p.featured ? "" : " pricing-card-cta-secondary"}`}
+              className={p.featured ? "btn-primary" : "btn-secondary"}
             >
               Sign up to buy
             </Link>
@@ -113,36 +130,57 @@ export default function PricingPage() {
 
       <PricingCustom />
 
+      <section className="trust-band">
+        {TRUST.map((t) => (
+          <div className="trust-item" key={t.label}>
+            <div className="trust-label">{t.label}</div>
+            <div className="trust-detail">{t.detail}</div>
+          </div>
+        ))}
+      </section>
+
       <section className="pricing-terms-card">
         <p>
           <strong>New accounts</strong> get 3 free applications to try the
           service before any purchase.
         </p>
         <p>
-          <strong>Minimum top-up</strong> is $10 (Starter pack).
+          <strong>What &quot;confirmed&quot; means:</strong> Instaply
+          watches the email inbox you connect and only deducts a credit
+          when the automated confirmation from the employer&apos;s
+          applicant-tracking system arrives. Submission without
+          confirmation is free.
         </p>
         <p>
-          <strong>What &quot;confirmed&quot; means:</strong> Instaply watches
-          the email inbox you connect and only deducts a credit when the
-          automated confirmation from the employer&apos;s applicant-tracking
-          system arrives. Submission without confirmation is free.
-        </p>
-        <p>
-          <strong>No outcome guarantees.</strong> Instaply is a filing service.
-          We do not guarantee interviews, offers, or any response from any
-          employer.
+          <strong>No outcome guarantees.</strong> Instaply is a filing
+          service. We do not guarantee interviews, offers, or any
+          response from any employer.
         </p>
       </section>
 
-      <h2 className="pricing-section-heading">Frequently asked</h2>
-      <div className="pricing-faq">
-        {FAQ.map((f) => (
-          <div className="pricing-faq-item" key={f.q}>
-            <p className="pricing-faq-q">{f.q}</p>
-            <p className="pricing-faq-a">{f.a}</p>
-          </div>
-        ))}
-      </div>
+      <section className="pricing-faq-section">
+        <div className="testimonials-head">
+          <div className="eyebrow-pill">Pricing FAQ</div>
+          <h2 className="testimonials-title">Questions, answered.</h2>
+        </div>
+        <div className="pricing-faq-v2">
+          {FAQ.map((f) => (
+            <details className="pricing-faq-item-v2" key={f.q}>
+              <summary>{f.q}</summary>
+              <p>{f.a}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      <section className="final-cta">
+        <h2>Start with 3 free applications.</h2>
+        <p>No credit card required. Top up only when you need more.</p>
+        <div className="hero-cta-row">
+          <Link href="/sign-in" className="btn-primary">Get started free</Link>
+          <Link href="/contact" className="btn-secondary">Talk to us</Link>
+        </div>
+      </section>
     </PublicShell>
   );
 }

@@ -6517,3 +6517,234 @@ p {
   color: var(--muted);
 }
 
+/* ---------- Pricing v2 ---------- */
+
+.pricing-hero-v2 {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 72px 32px 32px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.pricing-title-v2 {
+  font-size: clamp(36px, 4.8vw, 56px);
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+  text-wrap: balance;
+}
+
+.pricing-lede-v2 {
+  font-size: 17.5px;
+  line-height: 1.6;
+  color: var(--muted);
+  max-width: 620px;
+  margin: 0;
+}
+
+.pricing-hero-chips {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.pricing-hero-chip {
+  padding: 6px 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.pricing-grid-v2 {
+  max-width: 1100px;
+  margin: 32px auto;
+  padding: 0 32px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+  align-items: stretch;
+}
+
+.pack-card {
+  position: relative;
+  padding: 28px;
+  background: var(--panel-strong);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.pack-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--line));
+  box-shadow: 0 14px 32px -18px rgba(0, 82, 255, 0.2);
+}
+
+.pack-card-featured {
+  border-color: var(--accent);
+  background: linear-gradient(180deg, #fff 0%, color-mix(in srgb, var(--accent) 3%, #fff) 100%);
+  box-shadow:
+    0 0 0 1px var(--accent) inset,
+    0 14px 36px -18px rgba(0, 82, 255, 0.28);
+}
+
+.pack-card-featured:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 0 0 1px var(--accent) inset,
+    0 20px 44px -18px rgba(0, 82, 255, 0.35);
+}
+
+.pack-card-tag {
+  position: absolute;
+  top: -10px;
+  right: 20px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.pack-card-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pack-card-price {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.pack-card-price strong {
+  font-size: 44px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.pack-card-price span {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.pack-card-credits {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.pack-card-per {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.pack-card-bonus {
+  display: inline-block;
+  background: color-mix(in srgb, #10b981 10%, transparent);
+  color: #047857;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  align-self: flex-start;
+}
+
+.pack-card-note {
+  font-size: 13.5px;
+  color: var(--muted);
+  line-height: 1.55;
+  margin: 4px 0 12px;
+  flex: 1;
+}
+
+/* FAQ v2 (accordion) */
+
+.pricing-faq-section {
+  max-width: 820px;
+  margin: 48px auto;
+  padding: 0 32px;
+}
+
+.pricing-faq-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.pricing-faq-item-v2 {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 2px 6px;
+  transition: border-color 0.15s ease;
+}
+
+.pricing-faq-item-v2:hover {
+  border-color: color-mix(in srgb, var(--accent) 25%, var(--line));
+}
+
+.pricing-faq-item-v2 summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 16px 18px;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.pricing-faq-item-v2 summary::-webkit-details-marker {
+  display: none;
+}
+
+.pricing-faq-item-v2 summary::after {
+  content: "+";
+  color: var(--accent);
+  font-size: 20px;
+  font-weight: 400;
+  transition: transform 0.2s ease;
+  line-height: 1;
+}
+
+.pricing-faq-item-v2[open] summary::after {
+  transform: rotate(45deg);
+}
+
+.pricing-faq-item-v2 p {
+  margin: 0;
+  padding: 0 18px 18px;
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
