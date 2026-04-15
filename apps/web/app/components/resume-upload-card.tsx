@@ -1,8 +1,9 @@
 "use client";
 
-import { Check, FileUp, Loader2, Upload } from "lucide-react";
+import { Check, CircleAlert, CircleCheck, CircleX, FileUp, Loader2, Upload } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { getBrowserSupabase, isSupabaseConfigured } from "../lib/supabase-browser";
+import { extractPdfText, scoreResumeText, type AtsReport } from "../lib/ats-score";
 
 type DocRow = {
   id: string;
@@ -47,6 +48,8 @@ export function ResumeUploadCard({ kind = "resume" }: Props) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [justUploaded, setJustUploaded] = useState<string | null>(null);
+  const [scoring, setScoring] = useState(false);
+  const [report, setReport] = useState<AtsReport | null>(null);
 
   const copy = LABELS[kind];
 
@@ -106,6 +109,20 @@ export function ResumeUploadCard({ kind = "resume" }: Props) {
       setJustUploaded(file.name);
       setTimeout(() => setJustUploaded(null), 3000);
       await load();
+
+      // Kick off ATS scoring for resumes (PDFs only for now).
+      if (kind === "resume" && file.type === "application/pdf") {
+        setScoring(true);
+        try {
+          const { text, pageCount } = await extractPdfText(file);
+          const ats = scoreResumeText(text, pageCount);
+          setReport(ats);
+        } catch (e) {
+          console.warn("ATS scoring failed:", e);
+        } finally {
+          setScoring(false);
+        }
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed.");
     } finally {
@@ -176,6 +193,15 @@ export function ResumeUploadCard({ kind = "resume" }: Props) {
         </div>
       )}
 
+      {scoring && (
+        <div className="ats-scoring-row">
+          <Loader2 size={16} className="spin" />
+          <span>Running ATS check on your resume…</span>
+        </div>
+      )}
+
+      {report && kind === "resume" && <AtsReportView report={report} />}
+
       {hasDocs && (
         <div className="resume-list">
           {docs!.map((r) => (
@@ -204,5 +230,53 @@ export function ResumeUploadCard({ kind = "resume" }: Props) {
         </div>
       )}
     </article>
+  );
+}
+
+function AtsReportView({ report }: { report: AtsReport }) {
+  const gradeClass =
+    report.grade === "A" || report.grade === "B"
+      ? "ats-grade-good"
+      : report.grade === "C"
+      ? "ats-grade-ok"
+      : "ats-grade-bad";
+
+  return (
+    <div className="ats-report">
+      <div className={`ats-report-head ${gradeClass}`}>
+        <div className="ats-score-ring">
+          <span className="ats-score-num">{report.score}</span>
+          <span className="ats-score-max">/100</span>
+        </div>
+        <div className="ats-report-head-body">
+          <strong>ATS score — {report.grade}</strong>
+          <p>
+            Based on what we&apos;ve learned running Revize auto-apply.
+            Higher scores mean your resume parses cleanly, uses action
+            verbs, and has quantified impact.
+          </p>
+        </div>
+      </div>
+
+      <ul className="ats-check-list">
+        {report.checks.map((c) => (
+          <li key={c.id} className={`ats-check ats-check-${c.status}`}>
+            <span className="ats-check-ico">
+              {c.status === "pass" ? (
+                <CircleCheck size={16} />
+              ) : c.status === "warn" ? (
+                <CircleAlert size={16} />
+              ) : (
+                <CircleX size={16} />
+              )}
+            </span>
+            <div>
+              <strong>{c.title}</strong>
+              {c.detail && <p>{c.detail}</p>}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
