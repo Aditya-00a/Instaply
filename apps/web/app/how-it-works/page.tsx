@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PublicShell } from "../components/public-shell";
+import { WorkflowDiagram } from "../components/workflow-diagram";
 
 export const metadata: Metadata = {
   title: "How Instaply works",
@@ -73,6 +74,12 @@ export default function HowItWorksPage() {
       </section>
 
       <section className="info-section">
+        <h2>The flow at a glance</h2>
+        <WorkflowDiagram />
+      </section>
+
+      <section className="info-section">
+        <h2>Full walkthrough</h2>
         <ol className="info-steps">
           {STEPS.map((s) => (
             <li className="info-step" key={s.n}>

@@ -5685,6 +5685,164 @@ p {
   .app-table-cell-date::before { content: "Applied: "; color: var(--muted); }
 }
 
+/* ---------- Visual workflow diagram ---------- */
+
+.workflow {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 12px;
+}
+
+.workflow-track {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px 16px;
+  position: relative;
+}
+
+/* Horizontal connector line between stages */
+.workflow-track::before {
+  content: "";
+  position: absolute;
+  top: 33px;
+  left: 110px;
+  right: 110px;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--accent) 40%, transparent) 0%,
+    color-mix(in srgb, var(--accent) 20%, transparent) 50%,
+    color-mix(in srgb, var(--accent) 40%, transparent) 100%
+  );
+  z-index: 0;
+  pointer-events: none;
+}
+
+@media (max-width: 900px) {
+  .workflow-track::before {
+    display: none;
+  }
+}
+
+.workflow-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 0 4px;
+  text-align: center;
+  z-index: 1;
+}
+
+.workflow-ico {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--line);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 6px 16px rgba(10, 11, 13, 0.05);
+}
+
+.workflow-stage:hover .workflow-ico {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(10, 11, 13, 0.1);
+}
+
+.workflow-ico-blue {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff;
+  border-color: var(--accent);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.workflow-ico-green {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  border-color: #10b981;
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+}
+
+.workflow-ico-amber {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff;
+  border-color: #f59e0b;
+  box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3);
+}
+
+.workflow-num {
+  position: absolute;
+  top: -4px;
+  right: calc(50% - 42px);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--text);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(10, 11, 13, 0.2);
+}
+
+.workflow-stage-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.workflow-stage-body strong {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.workflow-stage-body p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.workflow-legend {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.workflow-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.workflow-legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.workflow-legend-blue { background: #fff; border: 2px solid var(--line); }
+.workflow-legend-instaply { background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+.workflow-legend-billing { background: linear-gradient(135deg, #f59e0b, #d97706); }
+
 .auth-visual-panel {
   display: grid;
   min-height: 720px;

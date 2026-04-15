@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PublicShell } from "../components/public-shell";
+import { WorkflowDiagram } from "../components/workflow-diagram";
 
 export const metadata: Metadata = {
   title: "About Instaply",
@@ -78,6 +79,11 @@ export default function AboutPage() {
             </div>
           ))}
         </div>
+      </section>
+
+      <section className="info-section">
+        <h2>How it flows, end to end</h2>
+        <WorkflowDiagram />
       </section>
 
       <section className="info-section">
