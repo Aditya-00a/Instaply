@@ -232,7 +232,7 @@ function SignInContent() {
                     <input type="checkbox" />
                     <span>Remember me</span>
                   </label>
-                  <Link href="/">Forgot password?</Link>
+                  <Link href="/forgot-password">Forgot password?</Link>
                 </div>
               ) : (
                 <label className="auth-checkbox auth-checkbox-legal">
