@@ -10,12 +10,24 @@ const DEMO_PASSWORD = "InstaplyDemo123!";
 
 export default function SignInPage() {
   const router = useRouter();
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState(DEMO_EMAIL);
   const [password, setPassword] = useState(DEMO_PASSWORD);
+  const [acceptLegal, setAcceptLegal] = useState(false);
   const [error, setError] = useState("");
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (mode === "signup") {
+      if (!acceptLegal) {
+        setError("You must accept the Terms of Service, Privacy Policy, and Refund Policy to create an account.");
+        return;
+      }
+      setError("");
+      router.push("/dashboard");
+      return;
+    }
 
     if (email.trim().toLowerCase() === DEMO_EMAIL.toLowerCase() && password === DEMO_PASSWORD) {
       setError("");
@@ -39,24 +51,38 @@ export default function SignInPage() {
             </div>
 
             <div className="auth-copy-block">
-              <h1 className="auth-heading">Welcome back</h1>
-              <p className="auth-copy">Sign in to manage your applications, answers, documents, and billing in one place.</p>
+              <h1 className="auth-heading">{mode === "signin" ? "Welcome back" : "Create your account"}</h1>
+              <p className="auth-copy">
+                {mode === "signin"
+                  ? "Sign in to manage your applications, answers, documents, and billing in one place."
+                  : "Get 3 free applications to try Instaply. No credit card required."}
+              </p>
             </div>
 
             <div className="auth-tab-row" aria-label="Authentication mode">
-              <button className="auth-tab auth-tab-active" type="button">
+              <button
+                className={`auth-tab${mode === "signin" ? " auth-tab-active" : ""}`}
+                type="button"
+                onClick={() => { setMode("signin"); setError(""); }}
+              >
                 Sign in
               </button>
-              <button className="auth-tab" type="button">
+              <button
+                className={`auth-tab${mode === "signup" ? " auth-tab-active" : ""}`}
+                type="button"
+                onClick={() => { setMode("signup"); setError(""); }}
+              >
                 Create account
               </button>
             </div>
 
-            <div className="auth-demo-credentials">
-              <strong>Demo access</strong>
-              <span>{DEMO_EMAIL}</span>
-              <span>{DEMO_PASSWORD}</span>
-            </div>
+            {mode === "signin" && (
+              <div className="auth-demo-credentials">
+                <strong>Demo access</strong>
+                <span>{DEMO_EMAIL}</span>
+                <span>{DEMO_PASSWORD}</span>
+              </div>
+            )}
 
             <form className="auth-form" onSubmit={handleSubmit}>
               <label className="auth-field">
@@ -80,18 +106,35 @@ export default function SignInPage() {
                 </div>
               </label>
 
-              <div className="auth-row">
-                <label className="auth-checkbox">
-                  <input type="checkbox" />
-                  <span>Remember me</span>
+              {mode === "signin" ? (
+                <div className="auth-row">
+                  <label className="auth-checkbox">
+                    <input type="checkbox" />
+                    <span>Remember me</span>
+                  </label>
+                  <Link href="/">Forgot password?</Link>
+                </div>
+              ) : (
+                <label className="auth-checkbox auth-checkbox-legal">
+                  <input
+                    type="checkbox"
+                    checked={acceptLegal}
+                    onChange={(event) => setAcceptLegal(event.target.checked)}
+                    required
+                  />
+                  <span>
+                    I have read and agree to the{" "}
+                    <Link href="/terms" target="_blank">Terms of Service</Link>,{" "}
+                    <Link href="/privacy" target="_blank">Privacy Policy</Link>, and{" "}
+                    <Link href="/refund" target="_blank">Refund Policy</Link>.
+                  </span>
                 </label>
-                <Link href="/">Forgot password?</Link>
-              </div>
+              )}
 
               {error ? <div className="auth-error">{error}</div> : null}
 
               <button className="auth-button auth-button-primary" type="submit">
-                Sign in
+                {mode === "signin" ? "Sign in" : "Create account"}
                 <MoveRight size={16} />
               </button>
             </form>
