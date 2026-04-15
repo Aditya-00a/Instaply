@@ -60,6 +60,64 @@ export default function HomePage() {
         </div>
       </section>
 
+      <section className="landing-testimonials">
+        <div className="landing-testimonials-head">
+          <div className="landing-eyebrow">What users say</div>
+          <h2 className="landing-testimonials-title">
+            A smoother job search, across every kind of candidate.
+          </h2>
+        </div>
+        <div className="landing-testimonials-grid">
+          <figure className="landing-testimonial">
+            <blockquote>
+              Instaply made the whole process so much smoother. I could
+              focus on prepping for interviews instead of retyping the
+              same answers into 40 ATS forms.
+            </blockquote>
+            <figcaption>
+              <span className="landing-testimonial-name">Sowmya Deshpande</span>
+              <span className="landing-testimonial-meta">Long Island University</span>
+            </figcaption>
+          </figure>
+
+          <figure className="landing-testimonial">
+            <blockquote>
+              Made my search a lot smoother. The match queue surfaced
+              roles I would have missed, and submissions just landed in
+              the background while I worked on everything else.
+            </blockquote>
+            <figcaption>
+              <span className="landing-testimonial-name">Nikhil Singh</span>
+              <span className="landing-testimonial-meta">New York University</span>
+            </figcaption>
+          </figure>
+
+          <figure className="landing-testimonial">
+            <blockquote>
+              As an international student, the visa and sponsorship
+              filters alone made my process much smoother. I stopped
+              wasting credits on roles I wasn&apos;t eligible for.
+            </blockquote>
+            <figcaption>
+              <span className="landing-testimonial-name">Yash Sharma</span>
+              <span className="landing-testimonial-meta">New York University</span>
+            </figcaption>
+          </figure>
+
+          <figure className="landing-testimonial">
+            <blockquote>
+              Genuinely made my application process smoother. Pay-per-
+              confirmation is the only pricing model that ever felt fair
+              to me.
+            </blockquote>
+            <figcaption>
+              <span className="landing-testimonial-name">Pavan Veera</span>
+              <span className="landing-testimonial-meta">Instaply user</span>
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
       <section className="landing-legal-row">
         <p>
           By using Instaply you agree to our{" "}

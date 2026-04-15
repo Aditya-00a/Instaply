@@ -28,7 +28,12 @@ export function PublicShell({ children }: { children: ReactNode }) {
         <div className="public-footer-links">
           <Link href="/about">Product</Link>
           <Link href="/how-it-works">How it works</Link>
+          <Link href="/integrations">Integrations</Link>
           <Link href="/pricing">Pricing</Link>
+          <Link href="/security">Security</Link>
+          <Link href="/status">Status</Link>
+          <Link href="/changelog">Changelog</Link>
+          <Link href="/careers">Careers</Link>
           <Link href="/terms">Terms of Service</Link>
           <Link href="/privacy">Privacy Policy</Link>
           <Link href="/refund">Refund Policy</Link>
