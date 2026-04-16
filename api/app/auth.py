@@ -75,7 +75,7 @@ def _verify_supabase_jwt(token: str) -> str:
         claims = jwt.decode(
             token,
             settings.supabase_jwt_secret,
-            algorithms=["HS256"],
+            algorithms=["HS256", "HS384", "HS512"],
             audience=settings.supabase_jwt_audience,
             options={"require": ["exp", "sub"]},
         )
