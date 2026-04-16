@@ -33,8 +33,10 @@ export default function SearchPage() {
   const [queuedIds, setQueuedIds] = useState<Set<string>>(new Set());
   const [queueing, setQueueing] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [suggested, setSuggested] = useState<JobResult[] | null>(null);
+  const [targetTitles, setTargetTitles] = useState<string[]>([]);
 
-  // Load already-applied job IDs on mount so user sees "✓ Applied" instantly
+  // Load applied IDs + preferences on mount; show recommended jobs automatically
   useEffect(() => {
     if (!ready) return;
     (async () => {
@@ -42,12 +44,44 @@ export default function SearchPage() {
       if (!supabase) return;
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data } = await supabase
+
+      // Load applied job IDs
+      const { data: apps } = await supabase
         .from("applications")
         .select("job_id")
         .eq("user_id", user.id);
-      if (data) {
-        setQueuedIds(new Set(data.map((r: { job_id: string }) => r.job_id)));
+      if (apps) {
+        setQueuedIds(new Set(apps.map((r: { job_id: string }) => r.job_id)));
+      }
+
+      // Load preferences and auto-search recommended jobs
+      const { data: prefs } = await supabase
+        .from("preferences")
+        .select("target_titles, target_locations")
+        .eq("user_id", user.id)
+        .limit(1);
+
+      if (prefs && prefs[0]) {
+        const titles = (prefs[0].target_titles as string[]) || [];
+        const locations = (prefs[0].target_locations as string[]) || [];
+        setTargetTitles(titles);
+
+        if (titles.length > 0) {
+          // Build OR filter from target titles for recommended jobs
+          const titleFilters = titles.map((t) => `title.ilike.*${t.split(" ").join("*")}*`).join(",");
+          let q = supabase
+            .from("jobs")
+            .select("id, title, company_name, source, location, remote, apply_url")
+            .or(titleFilters)
+            .eq("is_active", true)
+            .order("discovered_at", { ascending: false })
+            .limit(20);
+
+          const { data: recJobs } = await q;
+          if (recJobs && recJobs.length > 0) {
+            setSuggested(recJobs as JobResult[]);
+          }
+        }
       }
     })();
   }, [ready]);
@@ -171,6 +205,22 @@ export default function SearchPage() {
           </button>
         </div>
 
+        {targetTitles.length > 0 && (
+          <div className="search-quick-chips">
+            <span className="search-quick-label">Quick search:</span>
+            {targetTitles.map((t) => (
+              <button
+                key={t}
+                type="button"
+                className="search-quick-chip"
+                onClick={() => { setQuery(t); }}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        )}
+
         {error && <div className="search-error">{error}</div>}
 
         {results !== null && results.length === 0 && (
@@ -241,13 +291,66 @@ export default function SearchPage() {
           </>
         )}
 
-        {results === null && !searching && (
+        {results === null && !searching && suggested && suggested.length > 0 && (
+          <>
+            <div className="search-recommended-header">
+              <Sparkles size={16} />
+              <strong>Recommended for you</strong>
+              <span>Based on your target roles: {targetTitles.join(", ")}</span>
+            </div>
+            <div className="search-results">
+              {suggested.map((job) => {
+                const isQueued = queuedIds.has(job.id);
+                const isQueueing = queueing === job.id;
+                return (
+                  <article className="search-result" key={job.id}>
+                    <div className="search-result-main">
+                      <strong>{job.title}</strong>
+                      <span className="search-result-meta">
+                        {job.company_name}
+                        {job.location ? ` · ${job.location}` : ""}
+                        {job.remote ? " · Remote" : ""}
+                      </span>
+                      <span className="search-result-source">
+                        {SOURCES[job.source] || job.source}
+                      </span>
+                    </div>
+                    <div className="search-result-actions">
+                      {job.apply_url && (
+                        <a href={job.apply_url} target="_blank" rel="noopener noreferrer" className="search-result-link" title="View on ATS">
+                          <ExternalLink size={14} />
+                        </a>
+                      )}
+                      <button
+                        type="button"
+                        className={isQueued ? "search-queue-btn search-queue-btn-done" : "search-queue-btn"}
+                        onClick={() => !isQueued && queueJob(job)}
+                        disabled={isQueued || isQueueing}
+                      >
+                        {isQueueing ? "Applying…" : isQueued ? "✓ Applied" : "Apply"}
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {results === null && !searching && (!suggested || suggested.length === 0) && (
           <div className="search-hint">
             <p>
-              The job pool updates every 4 hours with roles from
-              Greenhouse, Lever, and more. Search by title and click
-              Apply — we handle the rest.
+              Search by role title to find open positions. The job pool
+              updates every 4 hours with roles from Greenhouse, Lever,
+              and more. Click Apply and we handle the rest.
             </p>
+            {targetTitles.length === 0 && (
+              <p>
+                <strong>Tip:</strong> Set your target roles in{" "}
+                <Link href="/onboarding">Profile</Link> to see personalized
+                recommendations here.
+              </p>
+            )}
           </div>
         )}
       </section>
