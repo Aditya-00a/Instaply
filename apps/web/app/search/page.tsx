@@ -106,6 +106,8 @@ export default function SearchPage() {
   const [extractedSkills, setExtractedSkills] = useState<ExtractedSkills>({});
   const [targetLocations, setTargetLocations] = useState<string[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
+  const [remoteOnly, setRemoteOnly] = useState(false);
+  const [locationFilter, setLocationFilter] = useState("");
 
   // Load applied IDs + preferences on mount; show recommended jobs automatically
   useEffect(() => {
@@ -190,13 +192,18 @@ export default function SearchPage() {
       const words = query.trim().split(/\s+/).filter(Boolean);
       const orFilter = words.map((w) => `title.ilike.%${w}%`).join(",");
 
-      const { data, error: err } = await supabase
+      let q = supabase
         .from("jobs")
         .select("id, title, company_name, source, location, remote, apply_url")
         .or(orFilter)
         .eq("is_active", true)
         .order("discovered_at", { ascending: false })
         .limit(50);
+
+      if (remoteOnly) q = q.eq("remote", true);
+      if (locationFilter.trim()) q = q.ilike("location", `%${locationFilter.trim()}%`);
+
+      const { data, error: err } = await q;
 
       if (err) throw err;
       // Score and sort results by match quality
@@ -290,6 +297,20 @@ export default function SearchPage() {
             {searching ? <Loader2 size={16} className="spin" /> : <Search size={16} />}
             Search
           </button>
+        </div>
+
+        <div className="search-filters">
+          <label className="search-filter-toggle">
+            <input type="checkbox" checked={remoteOnly} onChange={(e) => setRemoteOnly(e.target.checked)} />
+            Remote only
+          </label>
+          <input
+            type="text"
+            className="search-filter-input"
+            placeholder="Filter by location (e.g. New York)"
+            value={locationFilter}
+            onChange={(e) => setLocationFilter(e.target.value)}
+          />
         </div>
 
         {targetTitles.length > 0 && (

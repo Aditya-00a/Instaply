@@ -6451,6 +6451,87 @@ p {
   margin: 0 auto;
 }
 
+.search-filters {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.search-filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.search-filter-toggle input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+
+.search-filter-input {
+  padding: 6px 12px;
+  font-size: 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+  width: 200px;
+}
+
+.answers-edit-box {
+  margin-top: 8px;
+}
+
+.answers-edit-box textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  resize: vertical;
+  background: var(--panel);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+.answers-edit-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.answers-row-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.answers-edit-btn {
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--line));
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.answers-edit-btn:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
 .search-quick-chips {
   display: flex;
   align-items: center;

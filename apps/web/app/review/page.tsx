@@ -155,7 +155,12 @@ export default function ReviewPage() {
               </div>
               <div className="answers-list">
                 {blocked.map((r) => (
-                  <AnswerRowCard key={r.id} row={r} />
+                  <AnswerRowCard key={r.id} row={r} onUpdate={(id, text) => {
+                    setState((prev) => prev.kind === "live" ? {
+                      ...prev,
+                      rows: prev.rows.map((a) => a.id === id ? { ...a, answer_text: text } : a),
+                    } : prev);
+                  }} />
                 ))}
               </div>
             </section>
@@ -173,7 +178,12 @@ export default function ReviewPage() {
             ) : (
               <div className="answers-list">
                 {saved.map((r) => (
-                  <AnswerRowCard key={r.id} row={r} />
+                  <AnswerRowCard key={r.id} row={r} onUpdate={(id, text) => {
+                    setState((prev) => prev.kind === "live" ? {
+                      ...prev,
+                      rows: prev.rows.map((a) => a.id === id ? { ...a, answer_text: text } : a),
+                    } : prev);
+                  }} />
                 ))}
               </div>
             )}
@@ -206,26 +216,69 @@ export default function ReviewPage() {
   );
 }
 
-function AnswerRowCard({ row }: { row: AnswerRow }) {
+function AnswerRowCard({ row, onUpdate }: { row: AnswerRow; onUpdate?: (id: string, text: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(row.answer_text || "");
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (!draft.trim()) return;
+    setSaving(true);
+    try {
+      const supabase = getBrowserSupabase();
+      if (!supabase) return;
+      await supabase.from("answers").update({ answer_text: draft.trim() }).eq("id", row.id);
+      if (onUpdate) onUpdate(row.id, draft.trim());
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <article className="answers-row">
       <div className="answers-row-q">
         <strong>{row.question_text}</strong>
-        {row.answer_text ? (
+        {editing ? (
+          <div className="answers-edit-box">
+            <textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              rows={3}
+              placeholder="Type your answer..."
+              autoFocus
+            />
+            <div className="answers-edit-actions">
+              <button type="button" className="btn-primary" onClick={save} disabled={saving}>
+                {saving ? "Saving..." : "Save"}
+              </button>
+              <button type="button" className="btn-secondary" onClick={() => { setEditing(false); setDraft(row.answer_text || ""); }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : row.answer_text ? (
           <p className="answers-row-a">{row.answer_text}</p>
         ) : (
           <p className="answers-row-empty">No answer saved yet.</p>
         )}
         <span className="answers-row-meta">
-          {row.company_slug || "—"} ·{" "}
+          {row.company_slug || "Global"} ·{" "}
           {new Date(row.created_at).toLocaleDateString()}
         </span>
       </div>
-      <span
-        className={`app-pill ${row.times_used === 0 ? "app-pill-warn" : "app-pill-success"}`}
-      >
-        {row.times_used === 0 ? "Needs review" : `Used ${row.times_used}x`}
-      </span>
+      <div className="answers-row-actions">
+        <span
+          className={`app-pill ${row.times_used === 0 ? "app-pill-warn" : "app-pill-success"}`}
+        >
+          {row.times_used === 0 ? "Needs review" : `Used ${row.times_used}x`}
+        </span>
+        {!editing && (
+          <button type="button" className="answers-edit-btn" onClick={() => setEditing(true)}>
+            Edit
+          </button>
+        )}
+      </div>
     </article>
   );
 }
