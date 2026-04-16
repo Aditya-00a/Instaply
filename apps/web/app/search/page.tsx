@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ExternalLink, Loader2, Search, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { ConsoleShell } from "../components/console-shell";
 import { getBrowserSupabase, isSupabaseConfigured } from "../lib/supabase-browser";
@@ -32,6 +32,24 @@ export default function SearchPage() {
   const [error, setError] = useState<string | null>(null);
   const [queuedIds, setQueuedIds] = useState<Set<string>>(new Set());
   const [queueing, setQueueing] = useState<string | null>(null);
+
+  // Load already-applied job IDs on mount so user sees "✓ Applied" instantly
+  useEffect(() => {
+    if (!ready) return;
+    (async () => {
+      const supabase = getBrowserSupabase();
+      if (!supabase) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from("applications")
+        .select("job_id")
+        .eq("user_id", user.id);
+      if (data) {
+        setQueuedIds(new Set(data.map((r: { job_id: string }) => r.job_id)));
+      }
+    })();
+  }, [ready]);
 
   const search = async () => {
     if (!query.trim()) return;
@@ -105,7 +123,7 @@ export default function SearchPage() {
       }
       setQueuedIds((prev) => new Set(prev).add(job.id));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not queue.");
+      setError(e instanceof Error ? e.message : "Could not submit application.");
     } finally {
       setQueueing(null);
     }
@@ -116,9 +134,9 @@ export default function SearchPage() {
       activePath="/search"
       eyebrow="Search"
       title="Find jobs"
-      description="Search across Greenhouse, Lever, SmartRecruiters, and Workday. Click Queue to add a role to your application list."
+      description="Search across Greenhouse, Lever, SmartRecruiters, and Workday. Click Apply to submit an application on your behalf."
       actions={[
-        { href: "/applications", label: "View queued", variant: "secondary" },
+        { href: "/applications", label: "View applications", variant: "secondary" },
       ]}
     >
       <section className="console-section">
@@ -202,10 +220,10 @@ export default function SearchPage() {
                         disabled={isQueued || isQueueing}
                       >
                         {isQueueing
-                          ? "Queueing…"
+                          ? "Applying…"
                           : isQueued
-                          ? "✓ Queued"
-                          : "Queue"}
+                          ? "✓ Applied"
+                          : "Apply"}
                       </button>
                     </div>
                   </article>
@@ -219,8 +237,8 @@ export default function SearchPage() {
           <div className="search-hint">
             <p>
               The job pool updates every 4 hours with roles from
-              Greenhouse, Lever, and more. Search by title to find
-              matches and queue them for auto-apply.
+              Greenhouse, Lever, and more. Search by title and click
+              Apply — we handle the rest.
             </p>
           </div>
         )}
