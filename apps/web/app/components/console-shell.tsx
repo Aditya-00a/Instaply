@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
-import { Cable, ChevronRight } from "lucide-react";
+import { Cable, ChevronRight, Menu, X } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { consoleNavItems } from "../console-data";
 import { SignOutButton } from "./sign-out-button";
@@ -27,14 +30,55 @@ export function ConsoleShell({
   description,
   actions = [],
   children,
-  aside
+  aside,
 }: ConsoleShellProps) {
-  const workspaceItems = consoleNavItems.filter((item) => item.section === "workspace");
-  const accountItems = consoleNavItems.filter((item) => item.section === "account");
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const workspaceItems = consoleNavItems.filter((i) => i.section === "workspace");
+  const accountItems = consoleNavItems.filter((i) => i.section === "account");
+
+  // Close mobile nav on route change
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [activePath]);
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileNavOpen) {
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = "";
+      };
+    }
+  }, [mobileNavOpen]);
 
   return (
     <main className="console-app">
-      <aside className="console-sidebar glass">
+      {/* Mobile top bar */}
+      <div className="console-mobile-bar">
+        <button
+          type="button"
+          className="console-mobile-trigger"
+          onClick={() => setMobileNavOpen(true)}
+          aria-label="Open menu"
+        >
+          <Menu size={18} />
+        </button>
+        <strong>Instaply</strong>
+        <span className="console-mobile-active">{title}</span>
+      </div>
+
+      <aside
+        className={`console-sidebar glass${mobileNavOpen ? " console-sidebar-open" : ""}`}
+      >
+        <button
+          type="button"
+          className="console-mobile-close"
+          onClick={() => setMobileNavOpen(false)}
+          aria-label="Close menu"
+        >
+          <X size={18} />
+        </button>
+
         <div className="console-brand">
           <div className="pill">
             <Cable size={14} />
@@ -51,7 +95,11 @@ export function ConsoleShell({
           <nav className="console-nav">
             {workspaceItems.map((item) => (
               <Link
-                className={item.href === activePath ? "console-nav-link console-nav-link-active" : "console-nav-link"}
+                className={
+                  item.href === activePath
+                    ? "console-nav-link console-nav-link-active"
+                    : "console-nav-link"
+                }
                 href={item.href}
                 key={item.href}
               >
@@ -67,7 +115,11 @@ export function ConsoleShell({
           <nav className="console-nav">
             {accountItems.map((item) => (
               <Link
-                className={item.href === activePath ? "console-nav-link console-nav-link-active" : "console-nav-link"}
+                className={
+                  item.href === activePath
+                    ? "console-nav-link console-nav-link-active"
+                    : "console-nav-link"
+                }
                 href={item.href}
                 key={item.href}
               >
@@ -81,8 +133,14 @@ export function ConsoleShell({
         <div className="console-sidebar-footer-row">
           <SignOutButton />
         </div>
-
       </aside>
+
+      {mobileNavOpen && (
+        <div
+          className="console-sidebar-overlay"
+          onClick={() => setMobileNavOpen(false)}
+        />
+      )}
 
       <section className="console-main">
         <section className="console-top">
@@ -97,7 +155,11 @@ export function ConsoleShell({
               <div className="console-page-actions">
                 {actions.map((action) => (
                   <Link
-                    className={action.variant === "secondary" ? "button-secondary" : "button-primary"}
+                    className={
+                      action.variant === "secondary"
+                        ? "button-secondary"
+                        : "button-primary"
+                    }
                     href={action.href}
                     key={`${action.href}-${action.label}`}
                   >
@@ -109,7 +171,9 @@ export function ConsoleShell({
           </section>
         </section>
 
-        <section className={aside ? "console-content" : "console-content console-content-single"}>
+        <section
+          className={aside ? "console-content" : "console-content console-content-single"}
+        >
           <div className="console-content-main">{children}</div>
           {aside ? <aside className="console-content-side">{aside}</aside> : null}
         </section>
