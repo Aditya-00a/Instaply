@@ -26,7 +26,7 @@ import { extractPdfText, scoreResumeText, type AtsReport } from "../lib/ats-scor
 
 type Step = 1 | 2 | 3;
 
-type WorkAuth = "citizen" | "green_card" | "h1b" | "opt" | "other";
+type WorkAuth = "us_citizen" | "green_card" | "h1b" | "f1_opt" | "other";
 
 type Identity = {
   firstName: string;
@@ -73,7 +73,7 @@ const EMPTY_IDENTITY: Identity = {
   githubUrl: "",
   city: "",
   state: "",
-  workAuth: "citizen",
+  workAuth: "us_citizen",
   needsSponsorship: false,
 };
 
@@ -514,10 +514,10 @@ export default function OnboardingPage() {
                   <span>Work authorization</span>
                   <div className="wiz-radio-row">
                     {[
-                      { v: "citizen", l: "US Citizen" },
+                      { v: "us_citizen", l: "US Citizen" },
                       { v: "green_card", l: "Green card" },
                       { v: "h1b", l: "H-1B" },
-                      { v: "opt", l: "OPT / CPT" },
+                      { v: "f1_opt", l: "OPT / CPT" },
                       { v: "other", l: "Other" },
                     ].map((o) => (
                       <button
@@ -528,7 +528,7 @@ export default function OnboardingPage() {
                           setIdentity({
                             ...identity,
                             workAuth: o.v as WorkAuth,
-                            needsSponsorship: o.v === "h1b" || o.v === "opt",
+                            needsSponsorship: o.v === "h1b" || o.v === "f1_opt",
                           })
                         }
                       >
