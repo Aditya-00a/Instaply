@@ -164,11 +164,11 @@ export default function DashboardPage() {
           <div className="auto-apply-banner">
             <span className="auto-apply-banner-dot" />
             <div>
-              <strong>Auto-apply is active</strong>
+              <strong>{state.data.counts.queued} application{state.data.counts.queued === 1 ? "" : "s"} in queue</strong>
               <p>
-                We match and submit applications on your behalf. Roles
-                populate every 8 hours; submissions run automatically.
-                Check your applications page for status updates.
+                You queued these from the Search page. We&apos;ll fill out
+                and submit each form within a few minutes. You can cancel
+                any queued application from the Applications page.
               </p>
             </div>
           </div>

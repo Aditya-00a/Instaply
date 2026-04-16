@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { consoleNavItems } from "../console-data";
 import { SignOutButton } from "./sign-out-button";
 import { CreditBadge } from "./credit-badge";
+import { getBrowserSupabase } from "../lib/supabase-browser";
 
 interface ConsoleAction {
   href: string;
@@ -34,6 +35,7 @@ export function ConsoleShell({
   aside,
 }: ConsoleShellProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const workspaceItems = consoleNavItems.filter((i) => i.section === "workspace");
   const accountItems = consoleNavItems.filter((i) => i.section === "account");
 
@@ -41,6 +43,16 @@ export function ConsoleShell({
   useEffect(() => {
     setMobileNavOpen(false);
   }, [activePath]);
+
+  // Load user email
+  useEffect(() => {
+    (async () => {
+      const supabase = getBrowserSupabase();
+      if (!supabase) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) setUserEmail(user.email);
+    })();
+  }, []);
 
   // Lock body scroll when mobile menu is open
   useEffect(() => {
@@ -132,6 +144,11 @@ export function ConsoleShell({
         </div>
 
         <div className="console-sidebar-footer-row">
+          {userEmail && (
+            <div className="console-user-email" title={userEmail}>
+              {userEmail}
+            </div>
+          )}
           <SignOutButton />
         </div>
       </aside>

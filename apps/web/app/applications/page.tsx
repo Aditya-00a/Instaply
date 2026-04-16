@@ -297,20 +297,41 @@ export default function ApplicationsPage() {
                     <span className="app-table-cell-fit">
                       {r.fit_score != null ? `${Math.round(r.fit_score * 100)}%` : "—"}
                     </span>
-                    <span className="app-table-cell-date">{fmtDate(r.confirmed_at || r.queued_at)}</span>
-                    {r.jobs?.apply_url ? (
-                      <a
-                        href={r.jobs.apply_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="app-open-link"
-                        aria-label="Open job posting"
-                      >
-                        <ExternalLink size={14} />
-                      </a>
-                    ) : (
-                      <span />
-                    )}
+                    <span className="app-table-cell-date">
+                      {r.status === "confirmed" ? fmtDate(r.confirmed_at) : fmtDate(r.queued_at)}
+                    </span>
+                    <div className="app-table-cell-actions">
+                      {r.jobs?.apply_url && (
+                        <a
+                          href={r.jobs.apply_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="app-open-link"
+                          aria-label="Open job posting"
+                        >
+                          <ExternalLink size={14} />
+                        </a>
+                      )}
+                      {r.status === "queued" && (
+                        <button
+                          type="button"
+                          className="app-cancel-btn"
+                          onClick={async () => {
+                            const supabase = getBrowserSupabase();
+                            if (!supabase) return;
+                            await supabase.from("applications").delete().eq("id", r.id);
+                            setState((prev) =>
+                              prev.kind === "live"
+                                ? { ...prev, rows: prev.rows.filter((row) => row.id !== r.id) }
+                                : prev
+                            );
+                          }}
+                          title="Cancel this application"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))
               )}

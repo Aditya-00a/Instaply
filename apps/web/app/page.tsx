@@ -80,8 +80,8 @@ export default function HomePage() {
             <Link href="/sign-in" className="btn-primary">
               Get 3 free applications
             </Link>
-            <Link href="/how-it-works" className="btn-secondary">
-              See how it works
+            <Link href="/pricing" className="btn-secondary">
+              See pricing
             </Link>
           </div>
           <p className="hero-sub">

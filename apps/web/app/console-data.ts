@@ -63,23 +63,17 @@ export const queueRows = [
 
 export const blockedQuestions = [
   {
-    company: "Ramp",
-    question: "Work authorization dropdown needs a reusable answer and escalation rule.",
-    recommended: "Save once and apply across supported portals.",
+    company: "Example Co",
+    question: "Are you willing to work on-site in New York?",
+    recommended: "Answer once and Instaply reuses it on future applications.",
     priority: "High"
   },
   {
-    company: "Interactive Brokers",
-    question: "Signature confirmation can use the legal full name from profile settings.",
-    recommended: "Mark as safe auto-fill.",
+    company: "Example Co",
+    question: "Do you have a valid driver's license?",
+    recommended: "Set this in your screening answers on the Profile page.",
     priority: "Medium"
   },
-  {
-    company: "Apollo",
-    question: "Location preference depends on relocation policy and hybrid willingness.",
-    recommended: "Candidate should review once and store the rule.",
-    priority: "Medium"
-  }
 ];
 
 export const generatedDocuments = [

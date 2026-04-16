@@ -175,25 +175,15 @@ export default function DocumentsPage() {
             )}
           </section>
 
-          <section className="console-section">
-            <div className="section-intro">
-              <div>
-                <p className="eyebrow">Cover letters</p>
-                <h2>
-                  {state.coverLetters.length > 0
-                    ? `${state.coverLetters.length} on file`
-                    : "No cover letters yet"}
-                </h2>
+          {/* Cover letters — hidden until upload flow is built */}
+          {state.coverLetters.length > 0 && (
+            <section className="console-section">
+              <div className="section-intro">
+                <div>
+                  <p className="eyebrow">Cover letters</p>
+                  <h2>{state.coverLetters.length} on file</h2>
+                </div>
               </div>
-              <Link href="/onboarding" className="btn-secondary">
-                <Upload size={14} />
-                Upload
-              </Link>
-            </div>
-
-            {state.coverLetters.length === 0 ? (
-              <EmptyDocCard kind="cover_letter" ctaHref="/onboarding" />
-            ) : (
               <div className="doc-grid">
                 {state.coverLetters.map((d) => (
                   <DocCard
@@ -203,8 +193,8 @@ export default function DocumentsPage() {
                   />
                 ))}
               </div>
-            )}
-          </section>
+            </section>
+          )}
         </>
       )}
 
