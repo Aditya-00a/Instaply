@@ -16,6 +16,7 @@ import {
 
 import { ConsoleShell } from "../components/console-shell";
 import { McpTokensCard } from "../components/mcp-tokens-card";
+import { MfaSetupCard } from "../components/mfa-setup-card";
 
 const cloneProfile = (): CandidateWorkspaceProfile => JSON.parse(JSON.stringify(starterCandidateWorkspaceProfile));
 const humanize = (value: string) => value.replaceAll("_", " ");
@@ -334,6 +335,10 @@ export default function SettingsPage() {
             </div>
           </div>
         </article>
+      </section>
+
+      <section className="console-section">
+        <MfaSetupCard />
       </section>
 
       <section className="console-section">

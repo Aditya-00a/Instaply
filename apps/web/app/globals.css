@@ -5858,6 +5858,86 @@ p {
   align-self: flex-start;
 }
 
+/* ---------- MFA enrollment ---------- */
+
+.mfa-enroll {
+  padding: 18px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.mfa-enroll-row {
+  display: flex;
+  gap: 22px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.mfa-qr-wrap {
+  background: #fff;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+}
+
+.mfa-qr {
+  width: 168px;
+  height: 168px;
+  display: block;
+}
+
+.mfa-enroll-instructions {
+  flex: 1;
+  min-width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mfa-enroll-instructions strong {
+  font-size: 13.5px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.mfa-enroll-instructions p {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.mfa-secret {
+  display: block;
+  padding: 8px 12px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text);
+  word-break: break-all;
+}
+
+.mfa-code-input {
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 18px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.2em;
+  text-align: center;
+  width: 160px;
+  background: #fff;
+  color: var(--text);
+}
+
+.mfa-code-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
 .auth-visual-panel {
   display: grid;
   min-height: 720px;

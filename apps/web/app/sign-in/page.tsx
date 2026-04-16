@@ -29,6 +29,41 @@ function SignInContent() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState("");
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState("");
+
+  const submitMfa = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError("");
+    if (!mfaFactorId) return;
+    if (mfaCode.length !== 6) {
+      setError("Enter the 6-digit code from your authenticator app.");
+      return;
+    }
+    const supabase = getBrowserSupabase();
+    if (!supabase) return;
+    setLoading(true);
+    const { data: chal, error: chalErr } = await supabase.auth.mfa.challenge({
+      factorId: mfaFactorId,
+    });
+    if (chalErr || !chal) {
+      setError(chalErr?.message ?? "Could not start MFA challenge.");
+      setLoading(false);
+      return;
+    }
+    const { error: verr } = await supabase.auth.mfa.verify({
+      factorId: mfaFactorId,
+      challengeId: chal.id,
+      code: mfaCode,
+    });
+    if (verr) {
+      setError(verr.message);
+      setLoading(false);
+      return;
+    }
+    router.push(nextPath);
+    router.refresh();
+  };
 
   const supabaseReady = isSupabaseConfigured();
 
@@ -90,6 +125,23 @@ function SignInContent() {
           setLoading(false);
           return;
         }
+
+        // Check if account has 2FA — if so, surface a code prompt before
+        // we route to the dashboard. Supabase requires aal2 once a TOTP
+        // factor is enrolled.
+        const {
+          data: aal,
+        } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (aal && aal.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
+          const { data: factors } = await supabase.auth.mfa.listFactors();
+          const totp = factors?.totp?.[0];
+          if (totp) {
+            setMfaFactorId(totp.id);
+            setLoading(false);
+            return;
+          }
+        }
+
         router.push(nextPath);
         router.refresh();
         return;
@@ -194,6 +246,53 @@ function SignInContent() {
 
             {notice ? <div className="auth-notice">{notice}</div> : null}
 
+            {mfaFactorId ? (
+              <form className="auth-form" onSubmit={submitMfa}>
+                <div className="auth-notice">
+                  <strong>Two-factor verification</strong>
+                  <br />
+                  Open your authenticator app and enter the 6-digit code
+                  for Instaply.
+                </div>
+                <label className="auth-field">
+                  <span>Authenticator code</span>
+                  <div className="auth-input-shell">
+                    <LockKeyhole size={16} />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]{6}"
+                      maxLength={6}
+                      value={mfaCode}
+                      onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ""))}
+                      placeholder="123456"
+                      required
+                      autoFocus
+                    />
+                  </div>
+                </label>
+                {error ? <div className="auth-error">{error}</div> : null}
+                <button
+                  type="submit"
+                  className="auth-button auth-button-primary"
+                  disabled={loading || mfaCode.length !== 6}
+                >
+                  {loading ? "Verifying…" : "Verify"}
+                  <MoveRight size={16} />
+                </button>
+                <button
+                  type="button"
+                  className="auth-button auth-button-secondary"
+                  onClick={() => {
+                    setMfaFactorId(null);
+                    setMfaCode("");
+                    setError("");
+                  }}
+                >
+                  Cancel
+                </button>
+              </form>
+            ) : (
             <form className="auth-form" onSubmit={handleSubmit}>
               <label className="auth-field">
                 <span>Email address</span>
@@ -266,7 +365,10 @@ function SignInContent() {
                 <MoveRight size={16} />
               </button>
             </form>
+            )}
 
+            {!mfaFactorId && (
+              <>
             <div className="auth-divider">
               <span>or continue with</span>
             </div>
@@ -355,6 +457,8 @@ function SignInContent() {
               </span>
               <Link href="/">Back to website</Link>
             </div>
+              </>
+            )}
           </div>
 
           <aside className="auth-visual-panel">
