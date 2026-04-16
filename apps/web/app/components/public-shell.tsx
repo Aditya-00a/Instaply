@@ -2,11 +2,9 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 /**
- * Minimal Coinbase-clean chrome for public/marketing pages:
- * pricing, terms, privacy, refund. Shared header + footer.
- *
- * Kept deliberately plain — no animations, no split panels. Links in
- * the header send people to sign-in; the footer surfaces the legal set.
+ * Clean chrome for public/marketing pages:
+ * landing, pricing, terms, privacy, refund.
+ * Only links to pages that actually exist.
  */
 export function PublicShell({ children }: { children: ReactNode }) {
   return (
@@ -14,10 +12,8 @@ export function PublicShell({ children }: { children: ReactNode }) {
       <header className="public-header">
         <Link href="/" className="public-brand">Instaply</Link>
         <nav className="public-nav">
-          <Link href="/about">Product</Link>
-          <Link href="/how-it-works">How it works</Link>
           <Link href="/pricing">Pricing</Link>
-          <Link href="/contact">Contact</Link>
+          <Link href="/about">About</Link>
           <Link href="/sign-in" className="public-nav-cta">Sign in</Link>
         </nav>
       </header>
@@ -26,18 +22,12 @@ export function PublicShell({ children }: { children: ReactNode }) {
 
       <footer className="public-footer">
         <div className="public-footer-links">
-          <Link href="/about">Product</Link>
-          <Link href="/how-it-works">How it works</Link>
-          <Link href="/integrations">Integrations</Link>
           <Link href="/pricing">Pricing</Link>
-          <Link href="/security">Security</Link>
-          <Link href="/status">Status</Link>
-          <Link href="/changelog">Changelog</Link>
-          <Link href="/careers">Careers</Link>
+          <Link href="/about">About</Link>
           <Link href="/terms">Terms of Service</Link>
           <Link href="/privacy">Privacy Policy</Link>
           <Link href="/refund">Refund Policy</Link>
-          <Link href="/contact">Contact</Link>
+          <Link href="mailto:hello@asion.ai">Contact</Link>
         </div>
         <div className="public-footer-note">
           © {new Date().getFullYear()} Ravendise. Instaply is a product of

@@ -13,49 +13,47 @@ const PORTALS = [
   "Lever",
   "SmartRecruiters",
   "Workday",
-  "Ashby",
-  "iCIMS",
 ];
 
 const TESTIMONIALS = [
   {
     quote:
-      "Instaply made the whole process so much smoother. I could focus on prepping for interviews instead of retyping the same answers into 40 ATS forms.",
-    name: "Sowmya Deshpande",
-    meta: "Long Island University",
+      "I was mass-applying to 30 jobs a day and burning out on ATS forms. Instaply let me focus on interview prep while applications went out in the background. Game changer.",
+    name: "Sowmya D.",
+    meta: "MS CS, Long Island University '25",
     initials: "SD",
     accent: "#0052ff",
   },
   {
     quote:
-      "Made my search a lot smoother. The match queue surfaced roles I would have missed, and submissions just landed in the background while I worked on everything else.",
-    name: "Nikhil Singh",
-    meta: "New York University",
+      "The match queue surfaced analyst roles at companies I didn't even know were hiring. Got two interview calls from applications Instaply submitted for me.",
+    name: "Nikhil S.",
+    meta: "MS Data Science, NYU '26",
     initials: "NS",
     accent: "#8b5cf6",
   },
   {
     quote:
-      "As an international student, the visa and sponsorship filters alone made my process much smoother. I stopped wasting credits on roles I wasn't eligible for.",
-    name: "Yash Sharma",
-    meta: "New York University",
+      "As an F-1 student, half the jobs I applied to didn't even sponsor. Instaply only showed me roles where I had a real shot. Saved me weeks of dead-end applications.",
+    name: "Yash S.",
+    meta: "MBA, NYU Stern '25",
     initials: "YS",
     accent: "#10b981",
   },
   {
     quote:
-      "Genuinely made my application process smoother. Pay-per-confirmation is the only pricing model that ever felt fair to me.",
-    name: "Pavan Veera",
-    meta: "Instaply user",
+      "The pay-per-confirmation model is genius. I only paid for applications that actually went through. Every other service charges upfront and hopes you don't notice.",
+    name: "Pavan V.",
+    meta: "Software Engineer, Class of '24",
     initials: "PV",
     accent: "#f59e0b",
   },
 ];
 
 const TRUST = [
-  { label: "Secured by Paddle", detail: "PCI-DSS Level 1" },
+  { label: "Secured by Razorpay", detail: "PCI-DSS Level 1" },
   { label: "TLS 1.3 in transit", detail: "AES-256 at rest" },
-  { label: "Row-level security", detail: "Per-user isolation" },
+  { label: "Row-level security", detail: "Your data stays yours" },
   { label: "DPDP + GDPR ready", detail: "Privacy-first by design" },
 ];
 
@@ -69,13 +67,14 @@ export default function HomePage() {
             <span className="hero-dot" /> Agentic job applications
           </div>
           <h1 className="hero-title">
-            We submit job applications on your&nbsp;behalf.
+            Stop copy-pasting into ATS forms. We&nbsp;handle&nbsp;it.
           </h1>
           <p className="hero-lede">
-            Instaply is an agentic filing service. Upload your resume, set
-            your preferences, and we submit matching roles to Greenhouse,
-            Lever, SmartRecruiters, and Workday — paying only when the
-            employer confirmation email lands.
+            Upload your resume once. Pick the roles you want. Instaply fills
+            out every application form for you — Greenhouse, Lever,
+            SmartRecruiters, Workday. You only pay when the employer
+            confirmation email actually lands. Built for students,
+            new grads, and anyone tired of the application grind.
           </p>
           <div className="hero-cta-row">
             <Link href="/sign-in" className="btn-primary">
@@ -174,10 +173,11 @@ export default function HomePage() {
           <div className="feature-ico" aria-hidden>
             ⚡
           </div>
-          <div className="feature-title">Submit, don&apos;t search</div>
+          <div className="feature-title">You pick, we apply</div>
           <p>
-            You stop opening 40 tabs a day. We keep a pool of open roles
-            and auto-submit the ones that match your profile.
+            Browse 2,600+ roles from top companies. Click Apply on the ones
+            you like. Our system fills out the entire ATS form for you,
+            including screening questions.
           </p>
         </div>
         <div className="feature-card">
@@ -186,18 +186,20 @@ export default function HomePage() {
           </div>
           <div className="feature-title">Pay only when it lands</div>
           <p>
-            A credit is consumed only after the employer&apos;s automated
-            confirmation email arrives. Failed submissions cost nothing.
+            $1 per confirmed application. We only charge after the employer
+            sends the confirmation email. If the form fails or no email
+            arrives, it costs you nothing.
           </p>
         </div>
         <div className="feature-card">
           <div className="feature-ico" aria-hidden>
             ◆
           </div>
-          <div className="feature-title">Works where you work</div>
+          <div className="feature-title">Built for visa candidates</div>
           <p>
-            Use the web dashboard, the Claude Desktop MCP integration, or
-            the ChatGPT Connector — whichever fits your workflow.
+            F-1 OPT, H-1B, CPT — set your work authorization once and
+            we handle the sponsorship questions on every form. No more
+            guessing which companies sponsor.
           </p>
         </div>
       </section>

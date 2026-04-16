@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Cable, ChevronRight, Menu, X } from "lucide-react";
+import { ChevronRight, Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { consoleNavItems } from "../console-data";
@@ -81,13 +81,9 @@ export function ConsoleShell({
         </button>
 
         <div className="console-brand">
-          <div className="pill">
-            <Cable size={14} />
-            MCP first
-          </div>
           <div>
             <strong>Instaply</strong>
-            <p>Private job search and apply workspace</p>
+            <p>Your job application workspace</p>
           </div>
         </div>
 

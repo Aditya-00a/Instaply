@@ -28,7 +28,7 @@ export const consoleNavItems: ConsoleNavItem[] = [
 
 export const candidateSnapshot = {
   name: starterCandidateWorkspaceProfile.identity.legalFullName,
-  plan: "Agent Suite Trial",
+  plan: "Free",
   location: `${starterCandidateWorkspaceProfile.identity.currentCity}, ${starterCandidateWorkspaceProfile.identity.currentRegion}`,
   autoApplyEnabled: starterCandidateWorkspaceProfile.automation.autoApplyEnabled ? "Enabled" : "Off",
   runMode: starterCandidateWorkspaceProfile.automation.preferredRunMode.replaceAll("_", " "),
@@ -36,10 +36,10 @@ export const candidateSnapshot = {
 };
 
 export const overviewMetrics: SummaryMetric[] = [
-  { label: "Matches", value: "18", note: "live matches tracked across configured portals" },
-  { label: "Packets built", value: "11", note: "tailored resume and cover letter bundles generated" },
-  { label: "Answers needed", value: "4", note: "questions waiting for a candidate-approved answer" },
-  { label: "Ready now", value: "7", note: "supported applications ready for the next step" }
+  { label: "Credits", value: "3", note: "application credits remaining" },
+  { label: "Applied", value: "0", note: "applications submitted so far" },
+  { label: "Confirmed", value: "0", note: "confirmed by employer email" },
+  { label: "Searches today", value: "0/10", note: "free job searches used today" }
 ];
 
 export const queueRows = [

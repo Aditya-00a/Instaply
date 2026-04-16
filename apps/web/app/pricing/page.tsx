@@ -43,9 +43,9 @@ const PACKS = [
 ] as const;
 
 const TRUST = [
-  { label: "Secured by Paddle", detail: "PCI-DSS Level 1" },
+  { label: "Secured by Razorpay", detail: "PCI-DSS Level 1 compliant" },
   { label: "No subscriptions", detail: "One-time credit packs" },
-  { label: "Credits never expire", detail: "Account stays active" },
+  { label: "Credits never expire", detail: "Use them whenever you're ready" },
   { label: "Refundable", detail: "14-day unused-credit refund" },
 ];
 
@@ -72,7 +72,7 @@ const FAQ = [
   },
   {
     q: "How do I pay?",
-    a: "Payments are processed by Paddle, our merchant of record. Paddle supports credit and debit cards, PayPal, Apple Pay, Google Pay, and regional methods where available.",
+    a: "Payments are processed securely by Razorpay. We accept credit cards, debit cards, UPI, netbanking, and wallets. All transactions are PCI-DSS compliant.",
   },
 ] as const;
 
