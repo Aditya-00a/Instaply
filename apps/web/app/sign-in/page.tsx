@@ -31,6 +31,9 @@ function SignInContent() {
   const [notice, setNotice] = useState("");
   const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
   const [mfaCode, setMfaCode] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
+
+  const inviteRequired = process.env.NEXT_PUBLIC_INVITE_REQUIRED === "true";
 
   const submitMfa = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -83,6 +86,11 @@ function SignInContent() {
       setError(
         "You must accept the Terms of Service, Privacy Policy, and Refund Policy to create an account."
       );
+      return;
+    }
+
+    if (mode === "signup" && inviteRequired && !inviteCode.trim()) {
+      setError("This is a closed beta — please enter your invite code to sign up.");
       return;
     }
 
@@ -178,6 +186,21 @@ function SignInContent() {
             legal_accepted_version: POLICY_VERSION,
           })
           .eq("id", data.user.id);
+
+        // Redeem the invite code (if provided) to grant tester credits.
+        if (inviteCode.trim()) {
+          const { data: redeemed } = await supabase.rpc("redeem_invite_code", {
+            p_code: inviteCode.trim().toUpperCase(),
+            p_user_id: data.user.id,
+          });
+          if (redeemed === false && inviteRequired) {
+            setError(
+              "That invite code is invalid, expired, or already used. Contact hello@asion.ai if you think this is wrong."
+            );
+            setLoading(false);
+            return;
+          }
+        }
       }
 
       if (data.session) {
@@ -334,20 +357,46 @@ function SignInContent() {
                   <Link href="/forgot-password">Forgot password?</Link>
                 </div>
               ) : (
-                <label className="auth-checkbox auth-checkbox-legal">
-                  <input
-                    type="checkbox"
-                    checked={acceptLegal}
-                    onChange={(event) => setAcceptLegal(event.target.checked)}
-                    required
-                  />
-                  <span>
-                    I have read and agree to the{" "}
-                    <Link href="/terms" target="_blank">Terms of Service</Link>,{" "}
-                    <Link href="/privacy" target="_blank">Privacy Policy</Link>, and{" "}
-                    <Link href="/refund" target="_blank">Refund Policy</Link>.
-                  </span>
-                </label>
+                <>
+                  {inviteRequired && (
+                    <label className="auth-field">
+                      <span>
+                        Invite code <em style={{ color: "var(--accent)", fontStyle: "normal" }}>
+                          (closed beta — testers get 1000 credits)
+                        </em>
+                      </span>
+                      <div className="auth-input-shell">
+                        <Sparkles size={16} />
+                        <input
+                          type="text"
+                          value={inviteCode}
+                          onChange={(e) =>
+                            setInviteCode(e.target.value.toUpperCase().replace(/\s+/g, ""))
+                          }
+                          placeholder="ABCD2345"
+                          maxLength={12}
+                          required
+                          autoCapitalize="characters"
+                          style={{ fontFamily: "var(--font-mono)", letterSpacing: "0.1em" }}
+                        />
+                      </div>
+                    </label>
+                  )}
+                  <label className="auth-checkbox auth-checkbox-legal">
+                    <input
+                      type="checkbox"
+                      checked={acceptLegal}
+                      onChange={(event) => setAcceptLegal(event.target.checked)}
+                      required
+                    />
+                    <span>
+                      I have read and agree to the{" "}
+                      <Link href="/terms" target="_blank">Terms of Service</Link>,{" "}
+                      <Link href="/privacy" target="_blank">Privacy Policy</Link>, and{" "}
+                      <Link href="/refund" target="_blank">Refund Policy</Link>.
+                    </span>
+                  </label>
+                </>
               )}
 
               {error ? <div className="auth-error">{error}</div> : null}
