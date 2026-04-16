@@ -52,6 +52,10 @@ class Settings(BaseSettings):
     # Cerebras (LLM for resume analysis)
     cerebras_api_key: str = ""
 
+    # Adzuna (real-time job search)
+    adzuna_app_id: str = ""
+    adzuna_app_key: str = ""
+
     # Web URL (for Stripe success/cancel redirects)
     web_url: str = "https://instaply.asion.ai"
 

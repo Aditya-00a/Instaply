@@ -8,15 +8,22 @@ import { ConsoleShell } from "../components/console-shell";
 import { getBrowserSupabase, isSupabaseConfigured } from "../lib/supabase-browser";
 
 type JobResult = {
-  id: string;
+  id?: string;                    // Supabase ID (only for DB jobs)
+  external_id?: string;            // Adzuna ID (for live jobs)
   title: string;
   company_name: string;
+  company_slug?: string;
   source: string;
   location: string | null;
   remote: boolean;
   apply_url: string;
+  description?: string;
+  category?: string;
+  salary?: string;
   matchScore?: number;
 };
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://api.asion.ai";
 
 type ExtractedSkills = {
   skills?: string[];
@@ -118,13 +125,18 @@ export default function SearchPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Load applied job IDs
+      // Load applied jobs by external_id (so live results show "Applied" badge)
       const { data: apps } = await supabase
         .from("applications")
-        .select("job_id")
+        .select("job_id, jobs(external_id)")
         .eq("user_id", user.id);
       if (apps) {
-        setQueuedIds(new Set(apps.map((r: { job_id: string }) => r.job_id)));
+        const ids = new Set<string>();
+        for (const a of apps as { job_id: string; jobs: { external_id?: string } | null }[]) {
+          if (a.jobs?.external_id) ids.add(a.jobs.external_id);
+          if (a.job_id) ids.add(a.job_id);
+        }
+        setQueuedIds(ids);
       }
 
       // Load profile skills + preferences
@@ -148,23 +160,6 @@ export default function SearchPage() {
         const locations = (prefs[0].target_locations as string[]) || [];
         setTargetTitles(titles);
         setTargetLocations(locations);
-
-        if (titles.length > 0) {
-          // Build OR filter from target titles for recommended jobs
-          const titleFilters = titles.map((t) => `title.ilike.*${t.split(" ").join("*")}*`).join(",");
-          let q = supabase
-            .from("jobs")
-            .select("id, title, company_name, source, location, remote, apply_url")
-            .or(titleFilters)
-            .eq("is_active", true)
-            .order("discovered_at", { ascending: false })
-            .limit(20);
-
-          const { data: recJobs } = await q;
-          if (recJobs && recJobs.length > 0) {
-            setSuggested(recJobs as JobResult[]);
-          }
-        }
       }
     })();
   }, [ready]);
@@ -187,31 +182,27 @@ export default function SearchPage() {
     }
 
     try {
-      // Match ALL words (AND) so "Business Analyst" returns jobs that
-      // contain BOTH "business" and "analyst" in the title — not jobs
-      // that contain either word.
-      const words = query.trim().split(/\s+/).filter(Boolean);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Please sign in.");
 
-      let q = supabase
-        .from("jobs")
-        .select("id, title, company_name, source, location, remote, apply_url")
-        .eq("is_active", true)
-        .order("discovered_at", { ascending: false })
-        .limit(100);
-
-      // Apply each word as a separate ilike — Supabase chains them as AND.
-      for (const w of words) {
-        q = q.ilike("title", `%${w}%`);
+      // Live Adzuna search via our API
+      const params = new URLSearchParams({
+        q: query.trim(),
+        ...(locationFilter.trim() ? { where: locationFilter.trim() } : {}),
+        ...(remoteOnly ? { remote: "true" } : {}),
+      });
+      const res = await fetch(`${API_BASE}/jobs/search-live?${params}`, {
+        headers: { "Authorization": `Bearer ${session.access_token}` },
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || "Search failed");
       }
+      const data = await res.json();
+      const liveResults = (data.results || []) as JobResult[];
 
-      if (remoteOnly) q = q.eq("remote", true);
-      if (locationFilter.trim()) q = q.ilike("location", `%${locationFilter.trim()}%`);
-
-      const { data, error: err } = await q;
-
-      if (err) throw err;
-      // Score and sort results by match quality
-      const scored = ((data ?? []) as JobResult[]).map((job) => ({
+      // Score and sort by resume match
+      const scored = liveResults.map((job) => ({
         ...job,
         matchScore: scoreJob(job, extractedSkills, targetLocations),
       }));
@@ -229,34 +220,45 @@ export default function SearchPage() {
     const supabase = getBrowserSupabase();
     if (!supabase) return;
 
-    setQueueing(job.id);
+    const jobKey = job.external_id || job.id || job.apply_url;
+    setQueueing(jobKey);
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
         setError("Please sign in.");
         return;
       }
 
-      const { error: err } = await supabase.from("applications").insert({
-        user_id: user.id,
-        job_id: job.id,
-        status: "queued",
-        fit_score: null,
+      const res = await fetch(`${API_BASE}/applications/queue-live`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          external_id: job.external_id || `manual:${jobKey}`,
+          title: job.title,
+          company_name: job.company_name,
+          company_slug: job.company_slug,
+          location: job.location,
+          remote: job.remote,
+          apply_url: job.apply_url,
+        }),
       });
 
-      if (err) {
-        if (err.message.includes("duplicate") || err.code === "23505") {
-          setQueuedIds((prev) => new Set(prev).add(job.id));
-          setToast("You've already applied to this role.");
-          setTimeout(() => setToast(null), 3000);
-          return;
-        }
-        throw err;
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || "Failed to queue");
       }
-      setQueuedIds((prev) => new Set(prev).add(job.id));
-      setToast(`Applied to ${job.title} at ${job.company_name}. We'll submit within 30 minutes.`);
+
+      const result = await res.json();
+      setQueuedIds((prev) => new Set(prev).add(jobKey));
+
+      if (result.already_applied) {
+        setToast("You've already applied to this role.");
+      } else {
+        setToast(`Applied to ${job.title} at ${job.company_name}. We'll submit shortly.`);
+      }
       setTimeout(() => setToast(null), 4000);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not submit application.");
@@ -270,7 +272,7 @@ export default function SearchPage() {
       activePath="/search"
       eyebrow="Search"
       title="Find jobs"
-      description="Search across Greenhouse, Lever, SmartRecruiters, and Workday. Click Apply to submit an application on your behalf."
+      description="Real-time search across millions of jobs. Click Apply and we submit the application for you."
       actions={[
         { href: "/applications", label: "View applications", variant: "secondary" },
       ]}
@@ -409,10 +411,11 @@ export default function SearchPage() {
             </div>
             <div className="search-results">
               {results.map((job) => {
-                const isQueued = queuedIds.has(job.id);
-                const isQueueing = queueing === job.id;
+                const jobKey = job.external_id || job.id || job.apply_url;
+                const isQueued = queuedIds.has(jobKey);
+                const isQueueing = queueing === jobKey;
                 return (
-                  <article className="search-result" key={job.id}>
+                  <article className="search-result" key={jobKey}>
                     <div className="search-result-main">
                       <strong>{job.title}</strong>
                       <span className="search-result-meta">
@@ -470,10 +473,11 @@ export default function SearchPage() {
             </div>
             <div className="search-results">
               {suggested.map((job) => {
-                const isQueued = queuedIds.has(job.id);
-                const isQueueing = queueing === job.id;
+                const jobKey = job.external_id || job.id || job.apply_url;
+                const isQueued = queuedIds.has(jobKey);
+                const isQueueing = queueing === jobKey;
                 return (
-                  <article className="search-result" key={job.id}>
+                  <article className="search-result" key={jobKey}>
                     <div className="search-result-main">
                       <strong>{job.title}</strong>
                       <span className="search-result-meta">
@@ -510,9 +514,10 @@ export default function SearchPage() {
         {results === null && !searching && (!suggested || suggested.length === 0) && (
           <div className="search-hint">
             <p>
-              Search by role title to find open positions. The job pool
-              updates every 4 hours with roles from Greenhouse, Lever,
-              and more. Click Apply and we handle the rest.
+              Real-time search across millions of US jobs. Try
+              &ldquo;Registered Nurse&rdquo;, &ldquo;Mechanical Engineer&rdquo;,
+              &ldquo;Marketing Manager&rdquo;, or anything else.
+              Click Apply and we&apos;ll fill out the form for you.
             </p>
             {targetTitles.length === 0 && (
               <p>
