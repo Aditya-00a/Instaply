@@ -187,18 +187,22 @@ export default function SearchPage() {
     }
 
     try {
-      // Split query into words and match ANY word for broader results.
-      // "business analyst" matches "Business Systems Analyst", "Risk Analyst", etc.
+      // Match ALL words (AND) so "Business Analyst" returns jobs that
+      // contain BOTH "business" and "analyst" in the title — not jobs
+      // that contain either word.
       const words = query.trim().split(/\s+/).filter(Boolean);
-      const orFilter = words.map((w) => `title.ilike.%${w}%`).join(",");
 
       let q = supabase
         .from("jobs")
         .select("id, title, company_name, source, location, remote, apply_url")
-        .or(orFilter)
         .eq("is_active", true)
         .order("discovered_at", { ascending: false })
-        .limit(50);
+        .limit(100);
+
+      // Apply each word as a separate ilike — Supabase chains them as AND.
+      for (const w of words) {
+        q = q.ilike("title", `%${w}%`);
+      }
 
       if (remoteOnly) q = q.eq("remote", true);
       if (locationFilter.trim()) q = q.ilike("location", `%${locationFilter.trim()}%`);

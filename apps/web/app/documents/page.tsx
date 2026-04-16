@@ -112,6 +112,50 @@ export default function DocumentsPage() {
     window.open(data.signedUrl, "_blank");
   };
 
+  const handleUpload = async (kind: "resume" | "cover_letter", file: File) => {
+    const supabase = getBrowserSupabase();
+    if (!supabase) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const bucket = kind === "resume" ? "resumes" : "cover_letters";
+    const table = kind === "resume" ? "resumes" : "cover_letters";
+    const path = `${user.id}/${Date.now()}-${file.name}`;
+
+    try {
+      const { error: upErr } = await supabase.storage.from(bucket).upload(path, file, { upsert: false });
+      if (upErr) throw upErr;
+
+      // For resumes: clear existing primary first if this will be primary
+      const willBePrimary = kind === "resume" ? state.kind === "live" && state.resumes.length === 0 : false;
+      if (willBePrimary) {
+        await supabase.from(table).update({ is_primary: false }).eq("user_id", user.id);
+      }
+
+      const { data: row, error: insErr } = await supabase.from(table).insert({
+        user_id: user.id,
+        file_name: file.name,
+        file_size_bytes: file.size,
+        storage_path: path,
+        is_primary: willBePrimary,
+      }).select().single();
+      if (insErr) throw insErr;
+
+      // Refresh the list
+      setState((prev) => {
+        if (prev.kind !== "live") return prev;
+        const newRow = row as DocRow;
+        if (kind === "resume") {
+          return { ...prev, resumes: [newRow, ...prev.resumes] };
+        } else {
+          return { ...prev, coverLetters: [newRow, ...prev.coverLetters] };
+        }
+      });
+    } catch (e) {
+      alert("Upload failed: " + (e instanceof Error ? e.message : "unknown"));
+    }
+  };
+
   const isDemo = state.kind === "demo";
 
   return (
@@ -121,7 +165,6 @@ export default function DocumentsPage() {
       title="Documents"
       description="Your uploaded resumes and cover letters. Used to autofill applications."
       actions={[
-        { href: "/onboarding", label: "Upload more" },
         { href: "/applications", label: "View applications", variant: "secondary" },
       ]}
     >
@@ -151,10 +194,20 @@ export default function DocumentsPage() {
                     : "No resumes yet"}
                 </h2>
               </div>
-              <Link href="/onboarding" className="btn-secondary">
+              <label className="btn-secondary">
                 <Upload size={14} />
-                Upload
-              </Link>
+                Upload resume
+                <input
+                  type="file"
+                  accept=".pdf,.docx,.doc"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleUpload("resume", f);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
             </div>
 
             {state.resumes.length === 0 ? (
@@ -199,26 +252,70 @@ export default function DocumentsPage() {
             )}
           </section>
 
-          {/* Cover letters — hidden until upload flow is built */}
-          {state.coverLetters.length > 0 && (
-            <section className="console-section">
-              <div className="section-intro">
-                <div>
-                  <p className="eyebrow">Cover letters</p>
-                  <h2>{state.coverLetters.length} on file</h2>
+          <section className="console-section">
+            <div className="section-intro">
+              <div>
+                <p className="eyebrow">Cover letters</p>
+                <h2>
+                  {state.coverLetters.length > 0
+                    ? `${state.coverLetters.length} cover letter${state.coverLetters.length === 1 ? "" : "s"} on file`
+                    : "No cover letters yet"}
+                </h2>
+              </div>
+              <label className="btn-secondary">
+                <Upload size={14} />
+                Upload cover letter
+                <input
+                  type="file"
+                  accept=".pdf,.docx,.doc,.txt"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleUpload("cover_letter", f);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            </div>
+
+            {state.coverLetters.length === 0 ? (
+              <div className="doc-empty">
+                <div className="doc-empty-ico">
+                  <FileUp size={28} />
+                </div>
+                <div className="doc-empty-body">
+                  <strong>Optional — speeds up applications that ask for one</strong>
+                  <p>
+                    Upload a generic cover letter (PDF or DOCX). When an
+                    application form asks for one, we&apos;ll attach it
+                    automatically. Most students skip this and still get
+                    interviews.
+                  </p>
                 </div>
               </div>
+            ) : (
               <div className="doc-grid">
                 {state.coverLetters.map((d) => (
                   <DocCard
                     key={d.id}
                     doc={d}
                     onDownload={() => handleDownload("cover_letters", d)}
+                    onDelete={async () => {
+                      if (!confirm(`Delete ${d.file_name}?`)) return;
+                      const supabase = getBrowserSupabase();
+                      if (!supabase) return;
+                      await supabase.storage.from("cover_letters").remove([d.storage_path]);
+                      await supabase.from("cover_letters").delete().eq("id", d.id);
+                      setState((prev) => prev.kind === "live" ? {
+                        ...prev,
+                        coverLetters: prev.coverLetters.filter((r) => r.id !== d.id),
+                      } : prev);
+                    }}
                   />
                 ))}
               </div>
-            </section>
-          )}
+            )}
+          </section>
         </>
       )}
 

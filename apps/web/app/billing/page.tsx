@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { ConsoleShell } from "../components/console-shell";
 import { getBrowserSupabase, isSupabaseConfigured } from "../lib/supabase-browser";
 import { PricingCustom } from "../components/pricing-custom";
+import { InviteCodeCard } from "../components/invite-code-card";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://api.asion.ai";
 
@@ -342,6 +343,10 @@ export default function BillingPage() {
         <div style={{ marginTop: 20 }}>
           <PricingCustom inApp />
         </div>
+      </section>
+
+      <section className="console-section">
+        <InviteCodeCard />
       </section>
 
       <section className="console-section">
