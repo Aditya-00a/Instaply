@@ -1,0 +1,48 @@
+# fly.toml app configuration file generated for instaply-web on 2026-04-16T00:12:57-04:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'instaply-web'
+primary_region = 'bom'
+
+[build]
+  dockerfile = 'Dockerfile'
+
+  [build.args]
+    NEXT_PUBLIC_SUPABASE_URL      = "https://xmouiqvuipmynqnmkvmg.supabase.co"
+    NEXT_PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_spONGGAAxYxDt55NmRmJug_UgUz6mYO"
+    NEXT_PUBLIC_API_BASE          = "https://api.asion.ai"
+    NEXT_PUBLIC_PADDLE_ENV        = "production"
+
+[env]
+  NEXT_PUBLIC_API_BASE = 'https://api.asion.ai'
+  PORT = '3000'
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+  [http_service.concurrency]
+    type = 'requests'
+    hard_limit = 200
+    soft_limit = 150
+
+  [[http_service.checks]]
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '10s'
+    method = 'GET'
+    path = '/'
+    protocol = 'http'
+
+[[vm]]
+  size = 'shared-cpu-1x'
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 512

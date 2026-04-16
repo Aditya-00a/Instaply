@@ -32,6 +32,7 @@ export default function SearchPage() {
   const [error, setError] = useState<string | null>(null);
   const [queuedIds, setQueuedIds] = useState<Set<string>>(new Set());
   const [queueing, setQueueing] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   // Load already-applied job IDs on mount so user sees "✓ Applied" instantly
   useEffect(() => {
@@ -115,13 +116,16 @@ export default function SearchPage() {
 
       if (err) {
         if (err.message.includes("duplicate") || err.code === "23505") {
-          // Already queued
           setQueuedIds((prev) => new Set(prev).add(job.id));
+          setToast("You've already applied to this role.");
+          setTimeout(() => setToast(null), 3000);
           return;
         }
         throw err;
       }
       setQueuedIds((prev) => new Set(prev).add(job.id));
+      setToast(`Applied to ${job.title} at ${job.company_name}. We'll submit within 30 minutes.`);
+      setTimeout(() => setToast(null), 4000);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not submit application.");
     } finally {
@@ -139,6 +143,10 @@ export default function SearchPage() {
         { href: "/applications", label: "View applications", variant: "secondary" },
       ]}
     >
+      {toast && (
+        <div className="search-toast">{toast}</div>
+      )}
+
       <section className="console-section">
         <div className="search-bar">
           <div className="search-bar-input">

@@ -39,15 +39,14 @@ class Settings(BaseSettings):
     per_company_cap: int = 4
     free_credits_per_user: int = 10
 
-    # Paddle (Billing API — not Classic)
-    paddle_vendor_id: str = ""
-    paddle_api_key: str = ""
-    paddle_public_key: str = ""
-    # Secret for HMAC-SHA256 webhook signature verification.
-    # Paddle Dashboard -> Developer Tools -> Notifications -> copy secret.
-    paddle_webhook_secret: str = ""
-    # Optional: allow skipping signature check ONLY in local dev
-    paddle_webhook_skip_verify: bool = False
+    # Stripe
+    stripe_secret_key: str = ""
+    stripe_publishable_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_webhook_skip_verify: bool = False
+
+    # Web URL (for Stripe success/cancel redirects)
+    web_url: str = "https://instaply.asion.ai"
 
 
 settings = Settings()

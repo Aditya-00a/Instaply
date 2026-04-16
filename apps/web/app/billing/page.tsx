@@ -6,14 +6,9 @@ import { useEffect, useState } from "react";
 
 import { ConsoleShell } from "../components/console-shell";
 import { getBrowserSupabase, isSupabaseConfigured } from "../lib/supabase-browser";
-import { getPaddle, isPaddleConfigured } from "../lib/paddle";
 import { PricingCustom } from "../components/pricing-custom";
 
-const PACK_PRICE_ENV: Record<string, string | undefined> = {
-  starter: process.env.NEXT_PUBLIC_PADDLE_PRICE_STARTER,
-  plus: process.env.NEXT_PUBLIC_PADDLE_PRICE_PLUS,
-  pro: process.env.NEXT_PUBLIC_PADDLE_PRICE_PRO,
-};
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://api.asion.ai";
 
 type Pack = {
   id: string;
@@ -62,6 +57,7 @@ function humanReason(reason: string): string {
   const map: Record<string, string> = {
     signup_bonus: "Signup bonus",
     topup: "Top-up",
+    paid_topup: "Top-up",
     paddle_topup: "Top-up (Paddle)",
     application_confirmed: "Confirmed application",
     refund: "Refund",
@@ -129,47 +125,47 @@ export default function BillingPage() {
   }, []);
 
   const handleCheckout = async (packId: string) => {
-    const priceId = PACK_PRICE_ENV[packId];
-    if (!isPaddleConfigured() || !priceId) {
-      setToast(
-        "Checkout isn't fully configured yet. Email hello@asion.ai for early access."
-      );
-      setTimeout(() => setToast(null), 4800);
-      return;
-    }
-
-    const paddle = await getPaddle();
-    if (!paddle) {
-      setToast("Could not load Paddle. Try again in a moment.");
-      setTimeout(() => setToast(null), 4800);
-      return;
-    }
-
-    // Pre-fill customer email from Supabase session if signed in.
-    let customerEmail: string | undefined;
-    let customerId: string | undefined;
     const supabase = getBrowserSupabase();
-    if (supabase) {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      customerEmail = user?.email ?? undefined;
-      customerId = user?.id;
+    if (!supabase) {
+      setToast("Please sign in first.");
+      setTimeout(() => setToast(null), 4800);
+      return;
     }
 
-    paddle.Checkout.open({
-      items: [{ priceId, quantity: 1 }],
-      customer: customerEmail ? { email: customerEmail } : undefined,
-      customData: customerId ? { user_id: customerId, pack: packId } : undefined,
-      settings: {
-        displayMode: "overlay",
-        theme: "light",
-        successUrl:
-          typeof window !== "undefined"
-            ? `${window.location.origin}/billing/success`
-            : undefined,
-      },
-    });
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      setToast("Please sign in first.");
+      setTimeout(() => setToast(null), 4800);
+      return;
+    }
+
+    setToast("Redirecting to checkout...");
+
+    try {
+      const res = await fetch(`${API_BASE}/billing/create-checkout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ pack_id: packId }),
+      });
+
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(err || "Checkout failed");
+      }
+
+      const { checkout_url } = await res.json();
+      if (checkout_url) {
+        window.location.href = checkout_url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (e) {
+      setToast(e instanceof Error ? e.message : "Checkout failed. Try again.");
+      setTimeout(() => setToast(null), 4800);
+    }
   };
 
   const balance =

@@ -1,0 +1,23 @@
+[project]
+name = "instaply-mcp"
+version = "0.1.0"
+description = "Instaply MCP server — agentic job applications inside Claude Desktop"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Ravendise", email = "support@asion.ai" }]
+license = { text = "Proprietary" }
+dependencies = [
+    "mcp>=1.2.0",
+    "httpx>=0.27.0",
+    "pydantic>=2.8.0",
+]
+
+[project.scripts]
+instaply-mcp = "instaply_mcp.server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["instaply_mcp"]
