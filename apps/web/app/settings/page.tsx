@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Check, LockKeyhole, Minus, Plus, SlidersHorizontal, Sparkles } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Check, LockKeyhole, Loader2, Minus, Plus, Save, SlidersHorizontal, Sparkles } from "lucide-react";
 
 import {
   instaplyExperienceLevels,
@@ -19,8 +19,20 @@ import { McpTokensCard } from "../components/mcp-tokens-card";
 import { MfaSetupCard } from "../components/mfa-setup-card";
 import { AccountSettingsCard } from "../components/account-settings-card";
 import { InviteCodeCard } from "../components/invite-code-card";
+import { getBrowserSupabase, isSupabaseConfigured } from "../lib/supabase-browser";
 
-const cloneProfile = (): CandidateWorkspaceProfile => JSON.parse(JSON.stringify(starterCandidateWorkspaceProfile));
+const STORAGE_KEY = "instaply_workspace_settings";
+
+const cloneProfile = (): CandidateWorkspaceProfile => {
+  // Load from localStorage first
+  if (typeof window !== "undefined") {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+  }
+  return JSON.parse(JSON.stringify(starterCandidateWorkspaceProfile));
+};
 const humanize = (value: string) => value.replaceAll("_", " ");
 const companyModes = ["agent_recommended", "user_curated", "hybrid"] as const;
 const suggestedLocations = ["New York", "Remote", "San Francisco", "Chicago", "Boston"] as const;
@@ -69,6 +81,50 @@ function SwitchRow({
 export default function SettingsPage() {
   const [profile, setProfile] = useState<CandidateWorkspaceProfile>(cloneProfile);
   const [locationDraft, setLocationDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Auto-save to localStorage + Supabase on every change
+  const persistSettings = useCallback(async (p: CandidateWorkspaceProfile) => {
+    // Save to localStorage immediately
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); } catch {}
+
+    // Debounced save to Supabase
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      if (!isSupabaseConfigured()) return;
+      const supabase = getBrowserSupabase();
+      if (!supabase) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      setSaving(true);
+      try {
+        await supabase.from("preferences").upsert({
+          user_id: user.id,
+          target_locations: p.jobSearch.preferredLocations,
+          per_company_cap: p.automation.maxApplicationsPerRun,
+          updated_at: new Date().toISOString(),
+        });
+        setSaveStatus("saved");
+        setTimeout(() => setSaveStatus("idle"), 2000);
+      } catch {
+        setSaveStatus("error");
+      } finally {
+        setSaving(false);
+      }
+    }, 1000);
+  }, []);
+
+  // Wrap setProfile to auto-save
+  const updateProfile = useCallback((updater: (p: CandidateWorkspaceProfile) => CandidateWorkspaceProfile) => {
+    setProfile((prev) => {
+      const next = updater(prev);
+      persistSettings(next);
+      return next;
+    });
+  }, [persistSettings]);
 
   const settingsStats = [
     { label: "Selected portals", value: String(profile.jobSearch.portalSelections.length) },
@@ -78,7 +134,7 @@ export default function SettingsPage() {
   ];
 
   const togglePortal = (portal: PortalId) => {
-    setProfile((current) => ({
+    updateProfile((current) => ({
       ...current,
       jobSearch: {
         ...current.jobSearch,
@@ -112,7 +168,7 @@ export default function SettingsPage() {
       activePath="/settings"
       eyebrow="Settings"
       title="Workspace settings"
-      description=""
+      description={saving ? "Saving..." : saveStatus === "saved" ? "All changes saved" : "Changes auto-save as you go"}
       actions={[
         { href: "/onboarding", label: "Edit profile" },
         { href: "/billing", label: "View billing", variant: "secondary" }
@@ -198,7 +254,7 @@ export default function SettingsPage() {
                     className="profile-option-chip profile-option-chip-active"
                     key={location}
                     onClick={() =>
-                      setProfile((current) => ({
+                      updateProfile((current) => ({
                         ...current,
                         jobSearch: {
                           ...current.jobSearch,
@@ -220,7 +276,7 @@ export default function SettingsPage() {
                 <select
                   value={profile.jobSearch.experienceLevel}
                   onChange={(event) =>
-                    setProfile((current) => ({
+                    updateProfile((current) => ({
                       ...current,
                       jobSearch: { ...current.jobSearch, experienceLevel: event.target.value as ExperienceLevel }
                     }))
@@ -241,7 +297,7 @@ export default function SettingsPage() {
                 <select
                   value={profile.jobSearch.companyRecommendationMode}
                   onChange={(event) =>
-                    setProfile((current) => ({
+                    updateProfile((current) => ({
                       ...current,
                       jobSearch: {
                         ...current.jobSearch,
@@ -277,7 +333,7 @@ export default function SettingsPage() {
                 <select
                   value={profile.automation.preferredRunMode}
                   onChange={(event) =>
-                    setProfile((current) => ({
+                    updateProfile((current) => ({
                       ...current,
                       automation: { ...current.automation, preferredRunMode: event.target.value as RunMode }
                     }))
@@ -298,7 +354,7 @@ export default function SettingsPage() {
                 value={profile.automation.dailyApplyCap}
                 min={0}
                 onChange={(value) =>
-                  setProfile((current) => ({
+                  updateProfile((current) => ({
                     ...current,
                     automation: { ...current.automation, dailyApplyCap: value }
                   }))
@@ -312,7 +368,7 @@ export default function SettingsPage() {
                 value={profile.automation.maxApplicationsPerRun}
                 min={0}
                 onChange={(value) =>
-                  setProfile((current) => ({
+                  updateProfile((current) => ({
                     ...current,
                     automation: { ...current.automation, maxApplicationsPerRun: value }
                   }))
@@ -327,7 +383,7 @@ export default function SettingsPage() {
                   checked={profile.automation.autoApplyEnabled}
                   label="Automation enabled"
                   onToggle={() =>
-                    setProfile((current) => ({
+                    updateProfile((current) => ({
                       ...current,
                       automation: { ...current.automation, autoApplyEnabled: !current.automation.autoApplyEnabled }
                     }))

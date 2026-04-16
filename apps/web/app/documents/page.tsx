@@ -169,6 +169,30 @@ export default function DocumentsPage() {
                     key={d.id}
                     doc={d}
                     onDownload={() => handleDownload("resumes", d)}
+                    onSetPrimary={async () => {
+                      const supabase = getBrowserSupabase();
+                      if (!supabase) return;
+                      const { data: { user } } = await supabase.auth.getUser();
+                      if (!user) return;
+                      // Clear all primary flags, then set this one
+                      await supabase.from("resumes").update({ is_primary: false }).eq("user_id", user.id);
+                      await supabase.from("resumes").update({ is_primary: true }).eq("id", d.id);
+                      setState((prev) => prev.kind === "live" ? {
+                        ...prev,
+                        resumes: prev.resumes.map((r) => ({ ...r, is_primary: r.id === d.id })),
+                      } : prev);
+                    }}
+                    onDelete={async () => {
+                      if (!confirm(`Delete ${d.file_name}? This cannot be undone.`)) return;
+                      const supabase = getBrowserSupabase();
+                      if (!supabase) return;
+                      await supabase.storage.from("resumes").remove([d.storage_path]);
+                      await supabase.from("resumes").delete().eq("id", d.id);
+                      setState((prev) => prev.kind === "live" ? {
+                        ...prev,
+                        resumes: prev.resumes.filter((r) => r.id !== d.id),
+                      } : prev);
+                    }}
                   />
                 ))}
               </div>
@@ -228,7 +252,12 @@ export default function DocumentsPage() {
   );
 }
 
-function DocCard({ doc, onDownload }: { doc: DocRow; onDownload: () => void }) {
+function DocCard({ doc, onDownload, onSetPrimary, onDelete }: {
+  doc: DocRow;
+  onDownload: () => void;
+  onSetPrimary?: () => void;
+  onDelete?: () => void;
+}) {
   return (
     <article className="doc-card">
       <div className="doc-card-ico">
@@ -242,11 +271,22 @@ function DocCard({ doc, onDownload }: { doc: DocRow; onDownload: () => void }) {
         <div className="doc-card-meta">
           {fmtSize(doc.file_size_bytes)} · uploaded {fmtDate(doc.created_at)}
         </div>
+        <div className="doc-card-actions">
+          <button type="button" className="doc-card-btn" onClick={onDownload}>
+            <Download size={14} /> Open
+          </button>
+          {!doc.is_primary && onSetPrimary && (
+            <button type="button" className="doc-card-btn doc-card-btn-secondary" onClick={onSetPrimary}>
+              Set as primary
+            </button>
+          )}
+          {onDelete && (
+            <button type="button" className="doc-card-btn doc-card-btn-danger" onClick={onDelete}>
+              Delete
+            </button>
+          )}
+        </div>
       </div>
-      <button type="button" className="doc-card-btn" onClick={onDownload}>
-        <Download size={14} />
-        Open
-      </button>
     </article>
   );
 }

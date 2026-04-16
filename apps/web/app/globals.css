@@ -5541,6 +5541,34 @@ p {
   color: var(--accent);
 }
 
+.doc-card-btn-secondary {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--muted);
+  font-size: 11.5px;
+  padding: 5px 10px;
+}
+
+.doc-card-btn-danger {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--danger) 30%, var(--line));
+  color: var(--danger);
+  font-size: 11.5px;
+  padding: 5px 10px;
+}
+
+.doc-card-btn-danger:hover {
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+  border-color: var(--danger);
+}
+
+.doc-card-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
 .doc-empty {
   padding: 28px 24px;
   background: var(--panel-strong);
