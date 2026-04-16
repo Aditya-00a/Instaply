@@ -69,7 +69,7 @@ export default function ReviewPage() {
 
   const rows = state.kind === "live" ? state.rows : [];
   const blocked = rows.filter((r) => r.times_used === 0);
-  const saved = rows.filter((r) => !r.times_used === 0);
+  const saved = rows.filter((r) => r.times_used !== 0);
 
   return (
     <ConsoleShell
