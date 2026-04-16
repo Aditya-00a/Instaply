@@ -11,7 +11,7 @@ import { getBrowserSupabase, isSupabaseConfigured } from "../lib/supabase-browse
 type AppRow = {
   id: string;
   status: string;
-  created_at: string;
+  queued_at: string;
   jobs: {
     title: string | null;
     company_name: string | null;
@@ -83,8 +83,8 @@ export default function DashboardPage() {
         // Applications summary
         const { data: apps, error: appsErr } = await supabase
           .from("applications")
-          .select("id, status, created_at, jobs(title, company_name)")
-          .order("created_at", { ascending: false });
+          .select("id, status, queued_at, jobs(title, company_name)")
+          .order("queued_at", { ascending: false });
 
         if (appsErr) {
           if (!cancelled)
@@ -273,7 +273,7 @@ export default function DashboardPage() {
                       <p>{app.jobs?.company_name || "—"}</p>
                     </div>
                     <span className="workspace-inline-pill">
-                      {new Date(app.created_at).toLocaleDateString()}
+                      {new Date(app.queued_at).toLocaleDateString()}
                     </span>
                   </div>
                 ))

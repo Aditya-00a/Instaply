@@ -11,7 +11,7 @@ type AppRow = {
   id: string;
   status: string;
   fit_score: number | null;
-  created_at: string;
+  queued_at: string;
   confirmed_at: string | null;
   error_message: string | null;
   jobs: {
@@ -107,9 +107,9 @@ export default function ApplicationsPage() {
         const { data, error } = await supabase
           .from("applications")
           .select(
-            "id, status, fit_score, created_at, confirmed_at, error_message, jobs(title, company_name, source, apply_url, location)"
+            "id, status, fit_score, queued_at, confirmed_at, error_message, jobs(title, company_name, source, apply_url, location)"
           )
-          .order("created_at", { ascending: false });
+          .order("queued_at", { ascending: false });
 
         if (error) throw error;
         if (!cancelled) setState({ kind: "live", rows: (data ?? []) as unknown as AppRow[] });
@@ -256,7 +256,7 @@ export default function ApplicationsPage() {
                     <span className="app-table-cell-fit">
                       {r.fit_score != null ? `${Math.round(r.fit_score * 100)}%` : "—"}
                     </span>
-                    <span className="app-table-cell-date">{fmtDate(r.confirmed_at || r.created_at)}</span>
+                    <span className="app-table-cell-date">{fmtDate(r.confirmed_at || r.queued_at)}</span>
                     {r.jobs?.apply_url ? (
                       <a
                         href={r.jobs.apply_url}
