@@ -16,6 +16,7 @@ const PROTECTED_PREFIXES = [
   "/onboarding",
   "/billing",
   "/settings",
+  "/search",
 ];
 
 function isProtected(pathname: string): boolean {
