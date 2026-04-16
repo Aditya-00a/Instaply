@@ -139,10 +139,11 @@ export default function BillingPage() {
       return;
     }
 
-    setToast("Redirecting to checkout...");
+    setToast("Preparing checkout...");
 
     try {
-      const res = await fetch(`${API_BASE}/billing/create-checkout`, {
+      // 1. Create Razorpay order via our API
+      const res = await fetch(`${API_BASE}/billing/create-order`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -153,15 +154,65 @@ export default function BillingPage() {
 
       if (!res.ok) {
         const err = await res.text();
-        throw new Error(err || "Checkout failed");
+        throw new Error(err || "Order creation failed");
       }
 
-      const { checkout_url } = await res.json();
-      if (checkout_url) {
-        window.location.href = checkout_url;
-      } else {
-        throw new Error("No checkout URL returned");
+      const order = await res.json();
+
+      // 2. Load Razorpay script if not loaded
+      if (!(window as any).Razorpay) {
+        await new Promise<void>((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = "https://checkout.razorpay.com/v1/checkout.js";
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error("Failed to load payment SDK"));
+          document.head.appendChild(script);
+        });
       }
+
+      // 3. Open Razorpay checkout overlay
+      const options = {
+        key: order.key_id,
+        amount: order.amount,
+        currency: order.currency,
+        name: "Instaply",
+        description: `${order.pack.label} — ${order.pack.credits} applications`,
+        order_id: order.order_id,
+        handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
+          // 4. Verify payment + credit user
+          setToast("Verifying payment...");
+          try {
+            const verifyRes = await fetch(`${API_BASE}/billing/verify-payment`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${session!.access_token}`,
+              },
+              body: JSON.stringify(response),
+            });
+            if (!verifyRes.ok) throw new Error("Verification failed");
+            const result = await verifyRes.json();
+            setToast(`Payment successful! ${result.credited} credits added.`);
+            // Refresh the page to show updated balance
+            setTimeout(() => window.location.reload(), 2000);
+          } catch {
+            setToast("Payment received but verification failed. Contact support.");
+          }
+        },
+        prefill: {
+          email: session.user?.email || "",
+        },
+        theme: {
+          color: "#0052ff",
+        },
+        modal: {
+          ondismiss: () => setToast(null),
+        },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+      setToast(null);
     } catch (e) {
       setToast(e instanceof Error ? e.message : "Checkout failed. Try again.");
       setTimeout(() => setToast(null), 4800);

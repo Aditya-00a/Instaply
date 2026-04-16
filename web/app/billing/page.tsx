@@ -1,39 +1,26 @@
 "use client";
 import { useEffect, useState } from "react";
-import Script from "next/script";
 import { supabase } from "@/lib/supabase";
-import { apiGet } from "@/lib/api";
+import { apiGet, apiPost } from "@/lib/api";
 
 type Pack = { id: string; label: string; price_usd: number; credits: number; bonus_pct: number };
 type Credits = { balance: number; plan: string; used?: number };
 
-// Paddle product → price IDs are set at build time (env vars).
-const PRICE_ID: Record<string, string | undefined> = {
-  starter: process.env.NEXT_PUBLIC_PADDLE_PRICE_STARTER,
-  plus:    process.env.NEXT_PUBLIC_PADDLE_PRICE_PLUS,
-  pro:     process.env.NEXT_PUBLIC_PADDLE_PRICE_PRO,
-};
-
-declare global {
-  interface Window {
-    Paddle?: any;
-  }
-}
-
 export default function BillingPage() {
   const [packs, setPacks] = useState<Pack[] | null>(null);
   const [credits, setCredits] = useState<Credits | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [email, setEmail] = useState<string | null>(null);
-  const [ready, setReady] = useState(false);
+  const [buying, setBuying] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
+    // Check URL params for post-checkout status
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("success") === "1") setSuccess(true);
+
     (async () => {
       const { data: { user } } = await supabase().auth.getUser();
       if (!user) { window.location.href = "/signup"; return; }
-      setUserId(user.id);
-      setEmail(user.email || null);
       try {
         const [p, c] = await Promise.all([
           apiGet<{ packs: Pack[] }>("/billing/packs"),
@@ -45,33 +32,30 @@ export default function BillingPage() {
     })();
   }, []);
 
-  function initPaddle() {
-    if (!window.Paddle) return;
-    const env = process.env.NEXT_PUBLIC_PADDLE_ENV;
-    if (env && env !== "production") window.Paddle.Environment.set(env);
-    window.Paddle.Initialize({
-      token: process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN,
-    });
-    setReady(true);
-  }
-
-  function buy(pack: Pack) {
-    const priceId = PRICE_ID[pack.id];
-    if (!priceId) { alert("Price not configured yet — set NEXT_PUBLIC_PADDLE_PRICE_* in env."); return; }
-    if (!ready || !window.Paddle || !userId) return;
-    window.Paddle.Checkout.open({
-      items: [{ priceId, quantity: 1 }],
-      customer: email ? { email } : undefined,
-      // custom_data is what the webhook uses to credit the right user + pack.
-      customData: { user_id: userId, pack_id: pack.id },
-      settings: { theme: "dark", displayMode: "overlay" },
-    });
+  async function buy(pack: Pack) {
+    setBuying(pack.id);
+    setErr(null);
+    try {
+      const res = await apiPost<{ checkout_url: string }>("/billing/create-checkout", {
+        pack_id: pack.id,
+      });
+      // Redirect to Stripe Checkout
+      window.location.href = res.checkout_url;
+    } catch (e: any) {
+      setErr(e.message || "Checkout failed");
+      setBuying(null);
+    }
   }
 
   return (
     <div>
-      <Script src="https://cdn.paddle.com/paddle/v2/paddle.js" onLoad={initPaddle} />
       <h1 className="text-3xl font-semibold">Billing</h1>
+
+      {success && (
+        <div className="mt-4 rounded-md border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-300">
+          Payment successful! Credits will appear in a few seconds.
+        </div>
+      )}
 
       <div className="mt-6 rounded-lg border border-white/10 p-5 flex items-baseline justify-between">
         <div>
@@ -104,10 +88,10 @@ export default function BillingPage() {
             )}
             <button
               onClick={() => buy(p)}
-              disabled={!ready}
+              disabled={buying !== null}
               className="mt-5 w-full rounded-md bg-accent px-4 py-2 text-sm font-medium disabled:opacity-50"
             >
-              {ready ? "Buy" : "Loading…"}
+              {buying === p.id ? "Redirecting…" : "Buy"}
             </button>
           </div>
         ))}

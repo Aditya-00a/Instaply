@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import settings
 from .auth import current_user_id
 from .db import service_client
-from .stripe_webhook import router as stripe_router
+from .razorpay_webhook import router as razorpay_router
 from .audit import audit
 from .ratelimit import rate_limit
 from fastapi import Request
@@ -43,7 +43,7 @@ app.add_middleware(
 )
 
 
-app.include_router(stripe_router)
+app.include_router(razorpay_router)
 
 
 # ─── Health ───────────────────────────────────────────────────────

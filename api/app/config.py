@@ -39,11 +39,15 @@ class Settings(BaseSettings):
     per_company_cap: int = 4
     free_credits_per_user: int = 10
 
-    # Stripe
+    # Stripe (legacy — kept for backward compat)
     stripe_secret_key: str = ""
     stripe_publishable_key: str = ""
     stripe_webhook_secret: str = ""
     stripe_webhook_skip_verify: bool = False
+
+    # Razorpay (active)
+    razorpay_key_id: str = ""
+    razorpay_key_secret: str = ""
 
     # Web URL (for Stripe success/cancel redirects)
     web_url: str = "https://instaply.asion.ai"
