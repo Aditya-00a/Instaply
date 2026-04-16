@@ -6464,7 +6464,26 @@ p {
   padding: 4px 16px 12px;
 }
 
-.console-mobile-bar .credit-badge {
+.credit-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.credit-badge-apps {
+  background: linear-gradient(135deg,
+    color-mix(in srgb, #10b981 12%, transparent),
+    color-mix(in srgb, var(--accent) 6%, transparent));
+  border-color: color-mix(in srgb, #10b981 25%, var(--line));
+  color: #047857;
+}
+
+.credit-badge-apps:hover {
+  border-color: #10b981;
+  background: color-mix(in srgb, #10b981 18%, transparent);
+}
+
+.console-mobile-bar .credit-badges {
   margin-left: auto;
 }
 
