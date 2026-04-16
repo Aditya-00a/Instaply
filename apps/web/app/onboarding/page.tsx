@@ -22,7 +22,7 @@ import {
 
 import { ConsoleShell } from "../components/console-shell";
 import { getBrowserSupabase, isSupabaseConfigured } from "../lib/supabase-browser";
-import { extractPdfText, scoreResumeText, type AtsReport } from "../lib/ats-score";
+import { extractPdfText, extractDocxText, scoreResumeText, type AtsReport } from "../lib/ats-score";
 
 type Step = 1 | 2 | 3;
 
@@ -84,6 +84,7 @@ export default function OnboardingPage() {
 
   // Step 1 state
   const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [existingResume, setExistingResume] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [report, setReport] = useState<AtsReport | null>(null);
@@ -114,14 +115,29 @@ export default function OnboardingPage() {
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data } = await supabase
-        .from("profiles")
-        .select(
-          "full_name, phone, linkedin_url, github_url, current_city, current_state, work_auth_status, needs_sponsorship, email"
-        )
-        .eq("id", user.id)
-        .single();
-      if (!data || cancelled) return;
+      const [{ data }, { data: resumeData }] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select(
+            "full_name, phone, linkedin_url, github_url, current_city, current_state, work_auth_status, needs_sponsorship, email"
+          )
+          .eq("id", user.id)
+          .single(),
+        supabase
+          .from("resumes")
+          .select("file_name")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1),
+      ]);
+      if (cancelled) return;
+
+      // Show existing resume if one exists
+      if (resumeData && resumeData.length > 0) {
+        setExistingResume(resumeData[0].file_name);
+      }
+
+      if (!data) return;
 
       const parts = (data.full_name || "").split(" ");
       setIdentity((prev) => ({
@@ -152,16 +168,33 @@ export default function OnboardingPage() {
     }
     setResumeFile(file);
 
-    // Parse client-side for auto-fill even when not signed in
-    if (file.type === "application/pdf") {
+    // Parse client-side for auto-fill + ATS scoring (PDF and DOCX)
+    const isPdf = file.type === "application/pdf" || file.name.endsWith(".pdf");
+    const isDocx =
+      file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      file.name.endsWith(".docx") ||
+      file.name.endsWith(".doc");
+
+    if (isPdf || isDocx) {
       setScoring(true);
       try {
-        const { text, pageCount } = await extractPdfText(file);
+        let text: string;
+        let pageCount: number | null = null;
+
+        if (isPdf) {
+          const result = await extractPdfText(file);
+          text = result.text;
+          pageCount = result.pageCount;
+        } else {
+          const result = await extractDocxText(file);
+          text = result.text;
+        }
+
         const ats = scoreResumeText(text, pageCount);
         setReport(ats);
         autoFillFromText(text);
       } catch (e) {
-        console.warn("parse failed", e);
+        console.warn("Resume parsing failed:", e);
       } finally {
         setScoring(false);
       }
@@ -262,7 +295,7 @@ export default function OnboardingPage() {
     setLocDraft("");
   };
 
-  const canAdvance1 = !!resumeFile || !ready; // resume optional in demo
+  const canAdvance1 = !!resumeFile || !!existingResume || !ready;
   const canAdvance2 =
     identity.firstName.trim().length > 0 && identity.email.trim().length > 0;
 
@@ -372,6 +405,16 @@ export default function OnboardingPage() {
                 </div>
               </header>
 
+              {existingResume && !resumeFile && (
+                <div className="wiz-existing-resume">
+                  <FileUp size={18} />
+                  <div>
+                    <strong>Resume on file: {existingResume}</strong>
+                    <span>Already uploaded. Drop a new one below to replace it, or continue.</span>
+                  </div>
+                </div>
+              )}
+
               <label
                 className={`wiz-drop${uploading ? " wiz-drop-busy" : ""}`}
                 onDragOver={(e) => e.preventDefault()}
@@ -379,7 +422,7 @@ export default function OnboardingPage() {
               >
                 <input
                   type="file"
-                  accept=".pdf,.doc,.docx,application/pdf"
+                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                   onChange={onFileChange}
                   hidden
                   disabled={uploading}
@@ -395,6 +438,8 @@ export default function OnboardingPage() {
                       ? "Analyzing…"
                       : resumeFile
                       ? resumeFile.name
+                      : existingResume
+                      ? "Drop a new resume to replace"
                       : "Drop your resume here or click to select"}
                   </strong>
                   <span>PDF or DOCX, max 10 MB</span>

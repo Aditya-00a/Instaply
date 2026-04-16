@@ -47,6 +47,13 @@ const EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i;
 const PHONE_RE = /(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/;
 const LINKEDIN_RE = /linkedin\.com\/in\//i;
 
+export async function extractDocxText(file: File): Promise<{ text: string }> {
+  const mammoth = await import("mammoth");
+  const buf = await file.arrayBuffer();
+  const result = await mammoth.extractRawText({ arrayBuffer: buf });
+  return { text: result.value };
+}
+
 export async function extractPdfText(file: File): Promise<{ text: string; pageCount: number }> {
   // Lazy-load pdfjs only when needed.
   const pdfjs = (await import("pdfjs-dist/legacy/build/pdf.mjs")) as unknown as {
