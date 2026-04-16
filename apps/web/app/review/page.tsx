@@ -222,7 +222,7 @@ function AnswerRowCard({ row }: { row: AnswerRow }) {
         </span>
       </div>
       <span
-        className={`app-pill ${row.is_blocked ? "app-pill-warn" : "app-pill-success"}`}
+        className={`app-pill ${row.times_used === 0 ? "app-pill-warn" : "app-pill-success"}`}
       >
         {row.times_used === 0 ? "Needs review" : `Used ${row.times_used}x`}
       </span>
