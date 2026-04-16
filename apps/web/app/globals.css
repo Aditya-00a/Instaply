@@ -6421,6 +6421,61 @@ p {
   background: color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
+.search-match-badge {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.search-match-high {
+  background: color-mix(in srgb, #10b981 12%, transparent);
+  color: #059669;
+  border: 1px solid color-mix(in srgb, #10b981 25%, var(--line));
+}
+
+.search-match-mid {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--line));
+}
+
+.search-match-low {
+  background: color-mix(in srgb, var(--muted) 8%, transparent);
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+
+.search-analyze-prompt {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  background: color-mix(in srgb, var(--accent) 4%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--accent) 15%, var(--line));
+  border-radius: 14px;
+  margin-bottom: 16px;
+}
+
+.search-analyze-prompt div {
+  flex: 1;
+}
+
+.search-analyze-prompt strong {
+  font-size: 14px;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.search-analyze-prompt p {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
 .search-recommended-header {
   display: flex;
   align-items: center;

@@ -15,7 +15,75 @@ type JobResult = {
   location: string | null;
   remote: boolean;
   apply_url: string;
+  matchScore?: number;
 };
+
+type ExtractedSkills = {
+  skills?: string[];
+  titles_held?: string[];
+  industries?: string[];
+  experience_years?: number;
+  summary?: string;
+};
+
+function scoreJob(job: JobResult, skills: ExtractedSkills, targetLocations: string[]): number {
+  const title = (job.title || "").toLowerCase();
+  const loc = (job.location || "").toLowerCase();
+  let score = 0;
+  let factors = 0;
+
+  // Skill match (40% weight) — how many of the user's skills appear in the job title
+  const userSkills = (skills.skills || []).map((s) => s.toLowerCase());
+  if (userSkills.length > 0) {
+    const titleWords = title.split(/[\s,\-\/()]+/);
+    let matched = 0;
+    for (const skill of userSkills) {
+      const skillWords = skill.split(/\s+/);
+      if (skillWords.every((w) => titleWords.some((tw) => tw.includes(w) || w.includes(tw)))) {
+        matched++;
+      }
+    }
+    score += 0.4 * Math.min(matched / Math.min(userSkills.length, 5), 1);
+    factors += 0.4;
+  }
+
+  // Title match (35% weight) — does the job title match titles the user has held?
+  const heldTitles = (skills.titles_held || []).map((t) => t.toLowerCase());
+  if (heldTitles.length > 0) {
+    let bestTitleMatch = 0;
+    for (const held of heldTitles) {
+      const heldWords = held.split(/\s+/);
+      const matchedWords = heldWords.filter((w) =>
+        title.includes(w) && w.length > 2
+      ).length;
+      const ratio = matchedWords / heldWords.length;
+      if (ratio > bestTitleMatch) bestTitleMatch = ratio;
+    }
+    score += 0.35 * bestTitleMatch;
+    factors += 0.35;
+  }
+
+  // Location match (15% weight)
+  if (targetLocations.length > 0) {
+    const locMatch = targetLocations.some(
+      (tl) => loc.includes(tl.toLowerCase()) || (tl.toLowerCase() === "remote" && job.remote)
+    );
+    score += locMatch ? 0.15 : 0;
+    factors += 0.15;
+  }
+
+  // Industry match (10% weight)
+  const industries = (skills.industries || []).map((i) => i.toLowerCase());
+  if (industries.length > 0) {
+    const companyLower = (job.company_name || "").toLowerCase();
+    const indMatch = industries.some((ind) => title.includes(ind) || companyLower.includes(ind));
+    score += indMatch ? 0.1 : 0;
+    factors += 0.1;
+  }
+
+  // Normalize to 0-100
+  return factors > 0 ? Math.round((score / factors) * 100) : 0;
+}
 
 const SOURCES: Record<string, string> = {
   greenhouse: "Greenhouse",
@@ -35,6 +103,9 @@ export default function SearchPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [suggested, setSuggested] = useState<JobResult[] | null>(null);
   const [targetTitles, setTargetTitles] = useState<string[]>([]);
+  const [extractedSkills, setExtractedSkills] = useState<ExtractedSkills>({});
+  const [targetLocations, setTargetLocations] = useState<string[]>([]);
+  const [analyzing, setAnalyzing] = useState(false);
 
   // Load applied IDs + preferences on mount; show recommended jobs automatically
   useEffect(() => {
@@ -54,7 +125,16 @@ export default function SearchPage() {
         setQueuedIds(new Set(apps.map((r: { job_id: string }) => r.job_id)));
       }
 
-      // Load preferences and auto-search recommended jobs
+      // Load profile skills + preferences
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("extracted_skills")
+        .eq("id", user.id)
+        .single();
+      if (profile?.extracted_skills && Object.keys(profile.extracted_skills).length > 0) {
+        setExtractedSkills(profile.extracted_skills as ExtractedSkills);
+      }
+
       const { data: prefs } = await supabase
         .from("preferences")
         .select("target_titles, target_locations")
@@ -65,6 +145,7 @@ export default function SearchPage() {
         const titles = (prefs[0].target_titles as string[]) || [];
         const locations = (prefs[0].target_locations as string[]) || [];
         setTargetTitles(titles);
+        setTargetLocations(locations);
 
         if (titles.length > 0) {
           // Build OR filter from target titles for recommended jobs
@@ -118,7 +199,13 @@ export default function SearchPage() {
         .limit(50);
 
       if (err) throw err;
-      setResults((data ?? []) as JobResult[]);
+      // Score and sort results by match quality
+      const scored = ((data ?? []) as JobResult[]).map((job) => ({
+        ...job,
+        matchScore: scoreJob(job, extractedSkills, targetLocations),
+      }));
+      scored.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+      setResults(scored);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Search failed.");
     } finally {
@@ -221,6 +308,58 @@ export default function SearchPage() {
           </div>
         )}
 
+        {!Object.keys(extractedSkills).length && !analyzing && (
+          <div className="search-analyze-prompt">
+            <Sparkles size={16} />
+            <div>
+              <strong>Get personalized match scores</strong>
+              <p>We'll scan your resume with AI and score every job against your skills, experience, and background.</p>
+            </div>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={async () => {
+                setAnalyzing(true);
+                setToast("Analyzing your resume...");
+                try {
+                  const supabase = getBrowserSupabase();
+                  if (!supabase) throw new Error("Not signed in");
+                  const { data: { session } } = await supabase.auth.getSession();
+                  if (!session) throw new Error("Not signed in");
+                  const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE || "https://api.asion.ai"}/profile/analyze-resume`, {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${session.access_token}` },
+                  });
+                  if (!res.ok) {
+                    const errText = await res.text();
+                    throw new Error(errText || "Analysis failed");
+                  }
+                  const result = await res.json();
+                  setExtractedSkills(result.extracted as ExtractedSkills);
+                  setToast(`Found ${(result.extracted?.skills || []).length} skills in your resume!`);
+                  setTimeout(() => setToast(null), 4000);
+                } catch (e) {
+                  setToast(e instanceof Error ? e.message : "Analysis failed. Try again.");
+                  setTimeout(() => setToast(null), 5000);
+                } finally {
+                  setAnalyzing(false);
+                }
+              }}
+            >
+              Analyze my resume
+            </button>
+          </div>
+        )}
+        {analyzing && (
+          <div className="search-analyze-prompt">
+            <Loader2 size={16} className="spin" />
+            <div>
+              <strong>Scanning your resume...</strong>
+              <p>Extracting skills, experience, and education. This takes about 10 seconds.</p>
+            </div>
+          </div>
+        )}
+
         {error && <div className="search-error">{error}</div>}
 
         {results !== null && results.length === 0 && (
@@ -241,6 +380,7 @@ export default function SearchPage() {
           <>
             <div className="search-count">
               {results.length} role{results.length === 1 ? "" : "s"} found
+              {Object.keys(extractedSkills).length > 0 && " · sorted by resume match"}
             </div>
             <div className="search-results">
               {results.map((job) => {
@@ -259,6 +399,11 @@ export default function SearchPage() {
                         {SOURCES[job.source] || job.source}
                       </span>
                     </div>
+                    {job.matchScore != null && job.matchScore > 0 && (
+                      <span className={`search-match-badge ${job.matchScore >= 70 ? "search-match-high" : job.matchScore >= 40 ? "search-match-mid" : "search-match-low"}`}>
+                        {job.matchScore}% match
+                      </span>
+                    )}
                     <div className="search-result-actions">
                       {job.apply_url && (
                         <a

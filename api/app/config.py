@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     razorpay_key_id: str = ""
     razorpay_key_secret: str = ""
 
+    # Cerebras (LLM for resume analysis)
+    cerebras_api_key: str = ""
+
     # Web URL (for Stripe success/cancel redirects)
     web_url: str = "https://instaply.asion.ai"
 
