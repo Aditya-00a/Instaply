@@ -203,6 +203,18 @@ function SignInContent() {
         }
       }
 
+      // Fire welcome email (best-effort, don't block signup on failure)
+      if (data.user?.email) {
+        fetch("/api/email/welcome", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: data.user.email,
+            name: data.user.user_metadata?.full_name,
+          }),
+        }).catch(() => {});
+      }
+
       if (data.session) {
         router.push(nextPath);
         router.refresh();
