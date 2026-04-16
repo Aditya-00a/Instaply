@@ -5843,6 +5843,21 @@ p {
 .workflow-legend-instaply { background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
 .workflow-legend-billing { background: linear-gradient(135deg, #f59e0b, #d97706); }
 
+/* ---------- Custom calculator bonus pill ---------- */
+
+.pricing-custom-bonus-pill {
+  display: inline-block;
+  padding: 6px 12px;
+  background: color-mix(in srgb, #10b981 14%, transparent);
+  color: #047857;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  margin: 4px 0;
+  align-self: flex-start;
+}
+
 .auth-visual-panel {
   display: grid;
   min-height: 720px;

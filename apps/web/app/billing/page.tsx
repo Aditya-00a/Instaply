@@ -6,6 +6,14 @@ import { useEffect, useState } from "react";
 
 import { ConsoleShell } from "../components/console-shell";
 import { getBrowserSupabase, isSupabaseConfigured } from "../lib/supabase-browser";
+import { getPaddle, isPaddleConfigured } from "../lib/paddle";
+import { PricingCustom } from "../components/pricing-custom";
+
+const PACK_PRICE_ENV: Record<string, string | undefined> = {
+  starter: process.env.NEXT_PUBLIC_PADDLE_PRICE_STARTER,
+  plus: process.env.NEXT_PUBLIC_PADDLE_PRICE_PLUS,
+  pro: process.env.NEXT_PUBLIC_PADDLE_PRICE_PRO,
+};
 
 type Pack = {
   id: string;
@@ -17,10 +25,11 @@ type Pack = {
   featured?: boolean;
 };
 
+// Updated bonuses — capped at 20% per the unit-economics review.
 const PACKS: Pack[] = [
   { id: "starter", label: "Starter", usd: 10, credits: 10, bonus: 0, per: 1.0 },
-  { id: "plus", label: "Plus", usd: 25, credits: 30, bonus: 17, per: 0.83, featured: true },
-  { id: "pro", label: "Pro", usd: 50, credits: 70, bonus: 40, per: 0.71 },
+  { id: "plus", label: "Plus", usd: 25, credits: 28, bonus: 12, per: 0.89, featured: true },
+  { id: "pro", label: "Pro", usd: 50, credits: 60, bonus: 20, per: 0.83 },
 ];
 
 type LedgerRow = {
@@ -119,14 +128,48 @@ export default function BillingPage() {
     };
   }, []);
 
-  const handleCheckout = (packId: string) => {
-    // Paddle.js integration lands once the price IDs are in place.
-    // For now, surface a deterministic "coming soon" toast so the
-    // UI flow is complete and reviewable.
-    setToast(
-      `Checkout for "${packId}" will open in Paddle once billing is live. Contact hello@asion.ai if you'd like early access.`
-    );
-    setTimeout(() => setToast(null), 4800);
+  const handleCheckout = async (packId: string) => {
+    const priceId = PACK_PRICE_ENV[packId];
+    if (!isPaddleConfigured() || !priceId) {
+      setToast(
+        "Checkout isn't fully configured yet. Email hello@asion.ai for early access."
+      );
+      setTimeout(() => setToast(null), 4800);
+      return;
+    }
+
+    const paddle = await getPaddle();
+    if (!paddle) {
+      setToast("Could not load Paddle. Try again in a moment.");
+      setTimeout(() => setToast(null), 4800);
+      return;
+    }
+
+    // Pre-fill customer email from Supabase session if signed in.
+    let customerEmail: string | undefined;
+    let customerId: string | undefined;
+    const supabase = getBrowserSupabase();
+    if (supabase) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      customerEmail = user?.email ?? undefined;
+      customerId = user?.id;
+    }
+
+    paddle.Checkout.open({
+      items: [{ priceId, quantity: 1 }],
+      customer: customerEmail ? { email: customerEmail } : undefined,
+      customData: customerId ? { user_id: customerId, pack: packId } : undefined,
+      settings: {
+        displayMode: "overlay",
+        theme: "light",
+        successUrl:
+          typeof window !== "undefined"
+            ? `${window.location.origin}/billing/success`
+            : undefined,
+      },
+    });
   };
 
   const balance =
@@ -247,6 +290,10 @@ export default function BillingPage() {
               </button>
             </div>
           ))}
+        </div>
+
+        <div style={{ marginTop: 20 }}>
+          <PricingCustom inApp />
         </div>
       </section>
 
