@@ -1,0 +1,36 @@
+# ─── Ravendise / Instaply Worker — Fly.io config ──────────────────
+# Separate Fly app from the API so the worker can scale independently
+# and crash-restart without affecting user-facing endpoints.
+app            = "instaply-worker"
+primary_region = "bom"   # Mumbai
+
+[build]
+  dockerfile = "worker/Dockerfile"
+
+[env]
+  LOG_LEVEL              = "INFO"
+  WORKER_CONCURRENCY     = "2"
+  WORKER_POLL_IDLE_SECONDS = "15"
+  WORKER_VERIFIER_WINDOW_MIN = "30"
+
+# No [http_service] — this is a background worker. Fly will keep the
+# machine running as long as the process is alive.
+[processes]
+  worker = "python -m worker.orchestrator"
+
+# Memory headroom: Chromium + Playwright + Python is ~600 MB typical.
+# 1 GB leaves safe margin. Bump to 2x before running >2 concurrency.
+[[vm]]
+  size       = "shared-cpu-1x"
+  memory     = "1024mb"
+  cpu_kind   = "shared"
+  cpus       = 1
+  processes  = ["worker"]
+
+# Secrets that MUST be set before first deploy:
+#   fly secrets set -a instaply-worker \
+#     SUPABASE_URL=... \
+#     SUPABASE_SERVICE_ROLE_KEY=... \
+#     NVIDIA_API_KEY=... \
+#     GMAIL_CLIENT_ID=... \
+#     GMAIL_CLIENT_SECRET=...

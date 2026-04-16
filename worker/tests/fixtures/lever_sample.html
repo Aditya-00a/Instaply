@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<!-- Lever application form structure: jobs.lever.co/<co>/<id>/apply -->
+<html lang="en">
+<head><meta charset="utf-8"><title>Beta Co — Staff Engineer — Apply</title></head>
+<body>
+<div class="content-wrapper">
+  <div class="posting-headline">
+    <h2>Beta Co · Staff Engineer</h2>
+  </div>
+  <form class="application-form" data-qa="application-form" action="/posting-apply/abc123" method="post" enctype="multipart/form-data">
+    <input type="hidden" name="authenticity_token" value="x">
+
+    <div class="application-field">
+      <label class="application-label" for="resume-upload">Resume/CV<span class="required">✱</span></label>
+      <input id="resume-upload" name="resume" type="file" data-qa="resume-upload" required>
+    </div>
+
+    <ul class="application-user">
+      <li class="application-question">
+        <label class="application-label">Full name<span class="required">✱</span></label>
+        <input name="name" type="text" data-qa="name-input" required>
+      </li>
+      <li class="application-question">
+        <label class="application-label">Email<span class="required">✱</span></label>
+        <input name="email" type="email" data-qa="email-input" required>
+      </li>
+      <li class="application-question">
+        <label class="application-label">Phone</label>
+        <input name="phone" type="tel" data-qa="phone-input">
+      </li>
+      <li class="application-question">
+        <label class="application-label">Current company</label>
+        <input name="org" type="text" data-qa="org-input">
+      </li>
+      <li class="application-question">
+        <label class="application-label">LinkedIn URL</label>
+        <input name="urls[LinkedIn]" type="url" data-qa="linkedin-input">
+      </li>
+      <li class="application-question">
+        <label class="application-label">GitHub URL</label>
+        <input name="urls[GitHub]" type="url">
+      </li>
+      <li class="application-question">
+        <label class="application-label">Portfolio URL</label>
+        <input name="urls[Portfolio]" type="url">
+      </li>
+    </ul>
+
+    <div class="application-additional">
+      <ul>
+        <li class="application-question">
+          <label class="application-label">Are you legally authorized to work in the United States?<span class="required">✱</span></label>
+          <div class="application-field">
+            <select name="cards[abc][field0]" required>
+              <option value="">Select...</option>
+              <option>Yes</option>
+              <option>No</option>
+            </select>
+          </div>
+        </li>
+        <li class="application-question">
+          <label class="application-label">Will you now or in the future require sponsorship for employment visa status?<span class="required">✱</span></label>
+          <div class="application-field">
+            <select name="cards[abc][field1]" required>
+              <option value="">Select...</option>
+              <option>Yes</option>
+              <option>No</option>
+            </select>
+          </div>
+        </li>
+        <li class="application-question">
+          <label class="application-label">Why do you want to work at Beta?<span class="required">✱</span></label>
+          <textarea name="cards[abc][field2]" required maxlength="1000"></textarea>
+        </li>
+        <li class="application-question">
+          <label class="application-label">Highest degree</label>
+          <input name="cards[abc][field3]" type="text">
+        </li>
+      </ul>
+    </div>
+
+    <button type="submit" data-qa="btn-submit">Submit application</button>
+  </form>
+</div>
+</body>
+</html>
