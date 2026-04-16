@@ -6322,6 +6322,106 @@ p {
   margin: 0 auto;
 }
 
+/* ---------- Account settings ---------- */
+
+.account-section {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.account-section:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.account-section-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: var(--text);
+}
+
+.account-section-head strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.account-section-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.account-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--text);
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.account-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.account-input-danger:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+
+.account-status {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.account-section-danger {
+  margin-top: 8px;
+}
+
+.account-danger-text {
+  font-size: 13px;
+  color: #b91c1c;
+  line-height: 1.5;
+  margin: 0 0 10px;
+}
+
+.account-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border: 1px solid #dc2626;
+  background: transparent;
+  color: #dc2626;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.account-delete-btn:hover {
+  background: #dc2626;
+  color: #fff;
+}
+
+.account-delete-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .auth-visual-panel {
   display: grid;
   min-height: 720px;
