@@ -51,11 +51,15 @@ export default function SearchPage() {
     }
 
     try {
-      // Full-text search on title using Postgres trigram similarity
+      // Split query into words and match ANY word for broader results.
+      // "business analyst" matches "Business Systems Analyst", "Risk Analyst", etc.
+      const words = query.trim().split(/\s+/).filter(Boolean);
+      const orFilter = words.map((w) => `title.ilike.%${w}%`).join(",");
+
       const { data, error: err } = await supabase
         .from("jobs")
         .select("id, title, company_name, source, location, remote, apply_url")
-        .ilike("title", `%${query.trim()}%`)
+        .or(orFilter)
         .eq("is_active", true)
         .order("discovered_at", { ascending: false })
         .limit(50);
@@ -151,7 +155,7 @@ export default function SearchPage() {
               <p>
                 Try a broader title (e.g. &ldquo;analyst&rdquo; instead
                 of &ldquo;senior risk analyst II&rdquo;) or check back
-                later — the bridge adds new roles every 8 hours.
+                later — the bridge adds new roles every 4 hours.
               </p>
             </div>
           </div>
@@ -214,7 +218,7 @@ export default function SearchPage() {
         {results === null && !searching && (
           <div className="search-hint">
             <p>
-              The job pool updates every 8 hours with roles from
+              The job pool updates every 4 hours with roles from
               Greenhouse, Lever, and more. Search by title to find
               matches and queue them for auto-apply.
             </p>

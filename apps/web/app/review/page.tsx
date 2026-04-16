@@ -12,8 +12,8 @@ type AnswerRow = {
   id: string;
   question_text: string;
   answer_text: string;
-  source_company: string | null;
-  is_blocked: boolean;
+  company_slug: string | null;
+  times_used: number;
   created_at: string;
 };
 
@@ -49,7 +49,7 @@ export default function ReviewPage() {
         // Pull saved answers; column names match 0001_init.sql shape.
         const { data, error } = await supabase
           .from("answers")
-          .select("id, question_text, answer_text, source_company, is_blocked, created_at")
+          .select("id, question_text, answer_text, company_slug, times_used, created_at")
           .order("created_at", { ascending: false });
 
         if (error) throw error;
@@ -68,8 +68,8 @@ export default function ReviewPage() {
   }, []);
 
   const rows = state.kind === "live" ? state.rows : [];
-  const blocked = rows.filter((r) => r.is_blocked);
-  const saved = rows.filter((r) => !r.is_blocked);
+  const blocked = rows.filter((r) => r.times_used === 0);
+  const saved = rows.filter((r) => !r.times_used === 0);
 
   return (
     <ConsoleShell
@@ -217,14 +217,14 @@ function AnswerRowCard({ row }: { row: AnswerRow }) {
           <p className="answers-row-empty">No answer saved yet.</p>
         )}
         <span className="answers-row-meta">
-          {row.source_company || "—"} ·{" "}
+          {row.company_slug || "—"} ·{" "}
           {new Date(row.created_at).toLocaleDateString()}
         </span>
       </div>
       <span
         className={`app-pill ${row.is_blocked ? "app-pill-warn" : "app-pill-success"}`}
       >
-        {row.is_blocked ? "Needs review" : "Saved"}
+        {row.times_used === 0 ? "Needs review" : `Used ${row.times_used}x`}
       </span>
     </article>
   );
