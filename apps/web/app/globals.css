@@ -6084,6 +6084,46 @@ p {
   margin-top: 2px;
 }
 
+/* ---------- Auto-apply running banner ---------- */
+
+.auto-apply-banner {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px 20px;
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--accent) 8%, transparent),
+    color-mix(in srgb, #10b981 6%, transparent));
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--line));
+  border-radius: 14px;
+}
+
+.auto-apply-banner-dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #10b981;
+  margin-top: 6px;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.18);
+  animation: pulse-green 2s infinite;
+}
+
+.auto-apply-banner strong {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.auto-apply-banner p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
 .auth-visual-panel {
   display: grid;
   min-height: 720px;

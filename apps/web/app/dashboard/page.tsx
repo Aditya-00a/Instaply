@@ -159,6 +159,23 @@ export default function DashboardPage() {
         <EmptyState balance={state.data.balance} />
       )}
 
+      {state.kind === "live" && state.data.counts.queued > 0 && (
+        <section className="console-section">
+          <div className="auto-apply-banner">
+            <span className="auto-apply-banner-dot" />
+            <div>
+              <strong>Auto-apply is running for you</strong>
+              <p>
+                Your matched roles populate every 8 hours. Submission
+                goes live once your account graduates from the closed
+                beta — until then, click the open-link icon next to a
+                role to apply manually if you want.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
       {(state.kind === "demo" ||
         (state.kind === "live" &&
           state.data.counts.queued +
