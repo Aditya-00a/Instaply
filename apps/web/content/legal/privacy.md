@@ -1,7 +1,7 @@
 # Privacy Policy
 
 **Effective Date:** 14 April 2026
-**Last Updated:** 14 April 2026
+**Last Updated:** 15 April 2026
 
 ## 1. Controller
 
@@ -90,6 +90,23 @@ Under the DPDP Act and GDPR (where applicable), you have the right to:
 - **Lodge a complaint** with the Data Protection Board of India (DPB) or your local supervisory authority
 
 To exercise any right: email **hello@asion.ai**. We respond within 30 days.
+
+### 7.1 California residents (CCPA / CPRA)
+
+If you are a California resident, in addition to the rights above you have the right to:
+
+- **Know** what categories of personal information we collect, the sources, the purposes of collection, and the categories of third parties with whom we share it (all listed in Sections 2-4 of this policy)
+- **Access** the specific pieces of personal information we hold about you
+- **Delete** your personal information, subject to exceptions permitted by law (see Section 6 on retention)
+- **Correct** inaccurate personal information
+- **Opt out of "sale" or "sharing"** of your personal information. **We do not sell or share personal information** as those terms are defined under the CCPA/CPRA. We do not use personal information for cross-context behavioral advertising.
+- **Limit use of sensitive personal information** — we use sensitive categories (e.g., immigration / work-authorization status, demographic data) only to provide the Service you requested and never for inferring characteristics about you
+- **Non-discrimination** — we will not deny service, charge a different price, or provide a different level of service because you exercised a CCPA right
+- **Authorized agent** — you may designate an agent to make a request on your behalf; we will require reasonable verification
+
+To exercise any California right: email **hello@asion.ai** with the subject line "CCPA request". We respond within 45 days (extendable to 90 days with notice). We may need to verify your identity by matching information you provide against information in our records.
+
+We retain the categories of personal information described in Section 2 for the periods described in Section 6.
 
 ## 8. Security
 
