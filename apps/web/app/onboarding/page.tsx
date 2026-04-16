@@ -188,6 +188,13 @@ export default function OnboardingPage() {
         .upload(path, file, { upsert: false, contentType: file.type });
       if (uploadErr) throw uploadErr;
 
+      // Clear existing primary so the unique index doesn't conflict
+      await supabase
+        .from("resumes")
+        .update({ is_primary: false })
+        .eq("user_id", user.id)
+        .eq("is_primary", true);
+
       await supabase.from("resumes").insert({
         user_id: user.id,
         storage_path: path,
@@ -286,20 +293,26 @@ export default function OnboardingPage() {
         [identity.firstName, identity.lastName].filter(Boolean).join(" ") ||
         null;
 
+      // Only include work_auth_status if it's a valid enum value
+      const validWorkAuth = ["us_citizen", "green_card", "h1b", "f1_opt", "f1_cpt", "other"];
+      const profileUpdate: Record<string, unknown> = {
+        full_name: fullName,
+        phone: identity.phone || null,
+        linkedin_url: identity.linkedinUrl || null,
+        github_url: identity.githubUrl || null,
+        current_city: identity.city || null,
+        current_state: identity.state || null,
+        current_country: "US",
+        needs_sponsorship: identity.needsSponsorship,
+        updated_at: new Date().toISOString(),
+      };
+      if (validWorkAuth.includes(identity.workAuth)) {
+        profileUpdate.work_auth_status = identity.workAuth;
+      }
+
       const { error: pErr } = await supabase
         .from("profiles")
-        .update({
-          full_name: fullName,
-          phone: identity.phone || null,
-          linkedin_url: identity.linkedinUrl || null,
-          github_url: identity.githubUrl || null,
-          current_city: identity.city || null,
-          current_state: identity.state || null,
-          current_country: "US",
-          work_auth_status: identity.workAuth,
-          needs_sponsorship: identity.needsSponsorship,
-          updated_at: new Date().toISOString(),
-        })
+        .update(profileUpdate)
         .eq("id", user.id);
       if (pErr) throw pErr;
 
