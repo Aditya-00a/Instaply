@@ -236,16 +236,17 @@ export default function DashboardPage() {
             <div className="blocker-banner-copy">
               <span className="blocker-banner-kicker">Needs review</span>
               <strong>
-                {state.data.counts.needs_review} answer
-                {state.data.counts.needs_review === 1 ? "" : "s"} waiting on you
+                {state.data.counts.needs_review} application
+                {state.data.counts.needs_review === 1 ? "" : "s"} need
+                {state.data.counts.needs_review === 1 ? "s" : ""} your attention
               </strong>
               <p>
-                Answer them once and Instaply can reuse them safely across
-                supported applications.
+                These applications hit a screening question or issue that
+                requires your input before we can submit.
               </p>
             </div>
-            <Link className="button-secondary" href="/review">
-              Open answers
+            <Link className="button-secondary" href="/applications">
+              View applications
             </Link>
           </article>
         </section>

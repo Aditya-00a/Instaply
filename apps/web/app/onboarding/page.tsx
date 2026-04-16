@@ -24,7 +24,7 @@ import { ConsoleShell } from "../components/console-shell";
 import { getBrowserSupabase, isSupabaseConfigured } from "../lib/supabase-browser";
 import { extractPdfText, extractDocxText, scoreResumeText, type AtsReport } from "../lib/ats-score";
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2 | 3 | 4;
 
 type WorkAuth = "us_citizen" | "green_card" | "h1b" | "f1_opt" | "other";
 
@@ -97,6 +97,19 @@ export default function OnboardingPage() {
   const [targetRoles, setTargetRoles] = useState<string[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
   const [roleDraft, setRoleDraft] = useState("");
+
+  // Step 4 state — EEO + screening
+  const [gender, setGender] = useState("");
+  const [race, setRace] = useState("");
+  const [hispanicEthnicity, setHispanicEthnicity] = useState<boolean | null>(null);
+  const [veteranStatus, setVeteranStatus] = useState("");
+  const [disabilityStatus, setDisabilityStatus] = useState("");
+  const [licenseCerts, setLicenseCerts] = useState("");
+  const [yearsExp, setYearsExp] = useState("");
+  const [salaryMin, setSalaryMin] = useState("");
+  const [salaryMax, setSalaryMax] = useState("");
+  const [startAvailability, setStartAvailability] = useState("immediately");
+  const [willingBackgroundCheck, setWillingBackgroundCheck] = useState(true);
   const [locDraft, setLocDraft] = useState("");
 
   const [saving, setSaving] = useState(false);
@@ -343,21 +356,36 @@ export default function OnboardingPage() {
         profileUpdate.work_auth_status = identity.workAuth;
       }
 
+      // Add EEO fields (only if user filled them in)
+      if (gender) profileUpdate.gender = gender;
+      if (race) profileUpdate.race = race;
+      if (hispanicEthnicity !== null) profileUpdate.hispanic_ethnicity = hispanicEthnicity;
+      if (veteranStatus) profileUpdate.veteran_status = veteranStatus;
+      if (disabilityStatus) profileUpdate.disability_status = disabilityStatus;
+
       const { error: pErr } = await supabase
         .from("profiles")
         .update(profileUpdate)
         .eq("id", user.id);
       if (pErr) throw pErr;
 
-      // Upsert preferences row
-      await supabase
-        .from("preferences")
-        .upsert({
+      // Upsert preferences row (includes screening question answers)
+      const prefData: Record<string, unknown> = {
           user_id: user.id,
           target_titles: targetRoles,
           target_locations: locations,
+          start_availability: startAvailability,
+          willing_background_check: willingBackgroundCheck,
           updated_at: new Date().toISOString(),
-        });
+      };
+      if (licenseCerts.trim()) prefData.licenses_certifications = licenseCerts.split(",").map((s: string) => s.trim()).filter(Boolean);
+      if (yearsExp) prefData.years_of_experience = parseInt(yearsExp, 10);
+      if (salaryMin) prefData.salary_min_usd = parseInt(salaryMin, 10);
+      if (salaryMax) prefData.salary_max_usd = parseInt(salaryMax, 10);
+
+      await supabase
+        .from("preferences")
+        .upsert(prefData);
 
       setDoneBanner(true);
       setTimeout(() => router.push("/dashboard"), 1400);
@@ -372,20 +400,20 @@ export default function OnboardingPage() {
       activePath="/onboarding"
       eyebrow="Setup"
       title="Welcome to Instaply"
-      description="Three quick steps. Under two minutes. You can refine everything later from Settings."
+      description="Four quick steps. Under three minutes. You can refine everything later from Settings."
       actions={[{ href: "/settings", label: "Advanced settings", variant: "secondary" }]}
     >
       <section className="console-section">
         {/* Progress bar */}
         <div className="wiz-progress">
-          {[1, 2, 3].map((n) => (
+          {[1, 2, 3, 4].map((n) => (
             <div
               key={n}
               className={`wiz-step${step === n ? " wiz-step-active" : ""}${step > n ? " wiz-step-done" : ""}`}
             >
               <span className="wiz-step-num">{step > n ? <Check size={14} /> : n}</span>
               <span className="wiz-step-label">
-                {n === 1 ? "Upload resume" : n === 2 ? "Confirm basics" : "Targets"}
+                {n === 1 ? "Upload resume" : n === 2 ? "Confirm basics" : n === 3 ? "Targets" : "EEO & screening"}
               </span>
             </div>
           ))}
@@ -724,6 +752,147 @@ export default function OnboardingPage() {
 
               <footer className="wiz-foot">
                 <button type="button" className="btn-secondary" onClick={() => setStep(2)}>
+                  <ArrowLeft size={14} />
+                  Back
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => setStep(4)}
+                >
+                  Next
+                  <ArrowRight size={14} />
+                </button>
+              </footer>
+            </>
+          )}
+
+          {step === 4 && (
+            <>
+              <header className="wiz-head">
+                <div className="wiz-head-ico"><UserRound size={22} /></div>
+                <div>
+                  <h2>EEO & screening questions</h2>
+                  <p>
+                    Optional but saves time — these answers auto-fill across every
+                    application so you never re-type them.
+                  </p>
+                </div>
+              </header>
+
+              <div className="wiz-field-grid">
+                <label className="wiz-label">
+                  <span>Gender <em>(optional)</em></span>
+                  <select value={gender} onChange={(e) => setGender(e.target.value)}>
+                    <option value="">Prefer not to say</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="non_binary">Non-binary</option>
+                    <option value="other">Other</option>
+                  </select>
+                </label>
+
+                <label className="wiz-label">
+                  <span>Race / ethnicity <em>(optional)</em></span>
+                  <select value={race} onChange={(e) => setRace(e.target.value)}>
+                    <option value="">Prefer not to say</option>
+                    <option value="asian">Asian</option>
+                    <option value="black">Black or African American</option>
+                    <option value="hispanic">Hispanic or Latino</option>
+                    <option value="native_american">Native American / Alaska Native</option>
+                    <option value="pacific_islander">Native Hawaiian / Pacific Islander</option>
+                    <option value="white">White</option>
+                    <option value="two_or_more">Two or more races</option>
+                  </select>
+                </label>
+
+                <label className="wiz-label">
+                  <span>Hispanic / Latino? <em>(optional)</em></span>
+                  <select value={hispanicEthnicity === null ? "" : hispanicEthnicity ? "yes" : "no"} onChange={(e) => setHispanicEthnicity(e.target.value === "" ? null : e.target.value === "yes")}>
+                    <option value="">Prefer not to say</option>
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                  </select>
+                </label>
+
+                <label className="wiz-label">
+                  <span>Veteran status <em>(optional)</em></span>
+                  <select value={veteranStatus} onChange={(e) => setVeteranStatus(e.target.value)}>
+                    <option value="">Prefer not to say</option>
+                    <option value="not_veteran">I am not a veteran</option>
+                    <option value="veteran">I am a veteran</option>
+                    <option value="active_duty">Active duty / National Guard</option>
+                  </select>
+                </label>
+
+                <label className="wiz-label">
+                  <span>Disability status <em>(optional)</em></span>
+                  <select value={disabilityStatus} onChange={(e) => setDisabilityStatus(e.target.value)}>
+                    <option value="">Prefer not to say</option>
+                    <option value="no_disability">I do not have a disability</option>
+                    <option value="has_disability">I have a disability</option>
+                  </select>
+                </label>
+              </div>
+
+              <hr className="wiz-divider" />
+
+              <h3 className="wiz-sub-heading">Common screening questions</h3>
+              <p className="wiz-sub-desc">
+                Answer these once — Instaply fills them in automatically on
+                every supported application form.
+              </p>
+
+              <div className="wiz-field-grid">
+                <label className="wiz-label">
+                  <span>Years of professional experience</span>
+                  <input type="number" min="0" max="50" value={yearsExp} onChange={(e) => setYearsExp(e.target.value)} placeholder="e.g. 3" />
+                </label>
+
+                <label className="wiz-label">
+                  <span>Licenses or certifications</span>
+                  <input value={licenseCerts} onChange={(e) => setLicenseCerts(e.target.value)} placeholder="e.g. CFA, PMP, CPA, Series 7 (or leave blank)" />
+                </label>
+
+                <label className="wiz-label">
+                  <span>Salary expectation — minimum ($)</span>
+                  <input type="number" min="0" value={salaryMin} onChange={(e) => setSalaryMin(e.target.value)} placeholder="e.g. 80000" />
+                </label>
+
+                <label className="wiz-label">
+                  <span>Salary expectation — maximum ($)</span>
+                  <input type="number" min="0" value={salaryMax} onChange={(e) => setSalaryMax(e.target.value)} placeholder="e.g. 120000" />
+                </label>
+
+                <label className="wiz-label">
+                  <span>When can you start?</span>
+                  <select value={startAvailability} onChange={(e) => setStartAvailability(e.target.value)}>
+                    <option value="immediately">Immediately</option>
+                    <option value="2_weeks">In 2 weeks</option>
+                    <option value="1_month">In 1 month</option>
+                    <option value="flexible">Flexible</option>
+                  </select>
+                </label>
+
+                <label className="wiz-label">
+                  <span>Willing to undergo a background check?</span>
+                  <select value={willingBackgroundCheck ? "yes" : "no"} onChange={(e) => setWillingBackgroundCheck(e.target.value === "yes")}>
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                  </select>
+                </label>
+              </div>
+
+              {saveError && <div className="wiz-error">{saveError}</div>}
+              {doneBanner && (
+                <div className="wiz-done">
+                  <Check size={16} />
+                  All set — redirecting to your dashboard…
+                </div>
+              )}
+
+              <footer className="wiz-foot">
+                <button type="button" className="btn-secondary" onClick={() => setStep(3)}>
                   <ArrowLeft size={14} />
                   Back
                 </button>
