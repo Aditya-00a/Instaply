@@ -164,12 +164,11 @@ export default function DashboardPage() {
           <div className="auto-apply-banner">
             <span className="auto-apply-banner-dot" />
             <div>
-              <strong>Auto-apply is running for you</strong>
+              <strong>Auto-apply is active</strong>
               <p>
-                Your matched roles populate every 8 hours. Submission
-                goes live once your account graduates from the closed
-                beta — until then, click the open-link icon next to a
-                role to apply manually if you want.
+                We match and submit applications on your behalf. Roles
+                populate every 8 hours; submissions run automatically.
+                Check your applications page for status updates.
               </p>
             </div>
           </div>
