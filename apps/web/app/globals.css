@@ -5593,6 +5593,45 @@ p {
   margin-bottom: 12px;
 }
 
+.app-status-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  background: color-mix(in srgb, var(--accent) 3%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.app-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.app-review-detail {
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--warm) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warm) 20%, var(--line));
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.app-review-label {
+  font-weight: 600;
+  color: var(--warm);
+  margin-right: 4px;
+}
+
+.app-review-msg {
+  color: var(--text);
+}
+
 .app-filter {
   padding: 7px 14px;
   background: var(--panel);

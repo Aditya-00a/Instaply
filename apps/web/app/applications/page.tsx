@@ -49,6 +49,16 @@ const STATUS_CLASS: Record<string, string> = {
   skipped: "app-pill-muted",
 };
 
+const STATUS_TOOLTIP: Record<string, string> = {
+  queued: "Waiting in line. Our system will fill out this application within the next 30 minutes.",
+  in_progress: "Being submitted right now. Headless browser is filling out the form.",
+  submitted: "Application form was submitted. Waiting for the employer's confirmation email.",
+  confirmed: "Employer sent a confirmation email. This application is complete.",
+  needs_review: "The form had questions we couldn't auto-fill. See details below.",
+  failed: "Something went wrong during submission. We'll retry or you can re-queue.",
+  skipped: "This application was skipped (e.g. duplicate or missing info).",
+};
+
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString(undefined, {
@@ -222,6 +232,14 @@ export default function ApplicationsPage() {
               ))}
             </div>
 
+            <div className="app-status-legend">
+              <span className="app-legend-item"><span className="app-pill app-pill-muted">Queued</span> Waiting to be submitted</span>
+              <span className="app-legend-item"><span className="app-pill app-pill-info">Submitted</span> Form sent, awaiting confirmation</span>
+              <span className="app-legend-item"><span className="app-pill app-pill-success">Confirmed</span> Employer acknowledged</span>
+              <span className="app-legend-item"><span className="app-pill app-pill-warn">Review</span> Some fields need your input</span>
+              <span className="app-legend-item"><span className="app-pill app-pill-danger">Failed</span> Error during submission</span>
+            </div>
+
             <article className="glass app-table-card">
               <div className="app-table-head">
                 <span>Role</span>
@@ -237,19 +255,42 @@ export default function ApplicationsPage() {
                 </div>
               ) : (
                 filtered.map((r) => (
-                  <div className="app-table-row" key={r.id}>
+                  <div className={`app-table-row${r.error_message ? " app-table-row-expandable" : ""}`} key={r.id}>
                     <div className="app-table-cell-role">
                       <strong>{r.jobs?.title || "Untitled role"}</strong>
                       <span>
                         {r.jobs?.company_name || "—"}
                         {r.jobs?.location ? ` · ${r.jobs.location}` : ""}
                       </span>
+                      {r.status === "needs_review" && r.error_message && (
+                        <div className="app-review-detail">
+                          <span className="app-review-label">Needs your input:</span>
+                          <span className="app-review-msg">
+                            {(() => {
+                              try {
+                                const items = JSON.parse(r.error_message);
+                                if (Array.isArray(items)) {
+                                  return items.slice(0, 3).map((item: { question?: string }) => item.question || "Unknown field").join(", ");
+                                }
+                              } catch {}
+                              return r.error_message.slice(0, 120);
+                            })()}
+                          </span>
+                        </div>
+                      )}
+                      {r.status === "failed" && r.error_message && (
+                        <div className="app-review-detail">
+                          <span className="app-review-label">Error:</span>
+                          <span className="app-review-msg">{r.error_message.slice(0, 120)}</span>
+                        </div>
+                      )}
                     </div>
                     <span className="app-table-cell-source">
                       {humanSource(r.jobs?.source ?? null)}
                     </span>
                     <span
                       className={`app-pill ${STATUS_CLASS[r.status] || "app-pill-muted"}`}
+                      title={STATUS_TOOLTIP[r.status] || ""}
                     >
                       {STATUS_LABEL[r.status] || r.status}
                     </span>
