@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import { consoleNavItems } from "../console-data";
 import { SignOutButton } from "./sign-out-button";
+import { CreditBadge } from "./credit-badge";
 
 interface ConsoleAction {
   href: string;
@@ -64,7 +65,7 @@ export function ConsoleShell({
           <Menu size={18} />
         </button>
         <strong>Instaply</strong>
-        <span className="console-mobile-active">{title}</span>
+        <CreditBadge />
       </div>
 
       <aside
@@ -88,6 +89,10 @@ export function ConsoleShell({
             <strong>Instaply</strong>
             <p>Private job search and apply workspace</p>
           </div>
+        </div>
+
+        <div className="console-credit-row">
+          <CreditBadge />
         </div>
 
         <div className="console-sidebar-section">

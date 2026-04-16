@@ -6422,6 +6422,52 @@ p {
   cursor: not-allowed;
 }
 
+/* ---------- Credit badge (persistent) ---------- */
+
+.credit-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--accent) 12%, transparent),
+    color-mix(in srgb, #10b981 8%, transparent));
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--line));
+  border-radius: 999px;
+  text-decoration: none;
+  color: var(--accent);
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.credit-badge:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.credit-badge-count {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.credit-badge-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.console-credit-row {
+  padding: 4px 16px 12px;
+}
+
+.console-mobile-bar .credit-badge {
+  margin-left: auto;
+}
+
 .auth-visual-panel {
   display: grid;
   min-height: 720px;
