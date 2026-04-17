@@ -128,6 +128,16 @@ export default function DashboardPage() {
     loadAll();
   }, [loadAll]);
 
+  // Auto-refresh recent activity every 10 seconds so users see status updates
+  // (queued -> submitting -> submitted -> confirmed) without manual refresh
+  useEffect(() => {
+    if (!ready) return;
+    const interval = setInterval(() => {
+      loadAll();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [ready, loadAll]);
+
   // Onboarding completeness
   const profileComplete = snap.has_resume && snap.target_titles.length > 0;
 
