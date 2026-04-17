@@ -409,14 +409,20 @@ async def _discover_for_user(
             scored.sort(key=lambda x: -x[0])
             log.info("After LLM: %s", [(s, j["title"][:30]) for s, j in scored[:5]])
 
+    # Restrict to ATS hosts the agent can reliably submit on:
+    # Greenhouse + Lever (battle-tested). Skip Indeed/LinkedIn/Adzuna
+    # (bot blocks) and Workday (multi-step not yet supported).
+    SUPPORTED_HOSTS = ("greenhouse.io", "lever.co")
+
+    def is_supported(url: str) -> bool:
+        return any(h in (url or "").lower() for h in SUPPORTED_HOSTS)
+
     inserted = 0
     for score, job in scored:
         if score < min_score:
             continue
-
-        # NOTE: We surface ALL matching jobs (including Indeed/LinkedIn) so the
-        # user has visibility. The frontend marks non-ATS jobs as "Apply manually"
-        # and the submitter only auto-fills ATS-fillable URLs.
+        if not is_supported(job.get("apply_url", "")):
+            continue
 
         # Upsert into jobs table
         try:
