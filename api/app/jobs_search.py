@@ -68,11 +68,22 @@ def _scrape_jobs_sync(query: str, location: str, remote: bool, hours_old: int = 
 
     results = []
     for _, row in df.iterrows():
-        job_url = str(row.get("job_url", "") or "")
+        # Prefer direct employer ATS URL (Workday, ApplyToJob, etc.)
+        # over Indeed's broken viewjob?jk= redirect.
+        direct_url = str(row.get("job_url_direct", "") or "")
+        job_url = direct_url if direct_url else str(row.get("job_url", "") or "")
         title = str(row.get("title", "") or "")
         company = str(row.get("company", "") or "Unknown")
         loc = str(row.get("location", "") or "")
         site = str(row.get("site", "") or "unknown")
+        # If we have a direct URL, label source by the actual ATS, not Indeed
+        if direct_url:
+            url_lower = direct_url.lower()
+            if "greenhouse" in url_lower: site = "greenhouse"
+            elif "lever.co" in url_lower: site = "lever"
+            elif "workday" in url_lower or "myworkdayjobs" in url_lower: site = "workday"
+            elif "ashbyhq" in url_lower: site = "ashby"
+            elif "smartrecruiters" in url_lower: site = "smartrecruiters"
 
         if not job_url or not title:
             continue
