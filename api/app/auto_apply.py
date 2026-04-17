@@ -80,45 +80,37 @@ def _score_job_against_skills(job_title: str, job_company: str, skills: dict[str
     return round((score / factors) * 100) if factors > 0 else 0
 
 
-def _scrape_for_targets(titles: list[str], locations: list[str]) -> list[dict[str, Any]]:
-    """Run JobSpy across all title × location combos. Returns deduped results."""
-    from jobspy import scrape_jobs
+async def _scrape_for_targets_multi(titles: list[str], locations: list[str]) -> list[dict[str, Any]]:
+    """Aggregate jobs from all sources for each title × location.
 
-    seen = set()
-    out = []
-    for title in titles[:5]:  # cap to avoid blowing through API quota
+    Uses the same multi-source aggregator as the search page (Themuse,
+    Arbeitnow, JobSpy/Indeed, Remotive) so we get coverage across
+    healthcare, tech, marketing, etc. — not just tech.
+    """
+    from .jobs_search import _search_themuse, _search_arbeitnow, _scrape_jobs_sync
+
+    seen: set[str] = set()
+    out: list[dict[str, Any]] = []
+
+    for title in titles[:5]:  # cap titles to bound work
         loc = locations[0] if locations else "United States"
-        try:
-            df = scrape_jobs(
-                site_name=["indeed", "zip_recruiter"],
-                search_term=title,
-                location=loc,
-                results_wanted=10,
-                hours_old=72,
-                country_indeed="USA",
-                verbose=0,
-            )
-            if df is None or df.empty:
+        # Run all sources in parallel for this title
+        tasks = [
+            asyncio.to_thread(_scrape_jobs_sync, title, loc, False),
+            _search_themuse(title, loc),
+            _search_arbeitnow(title),
+        ]
+        results_per_source = await asyncio.gather(*tasks, return_exceptions=True)
+        for r in results_per_source:
+            if isinstance(r, Exception) or not r:
                 continue
-            for _, row in df.iterrows():
-                url = str(row.get("job_url") or "")
-                key = _stable_id(url)
-                if key in seen or not url:
+            for job in r:
+                eid = job.get("external_id", "")
+                if eid in seen:
                     continue
-                seen.add(key)
-                site = str(row.get("site") or "indeed")
-                out.append({
-                    "external_id": f"{site}:{key}",
-                    "source": site,
-                    "company_name": str(row.get("company") or "Unknown"),
-                    "company_slug": _slug(str(row.get("company") or "")),
-                    "title": str(row.get("title") or ""),
-                    "location": str(row.get("location") or ""),
-                    "remote": bool(row.get("is_remote", False)),
-                    "apply_url": url,
-                })
-        except Exception as e:
-            log.warning("JobSpy failed for '%s' in '%s': %s", title, loc, e)
+                seen.add(eid)
+                out.append(job)
+
     return out
 
 
@@ -200,9 +192,7 @@ async def run_now(
     skills = (profile.data.get("extracted_skills") if profile.data else {}) or {}
 
     min_score = prefs.data.get("auto_apply_min_match", 70)
-    inserted = await asyncio.to_thread(
-        _discover_for_user, db, user_id, titles, locations, skills, min_score
-    )
+    inserted = await _discover_for_user(db, user_id, titles, locations, skills, min_score)
 
     db.table("preferences").update({
         "auto_apply_last_run_at": datetime.now(timezone.utc).isoformat(),
@@ -211,7 +201,7 @@ async def run_now(
     return {"ok": True, "found": inserted}
 
 
-def _discover_for_user(
+async def _discover_for_user(
     db: Any,
     user_id: str,
     titles: list[str],
@@ -219,14 +209,35 @@ def _discover_for_user(
     skills: dict[str, Any],
     min_score: int,
 ) -> int:
-    """Sync helper: scrape, score, upsert jobs, insert pending_approval."""
-    jobs = _scrape_for_targets(titles, locations)
+    """Async helper: scrape, score, upsert jobs, insert pending_approval."""
+    jobs = await _scrape_for_targets_multi(titles, locations)
+    log.info("Discovered %d raw jobs for user %s", len(jobs), user_id[:8])
     if not jobs:
         return 0
 
+    # If user has no extracted_skills, fall back to title-only matching:
+    # any job whose title contains any target title word should pass.
+    no_skills = not (skills.get("skills") or skills.get("titles_held"))
+
+    # ATS hostnames the submitter knows how to fill out
+    SUBMITTABLE_HOSTS = (
+        "greenhouse.io", "lever.co", "smartrecruiters.com", "workday",
+        "ashbyhq.com", "myworkdayjobs.com", "icims.com", "workable.com",
+        "bamboohr.com", "jobvite.com",
+    )
+
+    def is_submittable(url: str) -> bool:
+        return any(h in (url or "").lower() for h in SUBMITTABLE_HOSTS)
+
     inserted = 0
     for job in jobs:
+        # Effective score: real LLM-based score, OR title-keyword fallback if no resume yet
         score = _score_job_against_skills(job["title"], job["company_name"], skills)
+        if no_skills:
+            # No resume yet — score by whether title contains any target keyword
+            title_l = (job["title"] or "").lower()
+            if any(any(w in title_l for w in t.lower().split()) for t in titles):
+                score = max(score, 70)
         if score < min_score:
             continue
 
@@ -312,9 +323,9 @@ async def cron_run(request: Request):
         min_score = pref.get("auto_apply_min_match", 70)
 
         try:
-            n = await asyncio.to_thread(
-                _discover_for_user, db, user_id,
-                titles, pref.get("target_locations") or [], skills, min_score
+            n = await _discover_for_user(
+                db, user_id, titles,
+                pref.get("target_locations") or [], skills, min_score
             )
             summary["found"] += n
             summary["ran"] += 1
