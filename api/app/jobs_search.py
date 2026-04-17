@@ -45,17 +45,20 @@ def _scrape_jobs_sync(query: str, location: str, remote: bool) -> list[dict[str,
     """Run JobSpy synchronously. Called from threadpool to avoid blocking."""
     from jobspy import scrape_jobs
 
+    kwargs: dict[str, Any] = {
+        "site_name": ["indeed", "zip_recruiter", "google"],
+        "search_term": query,
+        "location": location or "United States",
+        "results_wanted": 20,
+        "hours_old": 168,  # last week
+        "country_indeed": "USA",
+        "verbose": 0,
+    }
+    if remote:
+        kwargs["is_remote"] = True
+
     try:
-        df = scrape_jobs(
-            site_name=["indeed", "linkedin", "zip_recruiter", "google"],
-            search_term=query,
-            location=location or "United States",
-            results_wanted=20,
-            hours_old=168,  # last week
-            country_indeed="USA",
-            is_remote=remote if remote else None,
-            verbose=0,
-        )
+        df = scrape_jobs(**kwargs)
     except Exception as e:
         log.error("JobSpy scrape failed: %s", e)
         raise
