@@ -1,24 +1,26 @@
-"""Real-time job search via Adzuna API.
+"""Real-time job search via JobSpy.
 
-Adzuna provides 8M+ jobs across all industries from major US job boards.
-Free tier: ~250 calls/month for unverified, 1000+ for verified.
+JobSpy scrapes Indeed, LinkedIn, ZipRecruiter, Glassdoor, Google,
+and Bayt directly — returning real direct apply URLs (not aggregator
+redirects). No API keys, no project mismatches, no bot detection
+issues for our submitter (URLs are real ATS pages).
 
 Flow:
-  1. User searches → API hits Adzuna → returns live results (not stored)
+  1. User searches → API runs jobspy → returns real-time results
   2. User clicks Apply → API upserts that one job into our jobs table
      and creates an applications row (so the submitter can pick it up)
 """
 from __future__ import annotations
 
+import asyncio
+import hashlib
 import logging
 import re
 from typing import Any
 
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from .auth import current_user_id
-from .config import settings
 from .db import service_client
 from .ratelimit import rate_limit
 
@@ -33,81 +35,101 @@ def _slug(name: str) -> str:
     return s or "unknown"
 
 
+def _stable_id(url: str, fallback: str = "") -> str:
+    """Generate a stable ID from a URL (so deduping works across searches)."""
+    base = url or fallback
+    return hashlib.sha256(base.encode("utf-8")).hexdigest()[:16]
+
+
+def _scrape_jobs_sync(query: str, location: str, remote: bool) -> list[dict[str, Any]]:
+    """Run JobSpy synchronously. Called from threadpool to avoid blocking."""
+    from jobspy import scrape_jobs
+
+    try:
+        df = scrape_jobs(
+            site_name=["indeed", "linkedin", "zip_recruiter", "google"],
+            search_term=query,
+            location=location or "United States",
+            results_wanted=20,
+            hours_old=168,  # last week
+            country_indeed="USA",
+            is_remote=remote if remote else None,
+            verbose=0,
+        )
+    except Exception as e:
+        log.error("JobSpy scrape failed: %s", e)
+        raise
+
+    if df is None or df.empty:
+        return []
+
+    results = []
+    for _, row in df.iterrows():
+        job_url = str(row.get("job_url", "") or "")
+        title = str(row.get("title", "") or "")
+        company = str(row.get("company", "") or "Unknown")
+        loc = str(row.get("location", "") or "")
+        site = str(row.get("site", "") or "unknown")
+
+        if not job_url or not title:
+            continue
+
+        # Salary
+        salary_str = ""
+        smin = row.get("min_amount")
+        smax = row.get("max_amount")
+        if smin and smax:
+            try:
+                salary_str = f"${int(float(smin)):,} - ${int(float(smax)):,}"
+            except (ValueError, TypeError):
+                pass
+        elif smin:
+            try:
+                salary_str = f"${int(float(smin)):,}+"
+            except (ValueError, TypeError):
+                pass
+
+        results.append({
+            "external_id": f"{site}:{_stable_id(job_url)}",
+            "title": title,
+            "company_name": company,
+            "company_slug": _slug(company),
+            "location": loc,
+            "remote": bool(row.get("is_remote", False)),
+            "apply_url": job_url,
+            "description": str(row.get("description", "") or "")[:500],
+            "category": "",
+            "salary": salary_str,
+            "source": site,
+        })
+
+    return results
+
+
 @router.get("/jobs/search-live")
 async def search_live(
     request: Request,
     q: str = "",
     where: str = "",
     remote: bool = False,
-    page: int = 1,
     user_id: str = Depends(current_user_id),
-    _rl: None = rate_limit("jobs_search_live", per_min=30),
+    _rl: None = rate_limit("jobs_search_live", per_min=20),
 ):
-    """Real-time job search via Adzuna API."""
+    """Real-time job search across Indeed, LinkedIn, ZipRecruiter, Google."""
     if not q.strip():
-        return {"results": [], "count": 0, "source": "adzuna"}
-
-    if not settings.adzuna_app_id or not settings.adzuna_app_key:
-        raise HTTPException(500, "Adzuna API not configured")
-
-    params: dict[str, Any] = {
-        "app_id": settings.adzuna_app_id,
-        "app_key": settings.adzuna_app_key,
-        "what": q.strip(),
-        "results_per_page": 20,
-        "content-type": "application/json",
-    }
-    if where.strip():
-        params["where"] = where.strip()
-    if remote:
-        params["title_only"] = "remote"
+        return {"results": [], "count": 0, "source": "jobspy"}
 
     try:
-        async with httpx.AsyncClient(timeout=20) as client:
-            resp = await client.get(
-                f"https://api.adzuna.com/v1/api/jobs/us/search/{page}",
-                params=params,
-            )
-            resp.raise_for_status()
-            data = resp.json()
-    except httpx.HTTPError as e:
-        log.error("Adzuna search failed: %s", e)
-        raise HTTPException(502, "Job search service unavailable")
-
-    # Normalize Adzuna results to our job shape
-    results = []
-    for r in data.get("results", []):
-        company_name = (r.get("company") or {}).get("display_name") or "Unknown"
-        location_name = (r.get("location") or {}).get("display_name") or ""
-        category = (r.get("category") or {}).get("label") or ""
-        salary_min = r.get("salary_min")
-        salary_max = r.get("salary_max")
-        salary_str = ""
-        if salary_min and salary_max:
-            salary_str = f"${int(salary_min):,} - ${int(salary_max):,}"
-        elif salary_min:
-            salary_str = f"${int(salary_min):,}+"
-
-        results.append({
-            "external_id": f"adzuna:{r.get('id')}",
-            "title": r.get("title", ""),
-            "company_name": company_name,
-            "company_slug": _slug(company_name),
-            "location": location_name,
-            "remote": "remote" in location_name.lower(),
-            "apply_url": r.get("redirect_url", ""),
-            "description": (r.get("description") or "")[:500],
-            "category": category,
-            "salary": salary_str,
-            "created": r.get("created", ""),
-            "source": "adzuna",
-        })
+        # Run blocking JobSpy in a thread (it does HTTP under the hood)
+        results = await asyncio.to_thread(_scrape_jobs_sync, q.strip(), where.strip(), remote)
+    except Exception as e:
+        log.error("Search failed: %s", e)
+        raise HTTPException(502, f"Job search failed: {str(e)[:100]}")
 
     return {
         "results": results,
-        "count": data.get("count", 0),
-        "source": "adzuna",
-        "page": page,
+        "count": len(results),
+        "source": "jobspy",
     }
 
 
@@ -130,9 +152,18 @@ async def queue_live(
 
     db = service_client()
 
+    # Source comes from JobSpy as 'indeed', 'linkedin', etc.
+    # Default to 'manual' if unknown.
+    source = body.get("source", "manual")
+    valid_sources = {"greenhouse", "lever", "smartrecruiters", "workday",
+                     "ashby", "icims", "adzuna", "manual",
+                     "indeed", "linkedin", "zip_recruiter", "google", "glassdoor", "bayt"}
+    if source not in valid_sources:
+        source = "manual"
+
     # Upsert the job into our jobs table
     job_payload = {
-        "source": "adzuna",
+        "source": source,
         "external_id": body["external_id"],
         "company_slug": body.get("company_slug") or _slug(body["company_name"]),
         "company_name": body["company_name"],

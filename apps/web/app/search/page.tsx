@@ -243,6 +243,7 @@ export default function SearchPage() {
           location: job.location,
           remote: job.remote,
           apply_url: job.apply_url,
+          source: job.source || "manual",
         }),
       });
 
