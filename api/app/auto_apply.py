@@ -241,6 +241,10 @@ async def _discover_for_user(
         if score < min_score:
             continue
 
+        # Skip jobs we can't auto-apply to (Indeed, LinkedIn, etc.)
+        if not is_submittable(job.get("apply_url", "")):
+            continue
+
         # Upsert into jobs table
         try:
             up = (
