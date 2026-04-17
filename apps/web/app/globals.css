@@ -618,6 +618,21 @@ p {
   background: color-mix(in srgb, var(--danger) 12%, transparent);
 }
 
+.app-retry-btn {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.app-retry-btn:hover {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
 .app-table-cell-actions {
   display: flex;
   align-items: center;

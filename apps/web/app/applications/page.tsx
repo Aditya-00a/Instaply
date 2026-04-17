@@ -331,6 +331,28 @@ export default function ApplicationsPage() {
                           Cancel
                         </button>
                       )}
+                      {(r.status === "failed" || r.status === "needs_review") && (
+                        <button
+                          type="button"
+                          className="app-retry-btn"
+                          onClick={async () => {
+                            const supabase = getBrowserSupabase();
+                            if (!supabase) return;
+                            await supabase
+                              .from("applications")
+                              .update({ status: "queued", error_message: null, started_at: null, completed_at: null })
+                              .eq("id", r.id);
+                            setState((prev) =>
+                              prev.kind === "live"
+                                ? { ...prev, rows: prev.rows.map((row) => row.id === r.id ? { ...row, status: "queued", error_message: null } : row) }
+                                : prev
+                            );
+                          }}
+                          title="Re-queue this application for the agent to try again"
+                        >
+                          Retry
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))

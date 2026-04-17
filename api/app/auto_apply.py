@@ -245,16 +245,6 @@ async def _discover_for_user(
     # any job whose title contains any target title word should pass.
     no_skills = not (skills.get("skills") or skills.get("titles_held"))
 
-    # ATS hostnames the submitter knows how to fill out
-    SUBMITTABLE_HOSTS = (
-        "greenhouse.io", "lever.co", "smartrecruiters.com", "workday",
-        "ashbyhq.com", "myworkdayjobs.com", "icims.com", "workable.com",
-        "bamboohr.com", "jobvite.com",
-    )
-
-    def is_submittable(url: str) -> bool:
-        return any(h in (url or "").lower() for h in SUBMITTABLE_HOSTS)
-
     inserted = 0
     for job in jobs:
         # Effective score: real LLM-based score, OR title-keyword fallback if no resume yet
@@ -267,9 +257,9 @@ async def _discover_for_user(
         if score < min_score:
             continue
 
-        # Skip jobs we can't auto-apply to (Indeed, LinkedIn, etc.)
-        if not is_submittable(job.get("apply_url", "")):
-            continue
+        # NOTE: We surface ALL matching jobs (including Indeed/LinkedIn) so the
+        # user has visibility. The frontend marks non-ATS jobs as "Apply manually"
+        # and the submitter only auto-fills ATS-fillable URLs.
 
         # Upsert into jobs table
         try:

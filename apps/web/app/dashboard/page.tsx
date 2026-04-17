@@ -507,28 +507,46 @@ export default function DashboardPage() {
             </header>
 
             <div className="auto-pending-list">
-              {pending.map((p) => (
-                <div className="auto-pending-row" key={p.id}>
-                  <div className="auto-pending-main">
-                    <strong>{p.jobs.title}</strong>
-                    <span>
-                      {p.jobs.company_name}
-                      {p.jobs.location ? ` · ${p.jobs.location}` : ""}
+              {pending.map((p) => {
+                const ATS_HOSTS = ["greenhouse", "lever", "smartrecruiters", "workday", "ashby", "icims", "workable"];
+                const url = (p.jobs.apply_url || "").toLowerCase();
+                const autoApplyable = ATS_HOSTS.some((h) => url.includes(h)) || ATS_HOSTS.includes((p.jobs.source || "").toLowerCase());
+                return (
+                  <div className="auto-pending-row" key={p.id}>
+                    <div className="auto-pending-main">
+                      <strong>{p.jobs.title}</strong>
+                      <span>
+                        {p.jobs.company_name}
+                        {p.jobs.location ? ` · ${p.jobs.location}` : ""}
+                      </span>
+                    </div>
+                    <span className={`auto-match-badge ${matchClass(p.match_score)}`}>
+                      {p.match_score}% match
                     </span>
+                    <div className="auto-pending-actions">
+                      {autoApplyable ? (
+                        <button type="button" className="btn-primary auto-btn-sm" onClick={() => decideOne(p.id, "approved")}>
+                          Auto-apply
+                        </button>
+                      ) : (
+                        <a
+                          href={p.jobs.apply_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn-primary auto-btn-sm"
+                          onClick={() => decideOne(p.id, "skipped")}
+                          title="This job's site blocks our auto-apply. Open it to apply manually."
+                        >
+                          Apply ↗
+                        </a>
+                      )}
+                      <button type="button" className="btn-secondary auto-btn-sm" onClick={() => decideOne(p.id, "skipped")}>
+                        Skip
+                      </button>
+                    </div>
                   </div>
-                  <span className={`auto-match-badge ${matchClass(p.match_score)}`}>
-                    {p.match_score}% match
-                  </span>
-                  <div className="auto-pending-actions">
-                    <button type="button" className="btn-primary auto-btn-sm" onClick={() => decideOne(p.id, "approved")}>
-                      Approve
-                    </button>
-                    <button type="button" className="btn-secondary auto-btn-sm" onClick={() => decideOne(p.id, "skipped")}>
-                      Skip
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <footer className="auto-pending-footer">
