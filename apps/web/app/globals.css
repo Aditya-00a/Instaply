@@ -10072,6 +10072,33 @@ p {
   border-left: 3px solid var(--accent);
 }
 
+.auto-just-approved {
+  border: 1px solid color-mix(in srgb, #10b981 25%, var(--line));
+  background: linear-gradient(180deg, color-mix(in srgb, #10b981 4%, white), white);
+  animation: auto-fade-in 0.3s ease-out;
+}
+.auto-just-approved-eyebrow {
+  color: #059669 !important;
+}
+.auto-just-approved-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+.auto-just-approved-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+  padding: 6px 0;
+}
+@keyframes auto-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* ───────────── Onboarding Step 4 (EEO + Screening) ───────────── */
 .wiz-field-grid {
   display: grid;

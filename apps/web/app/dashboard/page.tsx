@@ -76,6 +76,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [discovering, setDiscovering] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [recentlyApproved, setRecentlyApproved] = useState<{ title: string; company: string; at: number }[]>([]);
 
   const loadAll = useCallback(async () => {
     if (!ready) {
@@ -195,13 +196,17 @@ export default function DashboardPage() {
     const supabase = getBrowserSupabase();
     if (!supabase) return;
     await supabase.from("pending_approval").update({ status: decision, decided_at: new Date().toISOString() }).eq("id", pendingId);
+    const item = pending.find((p) => p.id === pendingId);
     if (decision === "approved") {
-      const item = pending.find((p) => p.id === pendingId);
       if (item) {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           await supabase.from("applications").insert({ user_id: user.id, job_id: item.jobs.id, status: "queued" });
         }
+        setRecentlyApproved((prev) => [
+          { title: item.jobs.title, company: item.jobs.company_name, at: Date.now() },
+          ...prev,
+        ].slice(0, 10));
       }
     }
     setPending((prev) => prev.filter((p) => p.id !== pendingId));
@@ -219,6 +224,10 @@ export default function DashboardPage() {
         const rows = pending.map((p) => ({ user_id: user.id, job_id: p.jobs.id, status: "queued" as const }));
         await supabase.from("applications").insert(rows);
       }
+      setRecentlyApproved((prev) => [
+        ...pending.map((p) => ({ title: p.jobs.title, company: p.jobs.company_name, at: Date.now() })),
+        ...prev,
+      ].slice(0, 10));
     }
     setPending([]);
     loadAll();
@@ -394,7 +403,7 @@ export default function DashboardPage() {
               {snap.target_titles.map((t) => (
                 <span className="auto-chip auto-chip-active" key={t}>{t}</span>
               ))}
-              <Link href="/onboarding" style={{ fontSize: 12.5, color: "var(--accent)", marginLeft: 4 }}>Edit</Link>
+              <Link href="/profile" style={{ fontSize: 12.5, color: "var(--accent)", marginLeft: 4 }}>Edit</Link>
             </div>
           </div>
 
@@ -431,6 +440,41 @@ export default function DashboardPage() {
             <div>
               <strong style={{ display: "block", fontSize: 14 }}>Searching for matching jobs...</strong>
               <span style={{ fontSize: 13, color: "var(--muted)" }}>This usually takes 10-15 seconds.</span>
+            </div>
+          </article>
+        </section>
+      )}
+
+      {/* JUST APPROVED — confirmation banner shows above pending list */}
+      {recentlyApproved.length > 0 && (
+        <section className="console-section">
+          <article className="glass auto-card auto-just-approved">
+            <header className="auto-card-head">
+              <div>
+                <p className="eyebrow auto-just-approved-eyebrow">
+                  <Check size={12} style={{ verticalAlign: "middle", marginRight: 4 }} />
+                  Queued · {recentlyApproved.length}
+                </p>
+                <h3>Approved & sent to the agent</h3>
+                <p className="auto-card-sub">
+                  Applications are now in the submission queue. They&apos;ll show up under Recent activity once submitted.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRecentlyApproved([])}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: 12 }}
+              >
+                Dismiss
+              </button>
+            </header>
+            <div className="auto-just-approved-list">
+              {recentlyApproved.map((r, i) => (
+                <div className="auto-just-approved-row" key={i}>
+                  <Check size={14} style={{ color: "#10b981", flexShrink: 0 }} />
+                  <span><strong>{r.title}</strong> at {r.company}</span>
+                </div>
+              ))}
             </div>
           </article>
         </section>
