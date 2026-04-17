@@ -51,6 +51,7 @@ type RecentApp = {
   id: string;
   status: string;
   queued_at: string;
+  started_at: string | null;
   jobs: { title: string; company_name: string; apply_url: string } | null;
 };
 
@@ -103,7 +104,7 @@ export default function DashboardPage() {
       supabase.from("resumes").select("id").eq("user_id", user.id).limit(1),
       supabase.rpc("get_credit_balance", { p_user_id: user.id }),
       supabase.from("pending_approval").select("id, match_score, found_at, jobs(id, title, company_name, location, apply_url, source)").eq("user_id", user.id).eq("status", "pending").order("match_score", { ascending: false }).limit(10),
-      supabase.from("applications").select("id, status, queued_at, jobs(title, company_name, apply_url)").eq("user_id", user.id).order("queued_at", { ascending: false }).limit(6),
+      supabase.from("applications").select("id, status, queued_at, started_at, jobs(title, company_name, apply_url)").eq("user_id", user.id).order("queued_at", { ascending: false }).limit(6),
     ]);
 
     const skills = (prof?.extracted_skills as Record<string, unknown>) || {};
@@ -138,6 +139,15 @@ export default function DashboardPage() {
     }, 10000);
     return () => clearInterval(interval);
   }, [ready, loadAll]);
+
+  // Tick every second to update live timers on in_progress applications
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const hasInProgress = recent.some((a) => a.status === "in_progress");
+    if (!hasInProgress) return;
+    const interval = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(interval);
+  }, [recent]);
 
   // Onboarding completeness
   const profileComplete = snap.has_resume && snap.target_titles.length > 0;
@@ -251,6 +261,17 @@ export default function DashboardPage() {
     const h = Math.floor(m / 60);
     if (h < 24) return `${h}h ago`;
     return `${Math.floor(h / 24)}d ago`;
+  };
+
+  // Live elapsed timer for in-progress submissions (uses `tick` to re-render)
+  const fmtElapsed = (iso: string | null) => {
+    if (!iso) return "0s";
+    void tick; // keep linter happy — we depend on tick for re-renders
+    const diff = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+    const mins = Math.floor(diff / 60);
+    const secs = diff % 60;
+    if (mins === 0) return `${secs}s`;
+    return `${mins}m ${secs}s`;
   };
 
   const matchClass = (s: number) => (s >= 70 ? "auto-match-high" : s >= 40 ? "auto-match-mid" : "auto-match-low");
@@ -367,7 +388,7 @@ export default function DashboardPage() {
             <h2>{agentOn ? "Agent is active" : "Start your agent"}</h2>
             <p>
               {agentOn
-                ? `Searching daily for: ${snap.target_titles.slice(0, 3).join(", ")}${snap.target_titles.length > 3 ? "..." : ""}`
+                ? `Searching daily for: ${snap.target_titles.slice(0, 3).join(", ")}${snap.target_titles.length > 3 ? "..." : ""}. Each submission takes 30-90 seconds because the agent imitates a human (clicks, scrolls, types) so forms don't block it.`
                 : "Turn on the agent and we'll find jobs matching your profile. You approve each one before it gets sent."}
             </p>
             <div className="auto-master-status">
@@ -612,6 +633,15 @@ export default function DashboardPage() {
                   <span className={`auto-status-pill auto-status-${a.status}`}>
                     {a.status === "in_progress" ? "Submitting" : a.status.charAt(0).toUpperCase() + a.status.slice(1)}
                   </span>
+                  {a.status === "in_progress" && a.started_at && (
+                    <span
+                      className="auto-elapsed-timer"
+                      title="The agent imitates a human filling out the form (clicks, scrolls, types) so it doesn't get blocked. Submission usually takes 30-90 seconds."
+                    >
+                      <Loader2 size={11} className="spin" />
+                      {fmtElapsed(a.started_at)}
+                    </span>
+                  )}
                   <span className="auto-activity-text">
                     Applied to <strong>{a.jobs?.title || "job"}</strong> at <strong>{a.jobs?.company_name || "company"}</strong>
                   </span>
