@@ -10174,6 +10174,91 @@ p {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+.auto-activity-row-clickable {
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 8px;
+  margin: 0 -8px;
+}
+.auto-activity-row-clickable:hover {
+  background: color-mix(in srgb, var(--accent) 4%, transparent);
+}
+
+.auto-activity-toggle {
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 500;
+  margin-left: auto;
+  padding-right: 8px;
+}
+
+.auto-activity-details {
+  margin: 4px 0 16px;
+  padding: 14px 16px;
+  background: color-mix(in srgb, var(--accent) 3%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 12%, var(--line));
+  border-radius: 10px;
+  font-size: 12.5px;
+  animation: auto-fade-in 0.2s ease-out;
+}
+
+.auto-detail-row {
+  margin-bottom: 10px;
+}
+.auto-detail-row:last-child {
+  margin-bottom: 0;
+}
+.auto-detail-row strong {
+  display: inline-block;
+  margin-right: 6px;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 12px;
+}
+.auto-detail-row p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.auto-detail-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.auto-detail-chip {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+.auto-detail-chip-ok {
+  background: color-mix(in srgb, #10b981 8%, transparent);
+  border-color: color-mix(in srgb, #10b981 22%, var(--line));
+  color: #059669;
+  font-family: var(--font-sans);
+}
+.auto-detail-chip-warn {
+  background: color-mix(in srgb, var(--warm) 8%, transparent);
+  border-color: color-mix(in srgb, var(--warm) 22%, var(--line));
+  color: var(--warm);
+  font-family: var(--font-sans);
+}
+
+.auto-detail-error {
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--danger) 6%, transparent);
+  border-radius: 6px;
+  border-left: 3px solid var(--danger);
+}
+.auto-detail-error strong {
+  color: var(--danger);
+}
 @keyframes auto-fade-in {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }

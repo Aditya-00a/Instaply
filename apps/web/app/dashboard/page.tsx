@@ -52,6 +52,8 @@ type RecentApp = {
   status: string;
   queued_at: string;
   started_at: string | null;
+  error_message: string | null;
+  submission_log: string | null;
   jobs: { title: string; company_name: string; apply_url: string } | null;
 };
 
@@ -79,6 +81,7 @@ export default function DashboardPage() {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [recentlyApproved, setRecentlyApproved] = useState<{ title: string; company: string; at: number }[]>([]);
   const [activityFilter, setActivityFilter] = useState<string>("all");
+  const [expandedAppId, setExpandedAppId] = useState<string | null>(null);
 
   const loadAll = useCallback(async () => {
     if (!ready) {
@@ -104,7 +107,7 @@ export default function DashboardPage() {
       supabase.from("resumes").select("id").eq("user_id", user.id).limit(1),
       supabase.rpc("get_credit_balance", { p_user_id: user.id }),
       supabase.from("pending_approval").select("id, match_score, found_at, jobs(id, title, company_name, location, apply_url, source)").eq("user_id", user.id).eq("status", "pending").order("match_score", { ascending: false }).limit(10),
-      supabase.from("applications").select("id, status, queued_at, started_at, jobs(title, company_name, apply_url)").eq("user_id", user.id).order("queued_at", { ascending: false }).limit(6),
+      supabase.from("applications").select("id, status, queued_at, started_at, error_message, submission_log, jobs(title, company_name, apply_url)").eq("user_id", user.id).order("queued_at", { ascending: false }).limit(6),
     ]);
 
     const skills = (prof?.extracted_skills as Record<string, unknown>) || {};
@@ -261,6 +264,13 @@ export default function DashboardPage() {
     const h = Math.floor(m / 60);
     if (h < 24) return `${h}h ago`;
     return `${Math.floor(h / 24)}d ago`;
+  };
+
+  // Parse submission_log JSON safely
+  type SubLog = { status?: string; platform_detected?: string; filled_fields?: string[]; needs_review?: Array<{question: string}>; auto_answered?: string[]; submitted?: boolean };
+  const parseLog = (raw: string | null): SubLog | null => {
+    if (!raw) return null;
+    try { return typeof raw === "string" ? JSON.parse(raw) : raw; } catch { return null; }
   };
 
   // Live elapsed timer for in-progress submissions (uses `tick` to re-render)
@@ -627,31 +637,94 @@ export default function DashboardPage() {
             </div>
 
             <div className="auto-activity">
-              {recent.filter((a) => activityFilter === "all" || a.status === activityFilter).map((a) => (
-                <div className="auto-activity-row" key={a.id}>
-                  <span className="auto-activity-time">{fmtRelative(a.queued_at)}</span>
-                  <span className={`auto-status-pill auto-status-${a.status}`}>
-                    {a.status === "in_progress" ? "Submitting" : a.status.charAt(0).toUpperCase() + a.status.slice(1)}
-                  </span>
-                  {a.status === "in_progress" && a.started_at && (
-                    <span
-                      className="auto-elapsed-timer"
-                      title="The agent imitates a human filling out the form (clicks, scrolls, types) so it doesn't get blocked. Submission usually takes 1-3 minutes."
+              {recent.filter((a) => activityFilter === "all" || a.status === activityFilter).map((a) => {
+                const log = parseLog(a.submission_log);
+                const isExpanded = expandedAppId === a.id;
+                const hasDetails = !!(log || a.error_message);
+                return (
+                  <div key={a.id}>
+                    <div
+                      className={`auto-activity-row ${hasDetails ? "auto-activity-row-clickable" : ""}`}
+                      onClick={() => hasDetails && setExpandedAppId(isExpanded ? null : a.id)}
                     >
-                      <Loader2 size={11} className="spin" />
-                      {fmtElapsed(a.started_at)}
-                    </span>
-                  )}
-                  <span className="auto-activity-text">
-                    Applied to <strong>{a.jobs?.title || "job"}</strong> at <strong>{a.jobs?.company_name || "company"}</strong>
-                  </span>
-                  {a.jobs?.apply_url && (
-                    <a href={a.jobs.apply_url} target="_blank" rel="noopener noreferrer" className="auto-activity-link">
-                      <ExternalLink size={12} />
-                    </a>
-                  )}
-                </div>
-              ))}
+                      <span className="auto-activity-time">{fmtRelative(a.queued_at)}</span>
+                      <span className={`auto-status-pill auto-status-${a.status}`}>
+                        {a.status === "in_progress" ? "Submitting" : a.status.charAt(0).toUpperCase() + a.status.slice(1)}
+                      </span>
+                      {a.status === "in_progress" && a.started_at && (
+                        <span
+                          className="auto-elapsed-timer"
+                          title="The agent imitates a human filling out the form (clicks, scrolls, types) so it doesn't get blocked. Submission usually takes 1-3 minutes."
+                        >
+                          <Loader2 size={11} className="spin" />
+                          {fmtElapsed(a.started_at)}
+                        </span>
+                      )}
+                      <span className="auto-activity-text">
+                        Applied to <strong>{a.jobs?.title || "job"}</strong> at <strong>{a.jobs?.company_name || "company"}</strong>
+                      </span>
+                      {hasDetails && (
+                        <span className="auto-activity-toggle">{isExpanded ? "−" : "▾ Details"}</span>
+                      )}
+                      {a.jobs?.apply_url && (
+                        <a href={a.jobs.apply_url} target="_blank" rel="noopener noreferrer" className="auto-activity-link" onClick={(e) => e.stopPropagation()}>
+                          <ExternalLink size={12} />
+                        </a>
+                      )}
+                    </div>
+                    {isExpanded && (
+                      <div className="auto-activity-details">
+                        {log?.platform_detected && (
+                          <div className="auto-detail-row">
+                            <strong>Platform:</strong> {log.platform_detected}
+                          </div>
+                        )}
+                        {log?.filled_fields && log.filled_fields.length > 0 && (
+                          <div className="auto-detail-row">
+                            <strong>Fields filled ({log.filled_fields.length}):</strong>
+                            <div className="auto-detail-chips">
+                              {log.filled_fields.map((f, i) => (
+                                <span className="auto-detail-chip auto-detail-chip-ok" key={i}>✓ {f}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {log?.auto_answered && log.auto_answered.length > 0 && (
+                          <div className="auto-detail-row">
+                            <strong>AI-answered:</strong>
+                            <div className="auto-detail-chips">
+                              {log.auto_answered.map((q, i) => (
+                                <span className="auto-detail-chip" key={i}>{q}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {log?.needs_review && log.needs_review.length > 0 && (
+                          <div className="auto-detail-row">
+                            <strong>Needed review:</strong>
+                            <div className="auto-detail-chips">
+                              {log.needs_review.map((q, i) => (
+                                <span className="auto-detail-chip auto-detail-chip-warn" key={i}>{q.question}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {a.error_message && (
+                          <div className="auto-detail-row auto-detail-error">
+                            <strong>What happened:</strong>
+                            <p>{a.error_message}</p>
+                          </div>
+                        )}
+                        {log && !log.submitted && a.status === "failed" && (
+                          <div className="auto-detail-row" style={{ color: "var(--muted)", fontSize: 12 }}>
+                            <em>Click Retry on the Applications page to try again.</em>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
               {recent.filter((a) => activityFilter === "all" || a.status === activityFilter).length === 0 && (
                 <div style={{ fontSize: 13, color: "var(--muted)", textAlign: "center", padding: 16 }}>
                   No applications with this status.
