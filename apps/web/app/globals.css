@@ -636,7 +636,10 @@ p {
 .app-table-cell-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 
 .console-sidebar-label {
@@ -5735,7 +5738,7 @@ p {
 .app-table-head,
 .app-table-row {
   display: grid;
-  grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr) minmax(0, 1.2fr) 60px 90px 30px;
+  grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr) minmax(0, 1.2fr) 60px 90px minmax(120px, auto);
   gap: 14px;
   padding: 12px 18px;
   align-items: center;
