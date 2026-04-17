@@ -17,6 +17,7 @@ export interface SummaryMetric {
 
 export const consoleNavItems: ConsoleNavItem[] = [
   { href: "/dashboard", label: "Overview", section: "workspace" },
+  { href: "/auto-apply", label: "Auto-Apply", section: "workspace" },
   { href: "/search", label: "Search jobs", section: "workspace" },
   { href: "/applications", label: "Applications", section: "workspace" },
   { href: "/review", label: "Answers", section: "workspace" },

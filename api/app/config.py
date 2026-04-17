@@ -56,6 +56,9 @@ class Settings(BaseSettings):
     adzuna_app_id: str = ""
     adzuna_app_key: str = ""
 
+    # Auto-Apply cron secret (Fly scheduled machines call /auto-apply/cron)
+    cron_secret: str = ""
+
     # Web URL (for Stripe success/cancel redirects)
     web_url: str = "https://instaply.asion.ai"
 
