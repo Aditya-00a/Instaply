@@ -42,42 +42,153 @@ def _stable_id(url: str) -> str:
     return hashlib.sha256((url or "").encode("utf-8")).hexdigest()[:16]
 
 
-def _score_job_against_skills(job_title: str, job_company: str, skills: dict[str, Any]) -> int:
-    """Same scoring as web search page (skills + titles_held + industries)."""
+def _score_job_against_skills(
+    job_title: str,
+    job_company: str,
+    skills: dict[str, Any],
+    job_description: str = "",
+) -> int:
+    """Resume-to-job match scoring. Uses title + full description.
+
+    Weights:
+      - 40% Skills overlap with description (Python, SQL, Excel, etc.)
+      - 25% Title alignment with held titles + target titles
+      - 15% Industry match (description mentions user's industries)
+      - 10% Experience-level match (entry/mid/senior implied)
+      - 10% Education match (degree, major in description)
+    """
     title = (job_title or "").lower()
     company = (job_company or "").lower()
+    desc = (job_description or "").lower()
+    haystack = f"{title} {desc} {company}"  # what we search against
     score = 0.0
     factors = 0.0
 
+    # 1. SKILLS MATCH (40%) — count user skills mentioned in description
     user_skills = [s.lower() for s in (skills.get("skills") or [])]
     if user_skills:
-        title_words = re.split(r"[\s,\-/()]+", title)
         matched = 0
         for skill in user_skills:
-            sw = skill.split()
-            if all(any(w in tw or tw in w for tw in title_words) for w in sw):
+            # Exact phrase match in description (e.g. "machine learning")
+            if skill in haystack:
                 matched += 1
-        score += 0.4 * min(matched / min(len(user_skills), 5), 1)
+        # Cap at 10 to avoid penalty for short skill lists
+        ratio = min(matched / min(len(user_skills), 10), 1.0)
+        score += 0.4 * ratio
         factors += 0.4
 
+    # 2. TITLE ALIGNMENT (25%) — held titles vs job title
     held_titles = [t.lower() for t in (skills.get("titles_held") or [])]
     if held_titles:
         best = 0.0
         for held in held_titles:
-            words = held.split()
-            matched_w = sum(1 for w in words if w in title and len(w) > 2)
-            ratio = matched_w / len(words) if words else 0
+            words = [w for w in held.split() if len(w) > 2]
+            if not words:
+                continue
+            matched_w = sum(1 for w in words if w in title)
+            ratio = matched_w / len(words)
             best = max(best, ratio)
-        score += 0.35 * best
-        factors += 0.35
+        score += 0.25 * best
+        factors += 0.25
 
+    # 3. INDUSTRY MATCH (15%) — user's industries vs job
     industries = [i.lower() for i in (skills.get("industries") or [])]
     if industries:
-        if any(ind in title or ind in company for ind in industries):
-            score += 0.1
-        factors += 0.1
+        match = any(ind in haystack for ind in industries)
+        score += 0.15 if match else 0
+        factors += 0.15
+
+    # 4. EXPERIENCE LEVEL (10%) — entry/mid/senior alignment
+    exp_years = skills.get("experience_years") or 0
+    if exp_years:
+        # Detect target level from job title
+        is_senior_job = any(w in title for w in ("senior", "staff", "principal", "lead", "iii", "iv", "manager", "director", "head"))
+        is_entry_job = any(w in title for w in ("junior", "entry", "associate", "intern", "graduate", "trainee", " i ", " ii"))
+        # Match: senior people for senior jobs; entry people for entry jobs
+        if exp_years >= 5 and is_senior_job:
+            score += 0.10
+        elif exp_years <= 2 and is_entry_job:
+            score += 0.10
+        elif 3 <= exp_years < 5 and not is_senior_job and not is_entry_job:
+            score += 0.10
+        elif not is_senior_job and not is_entry_job:
+            score += 0.05  # neutral title, partial credit
+        factors += 0.10
+
+    # 5. EDUCATION RELEVANCE (10%) — degree/major mentioned in desc
+    education = skills.get("education") or {}
+    if education:
+        major = (education.get("major") or "").lower()
+        if major and major in haystack:
+            score += 0.10
+        elif major:
+            # Partial credit if any major-word appears
+            major_words = [w for w in major.split() if len(w) > 3]
+            if major_words and any(w in haystack for w in major_words):
+                score += 0.05
+        factors += 0.10
 
     return round((score / factors) * 100) if factors > 0 else 0
+
+
+# ─── LLM-based match analysis (Cerebras) ─────────────────────────
+
+async def _llm_match_score(
+    job_title: str,
+    job_description: str,
+    job_company: str,
+    skills: dict[str, Any],
+) -> int | None:
+    """Call Cerebras to compute a match score 0-100. Used only for top candidates
+    to avoid burning the free tier."""
+    import os
+    import httpx
+    api_key = os.getenv("OPENAI_API_KEY") or os.getenv("CEREBRAS_API_KEY", "")
+    if not api_key or not job_description:
+        return None
+
+    summary = skills.get("summary", "")[:500]
+    user_skills = ", ".join((skills.get("skills") or [])[:15])
+    user_titles = ", ".join((skills.get("titles_held") or [])[:5])
+    exp = skills.get("experience_years", 0)
+
+    prompt = f"""Rate how well this candidate matches this job from 0 to 100.
+
+CANDIDATE:
+Skills: {user_skills}
+Titles held: {user_titles}
+Years of experience: {exp}
+Summary: {summary}
+
+JOB:
+Title: {job_title}
+Company: {job_company}
+Description: {job_description[:1500]}
+
+Return ONLY a number 0-100. No explanation. Just the number."""
+
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.post(
+                "https://api.cerebras.ai/v1/chat/completions",
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json={
+                    "model": "llama-3.3-70b",
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.1,
+                    "max_tokens": 8,
+                },
+            )
+            resp.raise_for_status()
+            content = resp.json()["choices"][0]["message"]["content"].strip()
+            # Extract first number
+            m = re.search(r"\d+", content)
+            if m:
+                n = int(m.group())
+                return max(0, min(100, n))
+    except Exception as e:
+        log.warning("LLM match failed: %s", e)
+    return None
 
 
 async def _scrape_for_targets_multi(
@@ -264,15 +375,42 @@ async def _discover_for_user(
     # any job whose title contains any target title word should pass.
     no_skills = not (skills.get("skills") or skills.get("titles_held"))
 
-    inserted = 0
+    # Score every job using DESCRIPTION (not just title)
+    scored = []
     for job in jobs:
-        # Effective score: real LLM-based score, OR title-keyword fallback if no resume yet
-        score = _score_job_against_skills(job["title"], job["company_name"], skills)
+        s = _score_job_against_skills(
+            job["title"], job["company_name"], skills,
+            job_description=job.get("description", ""),
+        )
         if no_skills:
-            # No resume yet — score by whether title contains any target keyword
             title_l = (job["title"] or "").lower()
             if any(any(w in title_l for w in t.lower().split()) for t in titles):
-                score = max(score, 70)
+                s = max(s, 70)
+        scored.append((s, job))
+
+    # Sort by score desc, then run LLM verification on top 5 to refine
+    scored.sort(key=lambda x: -x[0])
+    if not no_skills and scored:
+        log.info("Top 5 by title+desc heuristic: %s",
+                 [(s, j["title"][:30]) for s, j in scored[:5]])
+        # LLM-refine top candidates (parallel calls)
+        top_jobs = [j for _, j in scored[:5] if j.get("description")]
+        if top_jobs:
+            llm_tasks = [_llm_match_score(j["title"], j["description"], j["company_name"], skills) for j in top_jobs]
+            llm_scores = await asyncio.gather(*llm_tasks, return_exceptions=True)
+            for i, llm_s in enumerate(llm_scores):
+                if isinstance(llm_s, int) and llm_s is not None:
+                    # Replace heuristic with LLM score (more accurate)
+                    job = top_jobs[i]
+                    for j, (orig_s, orig_j) in enumerate(scored):
+                        if orig_j.get("external_id") == job.get("external_id"):
+                            scored[j] = (llm_s, orig_j)
+                            break
+            scored.sort(key=lambda x: -x[0])
+            log.info("After LLM: %s", [(s, j["title"][:30]) for s, j in scored[:5]])
+
+    inserted = 0
+    for score, job in scored:
         if score < min_score:
             continue
 

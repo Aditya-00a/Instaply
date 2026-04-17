@@ -150,6 +150,11 @@ async def _search_themuse(query: str, location: str) -> list[dict[str, Any]]:
         url = (r.get("refs") or {}).get("landing_page") or ""
         if not url:
             continue
+        # Themuse returns description as HTML — strip tags + truncate
+        raw_desc = r.get("contents") or r.get("description") or ""
+        desc_text = re.sub(r"<[^>]+>", " ", raw_desc)  # strip HTML
+        desc_text = re.sub(r"\s+", " ", desc_text).strip()[:500]
+
         results.append({
             "external_id": f"themuse:{_stable_id(url)}",
             "title": r.get("name", ""),
@@ -158,7 +163,7 @@ async def _search_themuse(query: str, location: str) -> list[dict[str, Any]]:
             "location": loc_name,
             "remote": "remote" in loc_name.lower(),
             "apply_url": url,
-            "description": "",
+            "description": desc_text,
             "category": (r.get("categories") or [{}])[0].get("name", "") if r.get("categories") else "",
             "salary": "",
             "source": "themuse",
