@@ -84,27 +84,46 @@ async def _scrape_for_targets_multi(
     titles: list[str],
     locations: list[str],
     keywords: list[str] | None = None,
+    skills: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Aggregate jobs from all sources for each title × location.
 
     Build a list of search queries:
       - Each title alone
       - Each title + each keyword (if keywords set)
-    Capped at 8 total queries to bound work.
+      - Top job titles the user has held (from resume)
+    Capped at 10 total queries to bound work.
     """
     from .jobs_search import _search_themuse, _search_arbeitnow, _scrape_jobs_sync
 
     keywords = keywords or []
+    skills = skills or {}
+    held_titles: list[str] = (skills.get("titles_held") or [])[:3]
+
     queries: list[str] = []
     for title in titles[:5]:
         queries.append(title)
         for kw in keywords[:3]:
             queries.append(f"{title} {kw}")
+    # Add resume-based titles the user has actually held — they're often
+    # the strongest signal of what they're qualified for
+    for ht in held_titles:
+        if ht not in queries:
+            queries.append(ht)
     # If user has keywords but no titles, still let them search by keyword alone
     if not titles:
         for kw in keywords[:5]:
             queries.append(kw)
-    queries = queries[:8]  # hard cap
+    # Dedup and cap
+    seen_q = set()
+    deduped: list[str] = []
+    for q in queries:
+        ql = q.lower().strip()
+        if ql and ql not in seen_q:
+            seen_q.add(ql)
+            deduped.append(q)
+    queries = deduped[:10]
+    log.info("Discovery queries: %s", queries)
 
     seen: set[str] = set()
     out: list[dict[str, Any]] = []
@@ -236,7 +255,7 @@ async def _discover_for_user(
     keywords: list[str] | None = None,
 ) -> int:
     """Async helper: scrape, score, upsert jobs, insert pending_approval."""
-    jobs = await _scrape_for_targets_multi(titles, locations, keywords or [])
+    jobs = await _scrape_for_targets_multi(titles, locations, keywords or [], skills)
     log.info("Discovered %d raw jobs for user %s", len(jobs), user_id[:8])
     if not jobs:
         return 0
