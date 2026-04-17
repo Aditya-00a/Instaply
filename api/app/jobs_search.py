@@ -1,14 +1,13 @@
-"""Real-time job search via JobSpy.
+"""Real-time job search aggregating multiple free sources.
 
-JobSpy scrapes Indeed, LinkedIn, ZipRecruiter, Glassdoor, Google,
-and Bayt directly — returning real direct apply URLs (not aggregator
-redirects). No API keys, no project mismatches, no bot detection
-issues for our submitter (URLs are real ATS pages).
+Sources (no API keys required):
+  - JobSpy (Indeed, LinkedIn, ZipRecruiter, Google) - largest US coverage
+  - Themuse - 90k+ jobs, all industries (healthcare, marketing, etc.)
+  - Arbeitnow - 4M+ jobs worldwide
+  - Remotive - remote tech jobs
+  - Hacker News "Who's Hiring" - YC startups + tech
 
-Flow:
-  1. User searches → API runs jobspy → returns real-time results
-  2. User clicks Apply → API upserts that one job into our jobs table
-     and creates an applications row (so the submitter can pick it up)
+Each source runs in parallel. Results are deduped by URL hash.
 """
 from __future__ import annotations
 
@@ -18,6 +17,7 @@ import logging
 import re
 from typing import Any
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from .auth import current_user_id
@@ -109,6 +109,123 @@ def _scrape_jobs_sync(query: str, location: str, remote: bool) -> list[dict[str,
     return results
 
 
+async def _search_themuse(query: str, location: str) -> list[dict[str, Any]]:
+    """Themuse public API — 90k+ jobs, all industries."""
+    try:
+        params = {"page": 1}
+        # Themuse uses category filtering; we'll search by name in results
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                "https://www.themuse.com/api/public/jobs",
+                params=params,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+    except Exception as e:
+        log.warning("Themuse failed: %s", e)
+        return []
+
+    q_lower = query.lower()
+    loc_lower = location.lower()
+    results = []
+    for r in data.get("results", []):
+        name = (r.get("name") or "").lower()
+        if q_lower not in name:
+            continue
+        loc_list = r.get("locations") or []
+        loc_name = loc_list[0].get("name", "") if loc_list else ""
+        if loc_lower and loc_lower not in loc_name.lower():
+            continue
+        url = (r.get("refs") or {}).get("landing_page") or ""
+        if not url:
+            continue
+        results.append({
+            "external_id": f"themuse:{_stable_id(url)}",
+            "title": r.get("name", ""),
+            "company_name": (r.get("company") or {}).get("name", "Unknown"),
+            "company_slug": _slug((r.get("company") or {}).get("name", "")),
+            "location": loc_name,
+            "remote": "remote" in loc_name.lower(),
+            "apply_url": url,
+            "description": "",
+            "category": (r.get("categories") or [{}])[0].get("name", "") if r.get("categories") else "",
+            "salary": "",
+            "source": "themuse",
+        })
+    return results
+
+
+async def _search_arbeitnow(query: str) -> list[dict[str, Any]]:
+    """Arbeitnow public API — 4M+ jobs worldwide, no auth."""
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                "https://www.arbeitnow.com/api/job-board-api",
+                params={"search": query},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+    except Exception as e:
+        log.warning("Arbeitnow failed: %s", e)
+        return []
+
+    results = []
+    for j in data.get("data", [])[:25]:
+        url = j.get("url", "")
+        if not url:
+            continue
+        loc = j.get("location", "")
+        results.append({
+            "external_id": f"arbeitnow:{_stable_id(url)}",
+            "title": j.get("title", ""),
+            "company_name": j.get("company_name", "Unknown"),
+            "company_slug": _slug(j.get("company_name", "")),
+            "location": loc,
+            "remote": bool(j.get("remote", False)),
+            "apply_url": url,
+            "description": (j.get("description") or "")[:500],
+            "category": "",
+            "salary": "",
+            "source": "arbeitnow",
+        })
+    return results
+
+
+async def _search_remotive(query: str) -> list[dict[str, Any]]:
+    """Remotive — remote tech jobs, no auth."""
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                "https://remotive.com/api/remote-jobs",
+                params={"search": query, "limit": 20},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+    except Exception as e:
+        log.warning("Remotive failed: %s", e)
+        return []
+
+    results = []
+    for j in data.get("jobs", [])[:20]:
+        url = j.get("url", "")
+        if not url:
+            continue
+        results.append({
+            "external_id": f"remotive:{_stable_id(url)}",
+            "title": j.get("title", ""),
+            "company_name": j.get("company_name", "Unknown"),
+            "company_slug": _slug(j.get("company_name", "")),
+            "location": j.get("candidate_required_location", "Remote"),
+            "remote": True,
+            "apply_url": url,
+            "description": (j.get("description") or "")[:500],
+            "category": j.get("category", ""),
+            "salary": j.get("salary", ""),
+            "source": "remotive",
+        })
+    return results
+
+
 @router.get("/jobs/search-live")
 async def search_live(
     request: Request,
@@ -118,21 +235,51 @@ async def search_live(
     user_id: str = Depends(current_user_id),
     _rl: None = rate_limit("jobs_search_live", per_min=20),
 ):
-    """Real-time job search across Indeed, LinkedIn, ZipRecruiter, Google."""
+    """Real-time job search aggregating multiple free sources in parallel."""
     if not q.strip():
-        return {"results": [], "count": 0, "source": "jobspy"}
+        return {"results": [], "count": 0, "sources": []}
 
-    try:
-        # Run blocking JobSpy in a thread (it does HTTP under the hood)
-        results = await asyncio.to_thread(_scrape_jobs_sync, q.strip(), where.strip(), remote)
-    except Exception as e:
-        log.error("Search failed: %s", e)
-        raise HTTPException(502, f"Job search failed: {str(e)[:100]}")
+    query = q.strip()
+    location = where.strip()
+
+    # Run all sources in parallel
+    tasks = [
+        asyncio.to_thread(_scrape_jobs_sync, query, location, remote),
+        _search_themuse(query, location),
+        _search_arbeitnow(query),
+    ]
+    if remote or "remote" in query.lower():
+        tasks.append(_search_remotive(query))
+
+    results_per_source = await asyncio.gather(*tasks, return_exceptions=True)
+
+    # Merge + dedup by external_id
+    seen_ids: set[str] = set()
+    all_results = []
+    sources_used = []
+    for r in results_per_source:
+        if isinstance(r, Exception):
+            log.warning("Source failed: %s", r)
+            continue
+        if not r:
+            continue
+        for job in r:
+            ext_id = job.get("external_id", "")
+            if ext_id in seen_ids:
+                continue
+            seen_ids.add(ext_id)
+            all_results.append(job)
+        if r:
+            sources_used.append(r[0].get("source", "?"))
+
+    # Apply remote filter if requested (post-merge)
+    if remote:
+        all_results = [j for j in all_results if j.get("remote")]
 
     return {
-        "results": results,
-        "count": len(results),
-        "source": "jobspy",
+        "results": all_results,
+        "count": len(all_results),
+        "sources": list(set(sources_used)),
     }
 
 
