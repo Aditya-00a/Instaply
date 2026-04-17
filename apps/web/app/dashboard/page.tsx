@@ -82,6 +82,37 @@ export default function DashboardPage() {
   const [recentlyApproved, setRecentlyApproved] = useState<{ title: string; company: string; at: number }[]>([]);
   const [activityFilter, setActivityFilter] = useState<string>("all");
   const [expandedAppId, setExpandedAppId] = useState<string | null>(null);
+  const [answerDrafts, setAnswerDrafts] = useState<Record<string, string>>({});
+  const [savingAnswer, setSavingAnswer] = useState<string | null>(null);
+
+  const saveAnswer = async (appId: string, question: string, key: string) => {
+    const answer = (answerDrafts[key] || "").trim();
+    if (!answer) return;
+    setSavingAnswer(key);
+    try {
+      const supabase = getBrowserSupabase();
+      if (!supabase) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      await fetch(`${API_BASE}/answers/save`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          question,
+          answer,
+          application_id: appId,
+        }),
+      });
+      // Clear the draft and refresh activity (re-queues the app on backend)
+      setAnswerDrafts((d) => ({ ...d, [key]: "" }));
+      await loadAll();
+    } finally {
+      setSavingAnswer(null);
+    }
+  };
 
   const loadAll = useCallback(async () => {
     if (!ready) {
@@ -700,13 +731,44 @@ export default function DashboardPage() {
                           </div>
                         )}
                         {log?.needs_review && log.needs_review.length > 0 && (
-                          <div className="auto-detail-row">
-                            <strong>Needed review:</strong>
-                            <div className="auto-detail-chips">
-                              {log.needs_review.map((q, i) => (
-                                <span className="auto-detail-chip auto-detail-chip-warn" key={i}>{q.question}</span>
-                              ))}
-                            </div>
+                          <div className="auto-detail-row auto-needs-answer">
+                            <strong>The agent needs you to answer:</strong>
+                            <p style={{ margin: "4px 0 12px", fontSize: 12, color: "var(--muted)" }}>
+                              Type your answer below — we&apos;ll save it and reuse it for similar questions on future applications. Answer once, never again.
+                            </p>
+                            {log.needs_review.slice(0, 5).map((q, i) => {
+                              const key = `${a.id}-${i}`;
+                              const draft = answerDrafts[key] || "";
+                              const isSaving = savingAnswer === key;
+                              return (
+                                <div className="auto-question-block" key={i}>
+                                  <label className="auto-question-label">{q.question}</label>
+                                  <div className="auto-question-input-row">
+                                    <input
+                                      type="text"
+                                      value={draft}
+                                      onChange={(e) => setAnswerDrafts((d) => ({ ...d, [key]: e.target.value }))}
+                                      onKeyDown={(e) => e.key === "Enter" && saveAnswer(a.id, q.question, key)}
+                                      placeholder="Your answer..."
+                                      onClick={(e) => e.stopPropagation()}
+                                    />
+                                    <button
+                                      type="button"
+                                      className="btn-primary auto-btn-sm"
+                                      onClick={(e) => { e.stopPropagation(); saveAnswer(a.id, q.question, key); }}
+                                      disabled={!draft.trim() || isSaving}
+                                    >
+                                      {isSaving ? "Saving..." : "Save & Retry"}
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                            {log.needs_review.length > 5 && (
+                              <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 8 }}>
+                                + {log.needs_review.length - 5} more questions. Answer the first 5 and we&apos;ll re-run the agent.
+                              </p>
+                            )}
                           </div>
                         )}
                         {a.error_message && (

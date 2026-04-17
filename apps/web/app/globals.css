@@ -10262,6 +10262,48 @@ p {
 .auto-detail-error strong {
   color: var(--danger);
 }
+
+.auto-needs-answer {
+  background: color-mix(in srgb, var(--warm) 6%, transparent);
+  border-left: 3px solid var(--warm);
+  padding: 12px 14px;
+  border-radius: 6px;
+}
+.auto-needs-answer strong {
+  color: var(--warm);
+}
+.auto-question-block {
+  margin-bottom: 10px;
+}
+.auto-question-block:last-child {
+  margin-bottom: 0;
+}
+.auto-question-label {
+  display: block;
+  font-size: 12.5px;
+  color: var(--text);
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+.auto-question-input-row {
+  display: flex;
+  gap: 6px;
+}
+.auto-question-input-row input {
+  flex: 1;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: var(--font-sans);
+  background: var(--panel);
+  color: var(--text);
+  min-width: 0;
+}
+.auto-question-input-row input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
 @keyframes auto-fade-in {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }

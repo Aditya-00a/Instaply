@@ -15,6 +15,7 @@ from .razorpay_webhook import router as razorpay_router
 from .resume_analyzer import router as resume_router
 from .jobs_search import router as jobs_search_router
 from .auto_apply import router as auto_apply_router
+from .answers import router as answers_router
 from .audit import audit
 from .ratelimit import rate_limit
 from fastapi import Request
@@ -50,6 +51,7 @@ app.include_router(razorpay_router)
 app.include_router(resume_router)
 app.include_router(jobs_search_router)
 app.include_router(auto_apply_router)
+app.include_router(answers_router)
 
 
 # ─── Health ───────────────────────────────────────────────────────
