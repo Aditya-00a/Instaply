@@ -1,385 +1,491 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, Sparkles, UserPlus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import {
+  ArrowRight,
+  Check,
+  ExternalLink,
+  Loader2,
+  Lock,
+  Pause,
+  Shield,
+  Sparkles,
+  Wallet,
+  X,
+} from "lucide-react";
 
 import { ConsoleShell } from "../components/console-shell";
-import { blockedQuestions, generatedDocuments, overviewMetrics, queueRows } from "../console-data";
 import { getBrowserSupabase, isSupabaseConfigured } from "../lib/supabase-browser";
 
-type AppRow = {
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://api.asion.ai";
+
+type ProfileSnapshot = {
+  full_name: string | null;
+  has_resume: boolean;
+  has_skills: boolean;
+  target_titles: string[];
+  target_locations: string[];
+  auto_apply_enabled: boolean;
+  auto_apply_paused_until: string | null;
+  auto_apply_last_run_at: string | null;
+  auto_apply_daily_cap: number;
+};
+
+type PendingJob = {
+  id: string;
+  match_score: number;
+  found_at: string;
+  jobs: {
+    id: string;
+    title: string;
+    company_name: string;
+    location: string | null;
+    apply_url: string;
+    source: string;
+  };
+};
+
+type RecentApp = {
   id: string;
   status: string;
   queued_at: string;
-  jobs: {
-    title: string | null;
-    company_name: string | null;
-  } | null;
+  jobs: { title: string; company_name: string; apply_url: string } | null;
 };
 
-type LiveData = {
-  mode: "live";
-  balance: number;
-  searchesToday: number;
-  counts: {
-    queued: number;
-    submitted: number;
-    confirmed: number;
-    needs_review: number;
-  };
-  recent: AppRow[];
-  email: string | null;
+const DEFAULT_SNAPSHOT: ProfileSnapshot = {
+  full_name: null,
+  has_resume: false,
+  has_skills: false,
+  target_titles: [],
+  target_locations: [],
+  auto_apply_enabled: false,
+  auto_apply_paused_until: null,
+  auto_apply_last_run_at: null,
+  auto_apply_daily_cap: 5,
 };
-
-const DAILY_SEARCH_QUOTA = 10;
-
-type State =
-  | { kind: "demo" }
-  | { kind: "loading" }
-  | { kind: "live"; data: LiveData }
-  | { kind: "error"; message: string };
-
-const recentUpdatesDemo = [
-  { label: "Packet ready", title: "Risk Analyst", meta: "Interactive Brokers", state: "Ready" },
-  { label: "Answer needed", title: "AML Operations Analyst", meta: "Ramp", state: "Waiting" },
-  { label: "Fresh match", title: "Strategy Analyst", meta: "Apollo", state: "New" },
-];
 
 export default function DashboardPage() {
-  const [state, setState] = useState<State>(
-    isSupabaseConfigured() ? { kind: "loading" } : { kind: "demo" }
-  );
+  const ready = isSupabaseConfigured();
+  const [snap, setSnap] = useState<ProfileSnapshot>(DEFAULT_SNAPSHOT);
+  const [credits, setCredits] = useState(0);
+  const [pending, setPending] = useState<PendingJob[]>([]);
+  const [recent, setRecent] = useState<RecentApp[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [discovering, setDiscovering] = useState(false);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+
+  const loadAll = useCallback(async () => {
+    if (!ready) {
+      setLoading(false);
+      return;
+    }
+    const supabase = getBrowserSupabase();
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) setAccessToken(session.access_token);
+
+    const [{ data: prof }, { data: prefs }, { data: resumes }, balResp, { data: pendingData }, { data: recentData }] = await Promise.all([
+      supabase.from("profiles").select("full_name, extracted_skills").eq("id", user.id).maybeSingle(),
+      supabase.from("preferences").select("target_titles, target_locations, auto_apply_enabled, auto_apply_paused_until, auto_apply_last_run_at, auto_apply_daily_cap").eq("user_id", user.id).maybeSingle(),
+      supabase.from("resumes").select("id").eq("user_id", user.id).limit(1),
+      supabase.rpc("get_credit_balance", { p_user_id: user.id }),
+      supabase.from("pending_approval").select("id, match_score, found_at, jobs(id, title, company_name, location, apply_url, source)").eq("user_id", user.id).eq("status", "pending").order("match_score", { ascending: false }).limit(10),
+      supabase.from("applications").select("id, status, queued_at, jobs(title, company_name, apply_url)").eq("user_id", user.id).order("queued_at", { ascending: false }).limit(6),
+    ]);
+
+    const skills = (prof?.extracted_skills as Record<string, unknown>) || {};
+    setSnap({
+      full_name: prof?.full_name || null,
+      has_resume: (resumes && resumes.length > 0) || false,
+      has_skills: Object.keys(skills).length > 0 && Array.isArray((skills as { skills?: unknown[] }).skills) && ((skills as { skills?: unknown[] }).skills?.length ?? 0) > 0,
+      target_titles: prefs?.target_titles || [],
+      target_locations: prefs?.target_locations || [],
+      auto_apply_enabled: prefs?.auto_apply_enabled || false,
+      auto_apply_paused_until: prefs?.auto_apply_paused_until || null,
+      auto_apply_last_run_at: prefs?.auto_apply_last_run_at || null,
+      auto_apply_daily_cap: prefs?.auto_apply_daily_cap || 5,
+    });
+    setCredits(typeof balResp.data === "number" ? balResp.data : 0);
+    setPending((pendingData ?? []) as unknown as PendingJob[]);
+    setRecent((recentData ?? []) as unknown as RecentApp[]);
+    setLoading(false);
+  }, [ready]);
 
   useEffect(() => {
-    if (!isSupabaseConfigured()) return;
+    loadAll();
+  }, [loadAll]);
 
-    let cancelled = false;
+  // Onboarding completeness
+  const profileComplete = snap.has_resume && snap.target_titles.length > 0;
 
-    (async () => {
-      const supabase = getBrowserSupabase();
-      if (!supabase) {
-        if (!cancelled) setState({ kind: "demo" });
-        return;
+  // Toggle auto-apply
+  const toggleAgent = async (on: boolean) => {
+    const supabase = getBrowserSupabase();
+    if (!supabase) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from("preferences").upsert({
+      user_id: user.id,
+      auto_apply_enabled: on,
+      auto_apply_paused_until: on ? null : snap.auto_apply_paused_until,
+      updated_at: new Date().toISOString(),
+    });
+    setSnap((s) => ({ ...s, auto_apply_enabled: on, auto_apply_paused_until: on ? null : s.auto_apply_paused_until }));
+    if (on && pending.length === 0) {
+      // First time enabling — kick off discovery now
+      runDiscovery();
+    }
+  };
+
+  // Trigger discovery now
+  const runDiscovery = async () => {
+    if (!accessToken) return;
+    setDiscovering(true);
+    try {
+      const res = await fetch(`${API_BASE}/auto-apply/run-now`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${accessToken}` },
+      });
+      if (!res.ok) throw new Error(await res.text());
+      // Reload to show new pending jobs
+      await loadAll();
+    } catch (e) {
+      console.error("Discovery failed:", e);
+    } finally {
+      setDiscovering(false);
+    }
+  };
+
+  const decideOne = async (pendingId: string, decision: "approved" | "skipped") => {
+    const supabase = getBrowserSupabase();
+    if (!supabase) return;
+    await supabase.from("pending_approval").update({ status: decision, decided_at: new Date().toISOString() }).eq("id", pendingId);
+    if (decision === "approved") {
+      const item = pending.find((p) => p.id === pendingId);
+      if (item) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from("applications").insert({ user_id: user.id, job_id: item.jobs.id, status: "queued" });
+        }
       }
+    }
+    setPending((prev) => prev.filter((p) => p.id !== pendingId));
+  };
 
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) {
-          if (!cancelled) setState({ kind: "demo" });
-          return;
-        }
-
-        // Credit balance via RPC (function added in 0001_init.sql)
-        const [{ data: balanceData }, { data: searchData }] = await Promise.all([
-          supabase.rpc("get_credit_balance", { p_user_id: user.id }),
-          supabase.rpc("get_search_usage_today", { p_user_id: user.id }),
-        ]);
-        const balance = typeof balanceData === "number" ? balanceData : 0;
-        const searchesToday = typeof searchData === "number" ? searchData : 0;
-
-        // Applications summary
-        const { data: apps, error: appsErr } = await supabase
-          .from("applications")
-          .select("id, status, queued_at, jobs(title, company_name)")
-          .order("queued_at", { ascending: false });
-
-        if (appsErr) {
-          if (!cancelled)
-            setState({ kind: "error", message: appsErr.message });
-          return;
-        }
-
-        const all = (apps ?? []) as unknown as AppRow[];
-        const counts = {
-          queued: all.filter((a) => a.status === "queued").length,
-          submitted: all.filter((a) => a.status === "submitted").length,
-          confirmed: all.filter((a) => a.status === "confirmed").length,
-          needs_review: all.filter((a) => a.status === "needs_review").length,
-        };
-
-        if (!cancelled) {
-          setState({
-            kind: "live",
-            data: {
-              mode: "live",
-              balance,
-              searchesToday,
-              counts,
-              recent: all.slice(0, 3),
-              email: user.email ?? null,
-            },
-          });
-        }
-      } catch (e) {
-        if (!cancelled)
-          setState({
-            kind: "error",
-            message: e instanceof Error ? e.message : "Unknown error",
-          });
+  const decideAll = async (decision: "approved" | "skipped") => {
+    const supabase = getBrowserSupabase();
+    if (!supabase) return;
+    if (decision === "approved" && !confirm(`Queue ${pending.length} applications?\nUp to $${pending.length} if all confirm.`)) return;
+    const ids = pending.map((p) => p.id);
+    await supabase.from("pending_approval").update({ status: decision, decided_at: new Date().toISOString() }).in("id", ids);
+    if (decision === "approved") {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const rows = pending.map((p) => ({ user_id: user.id, job_id: p.jobs.id, status: "queued" as const }));
+        await supabase.from("applications").insert(rows);
       }
-    })();
+    }
+    setPending([]);
+    loadAll();
+  };
 
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const fmtRelative = (iso: string) => {
+    const diff = Date.now() - new Date(iso).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
+  };
 
-  return (
-    <ConsoleShell
-      activePath="/dashboard"
-      eyebrow=""
-      title="Overview"
-      description=""
-      actions={[
-        { href: "/applications", label: "View applications" },
-        { href: "/review", label: "Open answers", variant: "secondary" },
-      ]}
-    >
-      {state.kind === "loading" && (
+  const matchClass = (s: number) => (s >= 70 ? "auto-match-high" : s >= 40 ? "auto-match-mid" : "auto-match-low");
+
+  const isPaused = snap.auto_apply_paused_until && new Date(snap.auto_apply_paused_until) > new Date();
+  const agentOn = snap.auto_apply_enabled && !isPaused;
+  const firstName = snap.full_name?.split(" ")[0] || "there";
+
+  if (loading) {
+    return (
+      <ConsoleShell activePath="/dashboard" eyebrow="" title="Overview" description="">
         <section className="console-section">
-          <div className="dashboard-loading">Loading your workspace…</div>
-        </section>
-      )}
-
-      {state.kind === "error" && (
-        <section className="console-section">
-          <div className="dashboard-error">
-            Couldn&apos;t load your workspace — {state.message}
+          <div className="dashboard-loading">
+            <Loader2 size={16} className="spin" /> Loading…
           </div>
         </section>
-      )}
+      </ConsoleShell>
+    );
+  }
 
-      {state.kind === "live" && state.data.counts.queued +
-        state.data.counts.submitted +
-        state.data.counts.confirmed +
-        state.data.counts.needs_review === 0 && (
-        <EmptyState balance={state.data.balance} />
-      )}
-
-      {state.kind === "live" && state.data.counts.queued > 0 && (
+  // ─── ONBOARDING NEEDED ───
+  if (!profileComplete) {
+    return (
+      <ConsoleShell
+        activePath="/dashboard"
+        eyebrow="Welcome"
+        title={`Hey ${firstName}`}
+        description="Let's get your AI agent ready. Two quick steps and it starts working."
+      >
         <section className="console-section">
-          <div className="auto-apply-banner">
-            <span className="auto-apply-banner-dot" />
-            <div>
-              <strong>{state.data.counts.queued} application{state.data.counts.queued === 1 ? "" : "s"} in queue</strong>
-              <p>
-                You queued these from the Search page. We&apos;ll fill out
-                and submit each form within a few minutes. You can cancel
-                any queued application from the Applications page.
-              </p>
+          <article className="glass auto-master-card">
+            <div className="auto-master-copy">
+              <h2>Set up your agent</h2>
+              <p>Upload your resume and tell us what kind of role you want. We&apos;ll find matching jobs and apply on your behalf.</p>
             </div>
-          </div>
-        </section>
-      )}
-
-      {(state.kind === "demo" ||
-        (state.kind === "live" &&
-          state.data.counts.queued +
-            state.data.counts.submitted +
-            state.data.counts.confirmed +
-            state.data.counts.needs_review > 0)) && (
-        <section className="console-section">
-          <div className="section-intro">
-            <div>
-              <p className="eyebrow">Workspace</p>
-              <h2>Everything important in one place</h2>
-            </div>
-          </div>
-
-          <div className="pricing-plan-grid workspace-metric-grid">
-            {state.kind === "live"
-              ? [
-                  { label: "Credits", value: String(state.data.balance) },
-                  {
-                    label: "Searches today",
-                    value: `${state.data.searchesToday}/${DAILY_SEARCH_QUOTA}`,
-                  },
-                  { label: "Submitted", value: String(state.data.counts.submitted) },
-                  { label: "Confirmed", value: String(state.data.counts.confirmed) },
-                ].map((m) => (
-                  <article className="workspace-metric-card" key={m.label}>
-                    <span className="workspace-metric-label">{m.label}</span>
-                    <strong className="workspace-metric-value">{m.value}</strong>
-                  </article>
-                ))
-              : overviewMetrics.map((metric) => (
-                  <article className="workspace-metric-card" key={metric.label}>
-                    <span className="workspace-metric-label">{metric.label}</span>
-                    <strong className="workspace-metric-value">{metric.value}</strong>
-                  </article>
-                ))}
-          </div>
-        </section>
-      )}
-
-      {state.kind === "demo" && blockedQuestions.length > 0 ? (
-        <section className="console-section">
-          <article className="glass blocker-banner blocker-banner-product">
-            <div className="blocker-banner-copy">
-              <span className="blocker-banner-kicker">Needs review</span>
-              <strong>{blockedQuestions.length} answers are waiting on you</strong>
-              <p>Answer them once and Instaply can reuse them safely across supported applications.</p>
-            </div>
-            <a className="button-secondary" href="/review">
-              Open answers
-            </a>
-          </article>
-        </section>
-      ) : null}
-
-      {state.kind === "live" && state.data.counts.needs_review > 0 && (
-        <section className="console-section">
-          <article className="glass blocker-banner blocker-banner-product">
-            <div className="blocker-banner-copy">
-              <span className="blocker-banner-kicker">Needs review</span>
-              <strong>
-                {state.data.counts.needs_review} application
-                {state.data.counts.needs_review === 1 ? "" : "s"} need
-                {state.data.counts.needs_review === 1 ? "s" : ""} your attention
-              </strong>
-              <p>
-                These applications hit a screening question or issue that
-                requires your input before we can submit.
-              </p>
-            </div>
-            <Link className="button-secondary" href="/applications">
-              View applications
+            <Link href="/onboarding" className="btn-primary">
+              Get started <ArrowRight size={14} />
             </Link>
           </article>
         </section>
-      )}
 
-      {(state.kind === "demo" || state.kind === "live") && (
-        <section className="console-section workspace-grid-two">
-          <article className="glass workspace-card">
-            <div className="console-card-header">
-              <div>
-                <div className="panel-kicker">Activity</div>
-                <h3>Latest progress</h3>
-              </div>
-              <ArrowUpRight size={18} />
-            </div>
-
-            <div className="workspace-list">
-              {state.kind === "live" && state.data.recent.length > 0 ? (
-                state.data.recent.map((app) => (
-                  <div className="workspace-list-row" key={app.id}>
-                    <div>
-                      <span className="workspace-list-kicker">{app.status.replace("_", " ")}</span>
-                      <strong>{app.jobs?.title || "Untitled role"}</strong>
-                      <p>{app.jobs?.company_name || "—"}</p>
-                    </div>
-                    <span className="workspace-inline-pill">
-                      {new Date(app.queued_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                ))
-              ) : state.kind === "live" ? (
-                <div className="workspace-empty">
-                  Nothing here yet. Complete your profile to get matches.
+        <section className="console-section">
+          <div className="auto-grid-2">
+            <article className={`glass auto-card ${snap.has_resume ? "" : "auto-step-todo"}`}>
+              <header className="auto-card-head">
+                <div>
+                  <p className="eyebrow">Step 1</p>
+                  <h3>Upload your resume</h3>
                 </div>
-              ) : (
-                recentUpdatesDemo.map((item) => (
-                  <div className="workspace-list-row" key={`${item.label}-${item.title}`}>
-                    <div>
-                      <span className="workspace-list-kicker">{item.label}</span>
-                      <strong>{item.title}</strong>
-                      <p>{item.meta}</p>
-                    </div>
-                    <span className="workspace-inline-pill">{item.state}</span>
-                  </div>
-                ))
-              )}
-            </div>
-          </article>
+                {snap.has_resume ? <Check size={18} color="#10b981" /> : null}
+              </header>
+              <p style={{ fontSize: 13, color: "var(--muted)", margin: 0 }}>
+                We&apos;ll scan it with AI to extract your skills, experience, and education.
+              </p>
+            </article>
 
-          <article className="glass workspace-card">
-            <div className="console-card-header">
+            <article className={`glass auto-card ${snap.target_titles.length > 0 ? "" : "auto-step-todo"}`}>
+              <header className="auto-card-head">
+                <div>
+                  <p className="eyebrow">Step 2</p>
+                  <h3>Tell us what you want</h3>
+                </div>
+                {snap.target_titles.length > 0 ? <Check size={18} color="#10b981" /> : null}
+              </header>
+              <p style={{ fontSize: 13, color: "var(--muted)", margin: 0 }}>
+                Pick the job titles and locations you&apos;re targeting. The agent uses these to find matches.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section className="console-section">
+          <div className="auto-trust">
+            <div className="auto-trust-item">
+              <Lock size={16} />
               <div>
-                <div className="panel-kicker">Documents</div>
-                <h3>Recent files</h3>
+                <strong>You approve every application.</strong>
+                <p>Nothing goes out without your click.</p>
               </div>
             </div>
+            <div className="auto-trust-item">
+              <Wallet size={16} />
+              <div>
+                <strong>$1 per confirmed application.</strong>
+                <p>Charged only after the employer email lands.</p>
+              </div>
+            </div>
+            <div className="auto-trust-item">
+              <Shield size={16} />
+              <div>
+                <strong>3 free credits to start.</strong>
+                <p>Try it before you pay anything.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </ConsoleShell>
+    );
+  }
 
-            <div className="workspace-list">
-              {state.kind === "live" ? (
-                <div className="workspace-empty">
-                  Upload a resume from the Profile page to see it here.
-                </div>
-              ) : (
-                generatedDocuments.map((document) => (
-                  <div className="workspace-list-row" key={`${document.company}-${document.role}`}>
-                    <div>
-                      <strong>{document.role}</strong>
-                      <p>{document.company}</p>
-                      <div className="workspace-tag-row">
-                        <span className="workspace-tag">Resume: {document.resume}</span>
-                        <span className="workspace-tag">Letter: {document.coverLetter}</span>
-                      </div>
-                    </div>
-                    <span className="workspace-inline-note">{document.updated}</span>
-                  </div>
-                ))
+  // ─── PROFILE COMPLETE — AGENT VIEW ───
+  return (
+    <ConsoleShell
+      activePath="/dashboard"
+      eyebrow="AI Agent"
+      title={`Hey ${firstName}`}
+      description={agentOn ? "Your agent is active. Approve matches below to apply." : "Your agent is paused. Turn it on to start finding jobs."}
+      actions={[{ href: "/applications", label: "View activity", variant: "secondary" }]}
+    >
+      {/* MASTER SWITCH */}
+      <section className="console-section">
+        <article className="glass auto-master-card">
+          <div className="auto-master-copy">
+            <h2>{agentOn ? "Agent is active" : "Start your agent"}</h2>
+            <p>
+              {agentOn
+                ? `Searching daily for: ${snap.target_titles.slice(0, 3).join(", ")}${snap.target_titles.length > 3 ? "..." : ""}`
+                : "Turn on the agent and we'll find jobs matching your profile. You approve each one before it gets sent."}
+            </p>
+            <div className="auto-master-status">
+              <span className={`auto-pill ${agentOn ? "auto-pill-active" : "auto-pill-paused"}`}>
+                {agentOn ? "Active" : isPaused ? "Paused" : "Off"}
+              </span>
+              {snap.auto_apply_last_run_at && (
+                <span className="auto-meta">Last run · {fmtRelative(snap.auto_apply_last_run_at)}</span>
               )}
+              <span className="auto-meta">{credits} credits</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            className={`auto-toggle ${agentOn ? "auto-toggle-on" : ""}`}
+            onClick={() => toggleAgent(!agentOn)}
+            aria-label="Toggle agent"
+          >
+            <span className="auto-toggle-knob" />
+          </button>
+        </article>
+      </section>
+
+      {/* DISCOVERING STATE */}
+      {discovering && (
+        <section className="console-section">
+          <article className="glass auto-card" style={{ display: "flex", alignItems: "center", gap: 12, padding: 20 }}>
+            <Loader2 size={18} className="spin" style={{ color: "var(--accent)" }} />
+            <div>
+              <strong style={{ display: "block", fontSize: 14 }}>Searching for matching jobs...</strong>
+              <span style={{ fontSize: 13, color: "var(--muted)" }}>This usually takes 10-15 seconds.</span>
             </div>
           </article>
         </section>
       )}
 
-      {state.kind === "demo" && (
+      {/* PENDING APPROVAL */}
+      {pending.length > 0 && (
         <section className="console-section">
-          <article className="glass workspace-table-card">
-            <div className="console-card-header">
+          <article className="glass auto-pending-card">
+            <header className="auto-card-head">
               <div>
-                <div className="panel-kicker">Queue</div>
-                <h3>Open roles</h3>
+                <p className="eyebrow">Awaiting your approval</p>
+                <h3>
+                  {pending.length} job{pending.length === 1 ? "" : "s"} matched your profile
+                </h3>
+                <p className="auto-card-sub">
+                  Approve the ones you want to apply to. The agent only submits with your OK.
+                </p>
               </div>
-            </div>
+            </header>
 
-            <div className="workspace-list">
-              {queueRows.map((row) => (
-                <div className="workspace-list-row" key={row.role}>
-                  <strong>{row.role}</strong>
-                  <span className="workspace-inline-pill">{row.rating}</span>
+            <div className="auto-pending-list">
+              {pending.map((p) => (
+                <div className="auto-pending-row" key={p.id}>
+                  <div className="auto-pending-main">
+                    <strong>{p.jobs.title}</strong>
+                    <span>
+                      {p.jobs.company_name}
+                      {p.jobs.location ? ` · ${p.jobs.location}` : ""}
+                    </span>
+                  </div>
+                  <span className={`auto-match-badge ${matchClass(p.match_score)}`}>
+                    {p.match_score}% match
+                  </span>
+                  <div className="auto-pending-actions">
+                    <button type="button" className="btn-primary auto-btn-sm" onClick={() => decideOne(p.id, "approved")}>
+                      Approve
+                    </button>
+                    <button type="button" className="btn-secondary auto-btn-sm" onClick={() => decideOne(p.id, "skipped")}>
+                      Skip
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
+
+            <footer className="auto-pending-footer">
+              <button type="button" className="auto-btn-danger" onClick={() => decideAll("skipped")}>
+                Skip all {pending.length}
+              </button>
+              <button type="button" className="btn-primary" onClick={() => decideAll("approved")}>
+                Approve all {pending.length}
+              </button>
+            </footer>
           </article>
         </section>
       )}
-    </ConsoleShell>
-  );
-}
 
-function EmptyState({ balance }: { balance: number }) {
-  return (
-    <section className="console-section">
-      <article className="glass dashboard-empty-hero">
-        <div className="dashboard-empty-icon" aria-hidden>
-          <Sparkles size={22} />
+      {/* EMPTY PENDING — show "find more" CTA */}
+      {pending.length === 0 && agentOn && !discovering && (
+        <section className="console-section">
+          <article className="glass auto-card" style={{ textAlign: "center", padding: 36 }}>
+            <Sparkles size={28} style={{ color: "var(--accent)", margin: "0 auto 12px" }} />
+            <h3 style={{ fontSize: 16, margin: "0 0 6px" }}>No new matches right now</h3>
+            <p style={{ fontSize: 13.5, color: "var(--muted)", margin: "0 auto 16px", maxWidth: 480 }}>
+              The agent runs daily. Check back tomorrow or trigger a fresh search now.
+            </p>
+            <button type="button" className="btn-primary" onClick={runDiscovery} disabled={discovering}>
+              {discovering ? "Searching..." : "Find jobs now"}
+            </button>
+          </article>
+        </section>
+      )}
+
+      {/* RECENT ACTIVITY */}
+      {recent.length > 0 && (
+        <section className="console-section">
+          <article className="glass auto-card">
+            <header className="auto-card-head">
+              <div>
+                <p className="eyebrow">Activity</p>
+                <h3>Recent applications</h3>
+              </div>
+            </header>
+            <div className="auto-activity">
+              {recent.map((a) => (
+                <div className="auto-activity-row" key={a.id}>
+                  <span className="auto-activity-time">{fmtRelative(a.queued_at)}</span>
+                  <span className={`auto-status-pill auto-status-${a.status}`}>
+                    {a.status === "in_progress" ? "In progress" : a.status.charAt(0).toUpperCase() + a.status.slice(1)}
+                  </span>
+                  <span className="auto-activity-text">
+                    Applied to <strong>{a.jobs?.title || "job"}</strong> at <strong>{a.jobs?.company_name || "company"}</strong>
+                  </span>
+                  {a.jobs?.apply_url && (
+                    <a href={a.jobs.apply_url} target="_blank" rel="noopener noreferrer" className="auto-activity-link">
+                      <ExternalLink size={12} />
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+            <Link href="/applications" className="auto-view-all">View all applications →</Link>
+          </article>
+        </section>
+      )}
+
+      {/* TRUST FOOTER */}
+      <section className="console-section">
+        <div className="auto-trust">
+          <div className="auto-trust-item">
+            <Lock size={16} />
+            <div>
+              <strong>You approve every application.</strong>
+              <p>Nothing goes out without your click.</p>
+            </div>
+          </div>
+          <div className="auto-trust-item">
+            <Wallet size={16} />
+            <div>
+              <strong>$1 per confirmed application.</strong>
+              <p>Charged only after the employer email lands.</p>
+            </div>
+          </div>
+          <div className="auto-trust-item">
+            <Pause size={16} />
+            <div>
+              <strong>Pause anytime.</strong>
+              <p>Cancel queued applications with one click.</p>
+            </div>
+          </div>
         </div>
-        <div className="dashboard-empty-copy">
-          <span className="eyebrow">Welcome to Instaply</span>
-          <h2>You&apos;re all set — let&apos;s get your first application out.</h2>
-          <p>
-            You have <strong>{balance} free application credits</strong> ready
-            to use. The first step is to upload your resume and tell us the
-            kinds of roles you&apos;re looking for.
-          </p>
-        </div>
-        <div className="dashboard-empty-actions">
-          <Link href="/onboarding" className="btn-primary">
-            <UserPlus size={16} />
-            Complete your profile
-          </Link>
-          <Link href="/how-it-works" className="btn-secondary">
-            See how it works
-          </Link>
-        </div>
-      </article>
-    </section>
+      </section>
+    </ConsoleShell>
   );
 }

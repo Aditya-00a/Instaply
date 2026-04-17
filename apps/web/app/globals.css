@@ -10068,3 +10068,7 @@ p {
 }
 .auto-trust-item p { margin: 0; }
 
+.auto-step-todo {
+  border-left: 3px solid var(--accent);
+}
+

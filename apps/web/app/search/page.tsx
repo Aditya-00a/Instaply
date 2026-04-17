@@ -273,7 +273,7 @@ export default function SearchPage() {
       activePath="/search"
       eyebrow="Search"
       title="Find jobs"
-      description="Real-time search across millions of jobs. Click Apply and we submit the application for you."
+      description="Live search across millions of jobs. Click Apply to open the original posting and submit yourself, or enable Auto-Apply for hands-free filing."
       actions={[
         { href: "/applications", label: "View applications", variant: "secondary" },
       ]}
@@ -445,18 +445,14 @@ export default function SearchPage() {
                           <ExternalLink size={14} />
                         </a>
                       )}
-                      <button
-                        type="button"
-                        className={isQueued ? "search-queue-btn search-queue-btn-done" : "search-queue-btn"}
-                        onClick={() => !isQueued && queueJob(job)}
-                        disabled={isQueued || isQueueing}
+                      <a
+                        href={job.apply_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="search-queue-btn"
                       >
-                        {isQueueing
-                          ? "Applying…"
-                          : isQueued
-                          ? "✓ Applied"
-                          : "Apply"}
-                      </button>
+                        Apply ↗
+                      </a>
                     </div>
                   </article>
                 );
@@ -496,14 +492,14 @@ export default function SearchPage() {
                           <ExternalLink size={14} />
                         </a>
                       )}
-                      <button
-                        type="button"
-                        className={isQueued ? "search-queue-btn search-queue-btn-done" : "search-queue-btn"}
-                        onClick={() => !isQueued && queueJob(job)}
-                        disabled={isQueued || isQueueing}
+                      <a
+                        href={job.apply_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="search-queue-btn"
                       >
-                        {isQueueing ? "Applying…" : isQueued ? "✓ Applied" : "Apply"}
-                      </button>
+                        Apply ↗
+                      </a>
                     </div>
                   </article>
                 );
