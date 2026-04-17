@@ -388,7 +388,7 @@ export default function DashboardPage() {
             <h2>{agentOn ? "Agent is active" : "Start your agent"}</h2>
             <p>
               {agentOn
-                ? `Searching daily for: ${snap.target_titles.slice(0, 3).join(", ")}${snap.target_titles.length > 3 ? "..." : ""}. Each submission takes 30-90 seconds because the agent imitates a human (clicks, scrolls, types) so forms don't block it.`
+                ? `Searching daily for: ${snap.target_titles.slice(0, 3).join(", ")}${snap.target_titles.length > 3 ? "..." : ""}. Each submission takes 1-3 minutes because the agent imitates a human (clicks, scrolls, types) so forms don't block it.`
                 : "Turn on the agent and we'll find jobs matching your profile. You approve each one before it gets sent."}
             </p>
             <div className="auto-master-status">
@@ -636,7 +636,7 @@ export default function DashboardPage() {
                   {a.status === "in_progress" && a.started_at && (
                     <span
                       className="auto-elapsed-timer"
-                      title="The agent imitates a human filling out the form (clicks, scrolls, types) so it doesn't get blocked. Submission usually takes 30-90 seconds."
+                      title="The agent imitates a human filling out the form (clicks, scrolls, types) so it doesn't get blocked. Submission usually takes 1-3 minutes."
                     >
                       <Loader2 size={11} className="spin" />
                       {fmtElapsed(a.started_at)}
