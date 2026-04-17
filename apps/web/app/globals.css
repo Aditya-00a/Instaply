@@ -10072,3 +10072,77 @@ p {
   border-left: 3px solid var(--accent);
 }
 
+/* ───────────── Onboarding Step 4 (EEO + Screening) ───────────── */
+.wiz-field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+@media (max-width: 600px) {
+  .wiz-field-grid { grid-template-columns: 1fr; }
+}
+
+.wiz-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text);
+}
+.wiz-label > span:first-child {
+  font-weight: 500;
+  color: var(--text);
+}
+.wiz-label em {
+  font-style: normal;
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 12px;
+  margin-left: 4px;
+}
+.wiz-label select,
+.wiz-label input {
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  color: var(--text);
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+.wiz-label select:focus,
+.wiz-label input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.wiz-label input::placeholder {
+  color: var(--muted);
+  opacity: 0.6;
+}
+
+.wiz-divider {
+  border: none;
+  height: 1px;
+  background: var(--line);
+  margin: 28px 0 20px;
+}
+
+.wiz-sub-heading {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.wiz-sub-desc {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 8px;
+  line-height: 1.5;
+}
+

@@ -115,6 +115,7 @@ export default function SearchPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [remoteOnly, setRemoteOnly] = useState(false);
   const [locationFilter, setLocationFilter] = useState("");
+  const [hoursOld, setHoursOld] = useState<string>("168"); // 7 days default
 
   // Load applied IDs + preferences on mount; show recommended jobs automatically
   useEffect(() => {
@@ -185,11 +186,12 @@ export default function SearchPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Please sign in.");
 
-      // Live Adzuna search via our API
+      // Live multi-source search via our API
       const params = new URLSearchParams({
         q: query.trim(),
         ...(locationFilter.trim() ? { where: locationFilter.trim() } : {}),
         ...(remoteOnly ? { remote: "true" } : {}),
+        ...(hoursOld ? { hours_old: hoursOld } : {}),
       });
       const res = await fetch(`${API_BASE}/jobs/search-live?${params}`, {
         headers: { "Authorization": `Bearer ${session.access_token}` },
@@ -318,6 +320,19 @@ export default function SearchPage() {
             value={locationFilter}
             onChange={(e) => setLocationFilter(e.target.value)}
           />
+          <select
+            className="search-filter-input"
+            value={hoursOld}
+            onChange={(e) => setHoursOld(e.target.value)}
+            style={{ width: "auto" }}
+            aria-label="Posted within"
+          >
+            <option value="24">Posted last 24h</option>
+            <option value="72">Last 3 days</option>
+            <option value="168">Last 7 days</option>
+            <option value="720">Last 30 days</option>
+            <option value="">Any time</option>
+          </select>
         </div>
 
         {targetTitles.length > 0 && (

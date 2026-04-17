@@ -41,7 +41,7 @@ def _stable_id(url: str, fallback: str = "") -> str:
     return hashlib.sha256(base.encode("utf-8")).hexdigest()[:16]
 
 
-def _scrape_jobs_sync(query: str, location: str, remote: bool) -> list[dict[str, Any]]:
+def _scrape_jobs_sync(query: str, location: str, remote: bool, hours_old: int = 168) -> list[dict[str, Any]]:
     """Run JobSpy synchronously. Called from threadpool to avoid blocking."""
     from jobspy import scrape_jobs
 
@@ -50,7 +50,7 @@ def _scrape_jobs_sync(query: str, location: str, remote: bool) -> list[dict[str,
         "search_term": query,
         "location": location or "United States",
         "results_wanted": 20,
-        "hours_old": 168,  # last week
+        "hours_old": hours_old or 168,
         "country_indeed": "USA",
         "verbose": 0,
     }
@@ -232,6 +232,7 @@ async def search_live(
     q: str = "",
     where: str = "",
     remote: bool = False,
+    hours_old: int = 168,
     user_id: str = Depends(current_user_id),
     _rl: None = rate_limit("jobs_search_live", per_min=20),
 ):
@@ -244,7 +245,7 @@ async def search_live(
 
     # Run all sources in parallel
     tasks = [
-        asyncio.to_thread(_scrape_jobs_sync, query, location, remote),
+        asyncio.to_thread(_scrape_jobs_sync, query, location, remote, hours_old),
         _search_themuse(query, location),
         _search_arbeitnow(query),
     ]
