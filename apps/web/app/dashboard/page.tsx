@@ -77,6 +77,7 @@ export default function DashboardPage() {
   const [discovering, setDiscovering] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [recentlyApproved, setRecentlyApproved] = useState<{ title: string; company: string; at: number }[]>([]);
+  const [activityFilter, setActivityFilter] = useState<string>("all");
 
   const loadAll = useCallback(async () => {
     if (!ready) {
@@ -534,7 +535,6 @@ export default function DashboardPage() {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="btn-primary auto-btn-sm"
-                          onClick={() => decideOne(p.id, "skipped")}
                           title="This job's site blocks our auto-apply. Open it to apply manually."
                         >
                           Apply ↗
@@ -587,12 +587,30 @@ export default function DashboardPage() {
                 <h3>Recent applications</h3>
               </div>
             </header>
+
+            <div className="auto-activity-filter">
+              {(["all", "queued", "in_progress", "submitted", "confirmed", "failed"] as const).map((f) => {
+                const count = f === "all" ? recent.length : recent.filter((r) => r.status === f).length;
+                if (f !== "all" && count === 0) return null;
+                return (
+                  <button
+                    key={f}
+                    type="button"
+                    className={`auto-activity-chip ${activityFilter === f ? "auto-activity-chip-active" : ""}`}
+                    onClick={() => setActivityFilter(f)}
+                  >
+                    {f === "all" ? "All" : f === "in_progress" ? "Submitting" : f.charAt(0).toUpperCase() + f.slice(1)} <span>{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+
             <div className="auto-activity">
-              {recent.map((a) => (
+              {recent.filter((a) => activityFilter === "all" || a.status === activityFilter).map((a) => (
                 <div className="auto-activity-row" key={a.id}>
                   <span className="auto-activity-time">{fmtRelative(a.queued_at)}</span>
                   <span className={`auto-status-pill auto-status-${a.status}`}>
-                    {a.status === "in_progress" ? "In progress" : a.status.charAt(0).toUpperCase() + a.status.slice(1)}
+                    {a.status === "in_progress" ? "Submitting" : a.status.charAt(0).toUpperCase() + a.status.slice(1)}
                   </span>
                   <span className="auto-activity-text">
                     Applied to <strong>{a.jobs?.title || "job"}</strong> at <strong>{a.jobs?.company_name || "company"}</strong>
@@ -604,6 +622,11 @@ export default function DashboardPage() {
                   )}
                 </div>
               ))}
+              {recent.filter((a) => activityFilter === "all" || a.status === activityFilter).length === 0 && (
+                <div style={{ fontSize: 13, color: "var(--muted)", textAlign: "center", padding: 16 }}>
+                  No applications with this status.
+                </div>
+              )}
             </div>
             <Link href="/applications" className="auto-view-all">View all applications →</Link>
           </article>
