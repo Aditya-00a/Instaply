@@ -26,6 +26,7 @@ type ProfileSnapshot = {
   has_skills: boolean;
   target_titles: string[];
   target_locations: string[];
+  auto_apply_keywords: string[];
   auto_apply_enabled: boolean;
   auto_apply_paused_until: string | null;
   auto_apply_last_run_at: string | null;
@@ -59,6 +60,7 @@ const DEFAULT_SNAPSHOT: ProfileSnapshot = {
   has_skills: false,
   target_titles: [],
   target_locations: [],
+  auto_apply_keywords: [],
   auto_apply_enabled: false,
   auto_apply_paused_until: null,
   auto_apply_last_run_at: null,
@@ -95,7 +97,7 @@ export default function DashboardPage() {
 
     const [{ data: prof }, { data: prefs }, { data: resumes }, balResp, { data: pendingData }, { data: recentData }] = await Promise.all([
       supabase.from("profiles").select("full_name, extracted_skills").eq("id", user.id).maybeSingle(),
-      supabase.from("preferences").select("target_titles, target_locations, auto_apply_enabled, auto_apply_paused_until, auto_apply_last_run_at, auto_apply_daily_cap").eq("user_id", user.id).maybeSingle(),
+      supabase.from("preferences").select("target_titles, target_locations, auto_apply_keywords, auto_apply_enabled, auto_apply_paused_until, auto_apply_last_run_at, auto_apply_daily_cap").eq("user_id", user.id).maybeSingle(),
       supabase.from("resumes").select("id").eq("user_id", user.id).limit(1),
       supabase.rpc("get_credit_balance", { p_user_id: user.id }),
       supabase.from("pending_approval").select("id, match_score, found_at, jobs(id, title, company_name, location, apply_url, source)").eq("user_id", user.id).eq("status", "pending").order("match_score", { ascending: false }).limit(10),
@@ -109,6 +111,7 @@ export default function DashboardPage() {
       has_skills: Object.keys(skills).length > 0 && Array.isArray((skills as { skills?: unknown[] }).skills) && ((skills as { skills?: unknown[] }).skills?.length ?? 0) > 0,
       target_titles: prefs?.target_titles || [],
       target_locations: prefs?.target_locations || [],
+      auto_apply_keywords: prefs?.auto_apply_keywords || [],
       auto_apply_enabled: prefs?.auto_apply_enabled || false,
       auto_apply_paused_until: prefs?.auto_apply_paused_until || null,
       auto_apply_last_run_at: prefs?.auto_apply_last_run_at || null,
@@ -126,6 +129,29 @@ export default function DashboardPage() {
 
   // Onboarding completeness
   const profileComplete = snap.has_resume && snap.target_titles.length > 0;
+
+  // Keyword editor state
+  const [kwDraft, setKwDraft] = useState("");
+
+  const updateKeywords = async (next: string[]) => {
+    const supabase = getBrowserSupabase();
+    if (!supabase) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from("preferences").upsert({
+      user_id: user.id,
+      auto_apply_keywords: next,
+      updated_at: new Date().toISOString(),
+    });
+    setSnap((s) => ({ ...s, auto_apply_keywords: next }));
+  };
+  const addKeyword = (kw: string) => {
+    const v = kw.trim();
+    if (!v || snap.auto_apply_keywords.includes(v)) return;
+    updateKeywords([...snap.auto_apply_keywords, v]);
+    setKwDraft("");
+  };
+  const removeKeyword = (kw: string) => updateKeywords(snap.auto_apply_keywords.filter((k) => k !== kw));
 
   // Toggle auto-apply
   const toggleAgent = async (on: boolean) => {
@@ -342,6 +368,58 @@ export default function DashboardPage() {
           >
             <span className="auto-toggle-knob" />
           </button>
+        </article>
+      </section>
+
+      {/* AGENT TARGETS — let users tune what the agent searches for */}
+      <section className="console-section">
+        <article className="glass auto-card">
+          <header className="auto-card-head">
+            <div>
+              <p className="eyebrow">Agent search terms</p>
+              <h3>What the agent looks for</h3>
+              <p className="auto-card-sub">
+                Keywords like &quot;remote&quot;, &quot;startup&quot;, &quot;hospital&quot;, &quot;senior&quot;
+                expand the search. Combined with your target titles, more keywords means more matches.
+              </p>
+            </div>
+          </header>
+
+          <div className="auto-field">
+            <label>Target titles</label>
+            <div className="auto-chip-list">
+              {snap.target_titles.length === 0 ? (
+                <span style={{ fontSize: 12.5, color: "var(--muted)" }}>None set — </span>
+              ) : null}
+              {snap.target_titles.map((t) => (
+                <span className="auto-chip auto-chip-active" key={t}>{t}</span>
+              ))}
+              <Link href="/onboarding" style={{ fontSize: 12.5, color: "var(--accent)", marginLeft: 4 }}>Edit</Link>
+            </div>
+          </div>
+
+          <div className="auto-field">
+            <label>Search keywords</label>
+            <div className="auto-chip-list">
+              {snap.auto_apply_keywords.map((k) => (
+                <span className="auto-chip auto-chip-active" key={k}>
+                  {k}
+                  <button type="button" onClick={() => removeKeyword(k)} aria-label={`Remove ${k}`}>
+                    <X size={11} />
+                  </button>
+                </span>
+              ))}
+              <div className="auto-chip-input">
+                <input
+                  value={kwDraft}
+                  onChange={(e) => setKwDraft(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addKeyword(kwDraft))}
+                  placeholder="+ Add keyword"
+                />
+              </div>
+            </div>
+            <span className="auto-helper">Press Enter to add. Try: &quot;remote&quot;, &quot;hospital&quot;, &quot;startup&quot;, &quot;entry level&quot;, &quot;junior&quot;.</span>
+          </div>
         </article>
       </section>
 

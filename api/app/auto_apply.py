@@ -80,25 +80,41 @@ def _score_job_against_skills(job_title: str, job_company: str, skills: dict[str
     return round((score / factors) * 100) if factors > 0 else 0
 
 
-async def _scrape_for_targets_multi(titles: list[str], locations: list[str]) -> list[dict[str, Any]]:
+async def _scrape_for_targets_multi(
+    titles: list[str],
+    locations: list[str],
+    keywords: list[str] | None = None,
+) -> list[dict[str, Any]]:
     """Aggregate jobs from all sources for each title × location.
 
-    Uses the same multi-source aggregator as the search page (Themuse,
-    Arbeitnow, JobSpy/Indeed, Remotive) so we get coverage across
-    healthcare, tech, marketing, etc. — not just tech.
+    Build a list of search queries:
+      - Each title alone
+      - Each title + each keyword (if keywords set)
+    Capped at 8 total queries to bound work.
     """
     from .jobs_search import _search_themuse, _search_arbeitnow, _scrape_jobs_sync
+
+    keywords = keywords or []
+    queries: list[str] = []
+    for title in titles[:5]:
+        queries.append(title)
+        for kw in keywords[:3]:
+            queries.append(f"{title} {kw}")
+    # If user has keywords but no titles, still let them search by keyword alone
+    if not titles:
+        for kw in keywords[:5]:
+            queries.append(kw)
+    queries = queries[:8]  # hard cap
 
     seen: set[str] = set()
     out: list[dict[str, Any]] = []
 
-    for title in titles[:5]:  # cap titles to bound work
+    for query in queries:
         loc = locations[0] if locations else "United States"
-        # Run all sources in parallel for this title
         tasks = [
-            asyncio.to_thread(_scrape_jobs_sync, title, loc, False),
-            _search_themuse(title, loc),
-            _search_arbeitnow(title),
+            asyncio.to_thread(_scrape_jobs_sync, query, loc, False),
+            _search_themuse(query, loc),
+            _search_arbeitnow(query),
         ]
         results_per_source = await asyncio.gather(*tasks, return_exceptions=True)
         for r in results_per_source:
@@ -192,7 +208,16 @@ async def run_now(
     skills = (profile.data.get("extracted_skills") if profile.data else {}) or {}
 
     min_score = prefs.data.get("auto_apply_min_match", 70)
-    inserted = await _discover_for_user(db, user_id, titles, locations, skills, min_score)
+    keywords = prefs.data.get("auto_apply_keywords") or []
+
+    # Try discovery — if nothing found, try again with relaxed criteria
+    inserted = await _discover_for_user(db, user_id, titles, locations, skills, min_score, keywords)
+    if inserted == 0 and min_score > 50:
+        log.info("First pass found 0 jobs for %s -- relaxing min_score to 50", user_id[:8])
+        inserted = await _discover_for_user(db, user_id, titles, locations, skills, 50, keywords)
+    if inserted == 0:
+        log.info("Second pass found 0 jobs for %s -- searching with no location filter", user_id[:8])
+        inserted = await _discover_for_user(db, user_id, titles, [], skills, 40, keywords)
 
     db.table("preferences").update({
         "auto_apply_last_run_at": datetime.now(timezone.utc).isoformat(),
@@ -208,9 +233,10 @@ async def _discover_for_user(
     locations: list[str],
     skills: dict[str, Any],
     min_score: int,
+    keywords: list[str] | None = None,
 ) -> int:
     """Async helper: scrape, score, upsert jobs, insert pending_approval."""
-    jobs = await _scrape_for_targets_multi(titles, locations)
+    jobs = await _scrape_for_targets_multi(titles, locations, keywords or [])
     log.info("Discovered %d raw jobs for user %s", len(jobs), user_id[:8])
     if not jobs:
         return 0
@@ -297,7 +323,7 @@ async def cron_run(request: Request):
     db = service_client()
     eligible = (
         db.table("preferences")
-        .select("user_id, target_titles, target_locations, auto_apply_min_match, "
+        .select("user_id, target_titles, target_locations, auto_apply_keywords, auto_apply_min_match, "
                 "auto_apply_quiet_start, auto_apply_quiet_end, auto_apply_paused_until")
         .eq("auto_apply_enabled", True)
         .execute()
@@ -329,7 +355,8 @@ async def cron_run(request: Request):
         try:
             n = await _discover_for_user(
                 db, user_id, titles,
-                pref.get("target_locations") or [], skills, min_score
+                pref.get("target_locations") or [], skills, min_score,
+                pref.get("auto_apply_keywords") or []
             )
             summary["found"] += n
             summary["ran"] += 1

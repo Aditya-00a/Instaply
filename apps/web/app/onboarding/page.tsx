@@ -128,11 +128,11 @@ export default function OnboardingPage() {
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      const [{ data }, { data: resumeData }] = await Promise.all([
+      const [{ data }, { data: resumeData }, { data: prefsData }] = await Promise.all([
         supabase
           .from("profiles")
           .select(
-            "full_name, phone, linkedin_url, github_url, current_city, current_state, work_auth_status, needs_sponsorship, email"
+            "full_name, phone, linkedin_url, github_url, current_city, current_state, work_auth_status, needs_sponsorship, email, gender, race, hispanic_ethnicity, veteran_status, disability_status"
           )
           .eq("id", user.id)
           .single(),
@@ -142,6 +142,11 @@ export default function OnboardingPage() {
           .eq("user_id", user.id)
           .order("created_at", { ascending: false })
           .limit(1),
+        supabase
+          .from("preferences")
+          .select("target_titles, target_locations, licenses_certifications, salary_min_usd, salary_max_usd, start_availability, willing_background_check, has_drivers_license, years_of_experience")
+          .eq("user_id", user.id)
+          .maybeSingle(),
       ]);
       if (cancelled) return;
 
@@ -150,22 +155,42 @@ export default function OnboardingPage() {
         setExistingResume(resumeData[0].file_name);
       }
 
-      if (!data) return;
+      if (data) {
+        const parts = (data.full_name || "").split(" ");
+        setIdentity((prev) => ({
+          ...prev,
+          firstName: parts[0] || "",
+          lastName: parts.slice(1).join(" ") || "",
+          email: data.email || user.email || "",
+          phone: data.phone || "",
+          linkedinUrl: data.linkedin_url || "",
+          githubUrl: data.github_url || "",
+          city: data.current_city || "",
+          state: data.current_state || "",
+          workAuth: (data.work_auth_status as WorkAuth) || "citizen",
+          needsSponsorship: !!data.needs_sponsorship,
+        }));
+        // Hydrate EEO
+        if (data.gender) setGender(data.gender);
+        if (data.race) setRace(data.race);
+        if (data.hispanic_ethnicity !== null && data.hispanic_ethnicity !== undefined) setHispanicEthnicity(data.hispanic_ethnicity);
+        if (data.veteran_status) setVeteranStatus(data.veteran_status);
+        if (data.disability_status) setDisabilityStatus(data.disability_status);
+      }
 
-      const parts = (data.full_name || "").split(" ");
-      setIdentity((prev) => ({
-        ...prev,
-        firstName: parts[0] || "",
-        lastName: parts.slice(1).join(" ") || "",
-        email: data.email || user.email || "",
-        phone: data.phone || "",
-        linkedinUrl: data.linkedin_url || "",
-        githubUrl: data.github_url || "",
-        city: data.current_city || "",
-        state: data.current_state || "",
-        workAuth: (data.work_auth_status as WorkAuth) || "citizen",
-        needsSponsorship: !!data.needs_sponsorship,
-      }));
+      // Hydrate preferences (titles, locations, screening)
+      if (prefsData) {
+        if (Array.isArray(prefsData.target_titles)) setTargetRoles(prefsData.target_titles);
+        if (Array.isArray(prefsData.target_locations)) setLocations(prefsData.target_locations);
+        if (Array.isArray(prefsData.licenses_certifications) && prefsData.licenses_certifications.length > 0) {
+          setLicenseCerts(prefsData.licenses_certifications.join(", "));
+        }
+        if (prefsData.years_of_experience != null) setYearsExp(String(prefsData.years_of_experience));
+        if (prefsData.salary_min_usd != null) setSalaryMin(String(prefsData.salary_min_usd));
+        if (prefsData.salary_max_usd != null) setSalaryMax(String(prefsData.salary_max_usd));
+        if (prefsData.start_availability) setStartAvailability(prefsData.start_availability);
+        if (prefsData.willing_background_check != null) setWillingBackgroundCheck(prefsData.willing_background_check);
+      }
     })();
     return () => {
       cancelled = true;
@@ -398,10 +423,10 @@ export default function OnboardingPage() {
   return (
     <ConsoleShell
       activePath="/onboarding"
-      eyebrow="Setup"
-      title="Welcome to Instaply"
-      description="Four quick steps. Under three minutes. You can refine everything later from Settings."
-      actions={[{ href: "/settings", label: "Advanced settings", variant: "secondary" }]}
+      eyebrow="Profile"
+      title="Your profile"
+      description="Edit any time. Changes save as you go."
+      actions={[{ href: "/dashboard", label: "Back to dashboard", variant: "secondary" }]}
     >
       <section className="console-section">
         {/* Progress bar */}
