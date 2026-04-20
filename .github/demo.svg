@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" width="900" height="460" role="img" aria-label="Instaply chat demo">
+  <defs>
+    <linearGradient id="term-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0d1117"/>
+      <stop offset="100%" stop-color="#0a0d12"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="14" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Window -->
+  <g filter="url(#shadow)">
+    <rect x="40" y="30" width="820" height="400" rx="14" fill="url(#term-bg)" stroke="#1f2937" stroke-width="1"/>
+
+    <!-- Title bar -->
+    <rect x="40" y="30" width="820" height="38" rx="14" fill="#161b22"/>
+    <rect x="40" y="50" width="820" height="18" fill="#161b22"/>
+    <line x1="40" y1="68" x2="860" y2="68" stroke="#21262d" stroke-width="1"/>
+    <circle cx="65" cy="49" r="6" fill="#ff5f57"/>
+    <circle cx="85" cy="49" r="6" fill="#febc2e"/>
+    <circle cx="105" cy="49" r="6" fill="#28c840"/>
+    <text x="450" y="54" text-anchor="middle" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="12" fill="#7d8590">Claude Desktop  ·  instaply</text>
+
+    <!-- Body content -->
+    <g font-family="Inter, -apple-system, sans-serif" font-size="13.5">
+      <!-- User msg 1 -->
+      <text x="65" y="100" fill="#a78bfa" font-weight="700">You</text>
+      <text x="65" y="120" fill="#e6edf3">import my resume from ~/Desktop/resume.pdf</text>
+
+      <!-- Claude reply 1 -->
+      <text x="65" y="155" fill="#7ee787" font-weight="700">Claude</text>
+      <text x="65" y="175" fill="#c9d1d9">✓ Imported. Saved 12 skills, inferred role targets:</text>
+      <text x="65" y="194" fill="#94a3b8" font-style="italic">  Data Analyst, Risk Analyst, Quantitative Analyst</text>
+
+      <!-- User msg 2 -->
+      <text x="65" y="230" fill="#a78bfa" font-weight="700">You</text>
+      <text x="65" y="250" fill="#e6edf3">find data analyst roles, US, no sponsorship needed</text>
+
+      <!-- Claude reply 2 -->
+      <text x="65" y="285" fill="#7ee787" font-weight="700">Claude</text>
+      <text x="65" y="305" fill="#c9d1d9">→ Found 5 matches. Top hits:</text>
+
+      <g font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12">
+        <text x="85" y="325" fill="#7d8590">  ① Stripe</text><text x="240" y="325" fill="#94a3b8">Data Analyst, Remote</text><text x="455" y="325" fill="#7ee787">match: 0.94</text>
+        <text x="85" y="343" fill="#7d8590">  ② Linear</text><text x="240" y="343" fill="#94a3b8">Analytics Engineer</text><text x="455" y="343" fill="#7ee787">match: 0.91</text>
+        <text x="85" y="361" fill="#7d8590">  ③ Ramp</text><text x="240" y="361" fill="#94a3b8">Risk Analyst</text><text x="455" y="361" fill="#fbbf24">match: 0.83</text>
+      </g>
+
+      <!-- User msg 3 -->
+      <text x="65" y="397" fill="#a78bfa" font-weight="700">You</text>
+      <text x="65" y="416" fill="#e6edf3">apply to ② — opens browser, fills form, pauses for me</text>
+
+      <!-- caret -->
+      <rect x="492" y="406" width="9" height="14" fill="#e6edf3">
+        <animate attributeName="opacity" values="1;0;1" dur="1.1s" repeatCount="indefinite"/>
+      </rect>
+    </g>
+  </g>
+</svg>
