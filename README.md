@@ -33,38 +33,37 @@
 
 ---
 
-## ⚡ Get running in 60 seconds
+## ⚡ Get running in 5 commands
 
 ```bash
 git clone https://github.com/Aditya-00a/Instaply
 cd Instaply/agent
-python setup.py
+
+python setup.py                                       # detect HW + install Ollama + pick model
+python setup.py profile --resume ~/Desktop/cv.pdf     # build your profile from a PDF
+python setup.py doctor                                # sanity-check everything
+python run.py                                         # foreground first run
+
+# Then schedule it to run unattended (one of these)
+bash scripts/setup-scheduler.sh                       # macOS / Linux
+.\scripts\setup-scheduler.ps1                         # Windows
 ```
 
-That's the install. The wizard:
-- detects your OS, RAM, GPU + VRAM (NVIDIA / Apple Silicon / AMD)
-- offers to install **Ollama** if it's missing (`brew` / `winget` / `curl`)
-- recommends + pulls the **right local model** for your hardware (3B for tiny laptops, all the way up to 70B for workstations)
-- writes `agent/config/.env` with everything wired
+Under 5 minutes on a fresh laptop. Each step is opinionated and gets out of your way:
 
-Then drop your profile + start the loop:
+| Command | What it does |
+|---|---|
+| `python setup.py` | Detects your OS / RAM / GPU. Installs Ollama via `brew` / `winget` / `curl`. Picks the right local model for your hardware (3B → 70B). Writes `config/.env`. |
+| `python setup.py profile` | Walks ~15 questions (identity, contact, work auth, target roles, optional EEO). Pass `--resume <path>` to autopopulate from a PDF / DOCX. Writes `data/profile.json` + `data/master-resume.json`. |
+| `python setup.py doctor` | Runs 10 health checks (Python version, deps, Ollama up, model pulled, Playwright Chromium, profile valid, SQLite writable). Tells you the exact fix for any failure. |
+| `python run.py` | Starts the autonomous loop in the foreground. Discovers, scores, tailors, drafts. Hit Ctrl-C anytime. |
+| `setup-scheduler.{sh,ps1}` | Installs it as a scheduled task (macOS launchd / Linux cron / Windows Task Scheduler). Idempotent, has `status` / `remove` / `start` / `stop` subcommands. |
 
-```bash
-# Inside agent/
-cp config/.env.example .env             # already done by the wizard
-# Drop your resume + populate data/profile.json + data/master-resume.json
-
-# Foreground (good for the first run, watch what it does)
-python run.py
-
-# Or install as a background task (Windows)
-.\scripts\setup-scheduler.ps1
-```
-
-That's it. The loop wakes up on schedule, discovers fresh jobs across
-Greenhouse / Lever / SmartRecruiters / JobSpy sources, scores them
-against your profile, drafts tailored applications, and queues them.
-You wake up to a queue of drafts ready to review and submit.
+After the scheduler is in, you sleep. The loop wakes up every 30 min,
+discovers fresh jobs across Greenhouse / Lever / SmartRecruiters /
+JobSpy sources, scores them against your profile, drafts tailored
+applications, and queues them. You wake up to a queue of drafts ready
+to review and submit.
 
 > [!IMPORTANT]
 > Instaply runs on **your laptop**, with **your IP**, **your cookies**,

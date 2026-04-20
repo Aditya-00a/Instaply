@@ -1,9 +1,8 @@
 # Quickstart
 
-Get Instaply applying to jobs while you sleep, in about 60 seconds.
+Get Instaply applying to jobs while you sleep, in about 5 commands.
 
-> **TL;DR:** clone the repo, run `python setup.py`, drop your profile,
-> hit `python run.py` (or install the scheduled task). Done.
+> **TL;DR:** clone the repo, run the four wizards (`setup.py`, `setup.py profile`, `setup.py doctor`, `run.py`), then install the scheduler. Done.
 
 ---
 
@@ -20,7 +19,7 @@ If you don't have it: [python.org](https://python.org) (Windows / macOS) or `sud
 
 ---
 
-## 2. Run the setup wizard
+## 2. Hardware + LLM wizard
 
 ```bash
 python setup.py
@@ -40,26 +39,61 @@ Flags:
 - `--yes` / `-y` — skip every confirmation (CI / scripted use)
 - `--detect-only` — print the hardware + recommendation as JSON and exit (useful for "what would it pick on my machine?")
 
-Example:
+---
+
+## 3. Profile wizard
 
 ```bash
-python setup.py --detect-only
-# {
-#   "hardware": {"os_name": "Darwin", "ram_gb": 16, "vram_gb": null, "apple_silicon": true},
-#   "recommendation": {"name": "llama3.1:8b", "label": "Llama 3.1 8B", ...}
-# }
+python setup.py profile --resume ~/Desktop/your-cv.pdf
 ```
+
+Walks ~15 questions and writes both `data/profile.json` (identity / work auth / target roles / EEO) and `data/master-resume.json` (the source of truth for resume tailoring).
+
+Pass `--resume <path>` (PDF / DOCX / TXT) to autopopulate fields from your resume — name, email, phone, school, degree, skills, role targets all show up as green defaults you just press Enter to accept.
+
+| Flag | Effect |
+|---|---|
+| `--resume <path>` | Parse a resume and pre-fill what we can detect |
+| `--yes` / `-y` | Accept all defaults where possible |
+| `--force` | Overwrite an existing `profile.json` without asking |
+
+Skip `--resume` for fully manual entry if you don't have a current resume PDF.
 
 ---
 
-## 3. Install Python dependencies
+## 4. Sanity check
 
 ```bash
-pip install -r requirements.txt    # if you have one
-# or, minimally:
-pip install playwright httpx pydantic python-dotenv beautifulsoup4 lxml \
-    requests psutil openai sqlite-utils
+python setup.py doctor
+```
 
+Runs 10 pass/fail checks and tells you exactly what to fix:
+
+```
+✓ Python ≥ 3.10                           running 3.12.4
+✓ Python dependencies installed           playwright, httpx, pydantic, bs4, lxml
+✓ config/.env exists                      config/.env
+✓ Ollama reachable (http://localhost:11434)  HTTP 200
+✓ Model `llama3.1:8b` pulled              available as: llama3.1:8b
+✓ Playwright Chromium installed           ready
+✓ data/ directory writable                data
+✓ SQLite writable (data/jobs.db)
+✓ data/profile.json valid                 Jane Smith · 3 target roles
+✓ data/master-resume.json valid           14 skills · 1 education entries
+
+  All 10 checks passed. The agent should run.
+```
+
+If any check fails, you get the one-line fix command. `--json` mode for CI / scripted use.
+
+---
+
+## 5. Install dependencies (once)
+
+If `doctor` reports missing deps:
+
+```bash
+pip install playwright httpx pydantic python-dotenv beautifulsoup4 lxml requests psutil openai sqlite-utils tenacity
 python -m playwright install chromium
 ```
 
@@ -67,21 +101,7 @@ The Chromium download is ~150 MB, downloaded once, reused forever.
 
 ---
 
-## 4. Drop in your profile + master resume
-
-The agent reads two files at boot:
-
-```
-agent/data/profile.json          # contact, work auth, EEO, target roles, salary
-agent/data/master-resume.json    # the full resume the tailor module re-ranks per JD
-```
-
-Schemas live at `backend/models/schemas.py`. A profile-bootstrapping
-wizard is on the roadmap; for now you author these manually.
-
----
-
-## 5. Run it
+## 6. Run it
 
 ### Foreground (recommended for the first run)
 
@@ -89,45 +109,39 @@ wizard is on the roadmap; for now you author these manually.
 python run.py
 ```
 
-You'll see the loop tick: discover → score → tailor → queue. The first
-cycle takes a few minutes (cold ATS pool scans). Subsequent cycles are
-incremental.
+You'll see the loop tick: discover → score → tailor → queue. The first cycle takes a few minutes (cold ATS pool scans). Subsequent cycles are incremental.
 
-### Background — Windows (scheduled task)
+### Background — macOS / Linux
+
+```bash
+bash scripts/setup-scheduler.sh
+```
+
+That auto-detects your OS:
+- **macOS** → writes a launchd LaunchAgent at `~/Library/LaunchAgents/ai.instaply.agent.plist` and loads it. KeepAlive on crash, restart every 30 min.
+- **Linux** → adds a `*/30 * * * *` crontab entry (tagged so it can be cleanly removed).
+
+Manage it with:
+```bash
+bash scripts/setup-scheduler.sh status        # is it installed + running?
+bash scripts/setup-scheduler.sh stop          # stop the running process
+bash scripts/setup-scheduler.sh start         # start it (foreground daemon)
+bash scripts/setup-scheduler.sh remove        # uninstall the schedule
+```
+
+### Background — Windows
 
 ```powershell
 .\scripts\setup-scheduler.ps1
 ```
 
-That registers a Task Scheduler entry that runs the daily cycle and a
-watchdog that restarts the loop if it dies.
-
-Manage it with:
-
-```powershell
-.\scripts\manage.ps1 status        # see if it's running
-.\scripts\manage.ps1 stop          # stop it
-.\scripts\manage.ps1 start         # start it back up
-```
-
-### Background — macOS / Linux
-
-The cron / launchd setup scripts are on the roadmap. For now the
-hand-rolled equivalent on Linux:
-
-```bash
-crontab -e
-# Add this line to run every 30 minutes:
-*/30 * * * * cd /path/to/Instaply/agent && /usr/bin/python run.py >> data/logs/cron.log 2>&1
-```
+Manage with `.\scripts\manage.ps1 status` / `stop` / `start`.
 
 ---
 
-## 6. Review the queue
+## 7. Review the queue
 
-The agent **never silently submits**. It drafts applications into a
-queue at `~/.instaply/data.db` (status: `packet_generated`). When you're
-ready, run:
+The agent **never silently submits**. It drafts applications into a queue at `~/.instaply/data.db` (status: `packet_generated`). When you're ready, run:
 
 ```bash
 python apply_now.py             # walks the queue interactively
@@ -146,16 +160,28 @@ For each draft:
 
 ```
 agent/
+├── setup.py                   # ← runs the LLM wizard, profile wizard, doctor
+├── profile_wizard.py          # the profile Q&A
+├── doctor.py                  # the health check
+├── resume_parser.py           # PDF/DOCX → structured profile
+├── run.py                     # the persistent loop
+├── apply_now.py               # interactive queue walker
 ├── data/
-│   ├── profile.json           # YOU EDIT THIS — your identity, work auth, EEO, targets
-│   ├── master-resume.json     # YOU EDIT THIS — the full resume to tailor from
-│   ├── jobs.db                # auto-managed — discovered jobs + applications
-│   └── company_pools/         # ATS slug pools (greenhouse, lever, ashby, workday)
+│   ├── profile.json           # written by `setup.py profile`
+│   ├── master-resume.json     # written by `setup.py profile`
+│   ├── jobs.db                # auto-managed — discovered jobs + queue
+│   └── company_pools/         # ATS slug pools (greenhouse / lever / ashby / workday)
 ├── config/
-│   ├── .env                   # YOU EDIT THIS — LLM provider, SMTP if you want, etc.
-│   ├── resume_rules.json      # per-role tailoring rules (override per profile)
+│   ├── .env                   # written by `setup.py`
+│   ├── resume_rules.json      # per-role tailoring rules
 │   └── …
-└── backend/                   # services — usually no reason to touch
+├── backend/                   # services — usually no reason to touch
+└── scripts/
+    ├── setup-scheduler.sh     # macOS / Linux installer
+    ├── setup-scheduler.ps1    # Windows installer
+    ├── manage.ps1             # Windows start/stop helpers
+    ├── watchdog.py            # auto-restart on crash
+    └── …
 ```
 
 You own all of this. Delete `data/` to factory-reset.
@@ -165,29 +191,25 @@ You own all of this. Delete `data/` to factory-reset.
 ## Troubleshooting
 
 ### "Ollama not running"
-`ollama serve` in another terminal, or run any `ollama run <model>` once
-to launch the daemon.
+`ollama serve` in another terminal, or run any `ollama run <model>` once to launch the daemon. `python setup.py doctor` will tell you specifically.
 
 ### "Form filled, but the wrong values"
-Check what was filled vs your profile:
+Look at the screenshot in `data/artifacts/<job-id>/` and the field-decision log next to it. Then check what's in your profile:
 
 ```bash
-python -c "import json; print(json.load(open('data/profile.json')))"
+python -c "import json; print(json.dumps(json.load(open('data/profile.json')), indent=2))"
 ```
 
-Then look at the screenshot in `data/artifacts/<job-id>/` and the
-field-decision log next to it.
+If a value is wrong, re-run `python setup.py profile --force` to redo the wizard.
 
 ### "ATS X isn't supported"
-Today: **Greenhouse**, **Lever**, **SmartRecruiters**. Workday is in
-beta. Ashby and iCIMS are roadmap. File an issue with a sample URL,
-or contribute an adapter ([CONTRIBUTING.md](./CONTRIBUTING.md)).
+Today: **Greenhouse**, **Lever**, **SmartRecruiters**. Workday is in beta. Ashby and iCIMS are roadmap. File an issue with a sample URL, or contribute an adapter ([CONTRIBUTING.md](./CONTRIBUTING.md)).
 
 ### "Setup wizard recommended a model that's too small / big"
-Pass `--detect-only` to see the math. The wizard's budget formula is
-`VRAM + (system RAM / 2)` for NVIDIA, full system RAM for Apple
-Silicon, system RAM for CPU-only. If you want a different model, just
-edit `config/.env` and `ollama pull <model>` manually.
+Pass `--detect-only` to see the math. The wizard's budget formula is `VRAM + (system RAM / 2)` for NVIDIA, full system RAM for Apple Silicon, system RAM for CPU-only. If you want a different model, just edit `config/.env` and `ollama pull <model>` manually.
+
+### "Discovery cycle is slow / silent"
+By default `CAREER_DISCOVERY_ENABLED=false` (skips the slow web-scraping step that probes corporate sites). Set it to `true` in `config/.env` only if you want to grow your slug pool beyond the 16k+ already shipped.
 
 ---
 
