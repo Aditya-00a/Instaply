@@ -11,15 +11,17 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Python deps first (cache layer)
-COPY worker/requirements.txt /app/worker/requirements.txt
+# Build context (per worker/fly.toml [build] dockerfile = "Dockerfile") is
+# the worker/ directory itself, so paths below are relative to worker/.
+# Python deps first (cache layer).
+COPY requirements.txt /app/worker/requirements.txt
 RUN pip install -r /app/worker/requirements.txt
 
 # Ensure Chromium is present (base image ships it, but re-check is cheap)
 RUN python -m playwright install chromium --with-deps
 
-# App code
-COPY worker /app/worker
+# App code — copy the entire worker/ directory contents into /app/worker
+COPY . /app/worker
 
 # Workers don't listen on a port — no EXPOSE, no HTTP check.
 # Health is liveness: if the process dies, Fly restarts the machine.

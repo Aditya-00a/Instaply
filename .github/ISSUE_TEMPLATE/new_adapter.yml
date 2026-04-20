@@ -1,0 +1,48 @@
+name: 🔌 New ATS adapter request
+description: Ask for support for a new applicant-tracking system (ATS).
+title: "[Adapter]: <ATS name>"
+labels: ["adapter", "enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        New ATS adapters are the easiest way to expand Instaply. The interface is small (~50 lines).
+        See [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md) for the adapter authoring guide.
+
+  - type: input
+    id: ats
+    attributes:
+      label: ATS name
+      placeholder: e.g. Ashby, iCIMS, Taleo, Workable, BambooHR
+    validations:
+      required: true
+
+  - type: input
+    id: url-pattern
+    attributes:
+      label: URL pattern
+      placeholder: e.g. *.ashbyhq.com/*
+    validations:
+      required: false
+
+  - type: textarea
+    id: sample-urls
+    attributes:
+      label: 2–3 sample posting URLs (public)
+      description: Live URLs help me actually test the adapter against real DOM.
+      placeholder: |
+        - https://...
+        - https://...
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Want to write the adapter yourself?
+      options:
+        - label: Yes — I'll send a PR (see CONTRIBUTING.md for the template)
+        - label: I can help test, but won't write it
+        - label: Just requesting, no time to contribute right now
+    validations:
+      required: false

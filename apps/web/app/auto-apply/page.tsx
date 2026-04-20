@@ -34,20 +34,6 @@ type AutoApplyConfig = {
   target_locations: string[];
 };
 
-type PendingJob = {
-  id: string;
-  match_score: number;
-  found_at: string;
-  jobs: {
-    id: string;
-    title: string;
-    company_name: string;
-    location: string | null;
-    apply_url: string;
-    source: string;
-  };
-};
-
 type RecentApp = {
   id: string;
   status: string;
@@ -74,7 +60,6 @@ export default function AutoApplyPage() {
   const ready = isSupabaseConfigured();
   const [config, setConfig] = useState<AutoApplyConfig>(DEFAULT_CONFIG);
   const [credits, setCredits] = useState<number>(0);
-  const [pending, setPending] = useState<PendingJob[]>([]);
   const [recent, setRecent] = useState<RecentApp[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<"idle" | "saving" | "saved">("idle");
@@ -91,16 +76,9 @@ export default function AutoApplyPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const [{ data: prefs }, balResp, { data: pendingData }, { data: recentData }] = await Promise.all([
+      const [{ data: prefs }, balResp, { data: recentData }] = await Promise.all([
         supabase.from("preferences").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.rpc("get_credit_balance", { p_user_id: user.id }),
-        supabase
-          .from("pending_approval")
-          .select("id, match_score, found_at, jobs(id, title, company_name, location, apply_url, source)")
-          .eq("user_id", user.id)
-          .eq("status", "pending")
-          .order("match_score", { ascending: false })
-          .limit(50),
         supabase
           .from("applications")
           .select("id, status, queued_at, jobs(title, company_name, apply_url)")
@@ -111,7 +89,6 @@ export default function AutoApplyPage() {
 
       if (prefs) setConfig({ ...DEFAULT_CONFIG, ...prefs });
       setCredits(typeof balResp.data === "number" ? balResp.data : 0);
-      setPending((pendingData ?? []) as unknown as PendingJob[]);
       setRecent((recentData ?? []) as unknown as RecentApp[]);
       setLoading(false);
     })();
@@ -174,48 +151,6 @@ export default function AutoApplyPage() {
   };
   const removeLoc = (l: string) => update({ target_locations: config.target_locations.filter((x) => x !== l) });
 
-  const decideOne = async (pendingId: string, decision: "approved" | "skipped") => {
-    const supabase = getBrowserSupabase();
-    if (!supabase) return;
-    await supabase
-      .from("pending_approval")
-      .update({ status: decision, decided_at: new Date().toISOString() })
-      .eq("id", pendingId);
-
-    if (decision === "approved") {
-      const item = pending.find((p) => p.id === pendingId);
-      if (item) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await supabase.from("applications").insert({
-            user_id: user.id,
-            job_id: item.jobs.id,
-            status: "queued",
-          });
-        }
-      }
-    }
-    setPending((prev) => prev.filter((p) => p.id !== pendingId));
-  };
-
-  const decideAll = async (decision: "approved" | "skipped") => {
-    const supabase = getBrowserSupabase();
-    if (!supabase) return;
-    if (decision === "approved" && !confirm(`Queue ${pending.length} applications? About $${pending.length} if all confirm.`)) return;
-
-    const ids = pending.map((p) => p.id);
-    await supabase.from("pending_approval").update({ status: decision, decided_at: new Date().toISOString() }).in("id", ids);
-
-    if (decision === "approved") {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const rows = pending.map((p) => ({ user_id: user.id, job_id: p.jobs.id, status: "queued" as const }));
-        await supabase.from("applications").insert(rows);
-      }
-    }
-    setPending([]);
-  };
-
   const pause7Days = () => {
     const until = new Date();
     until.setDate(until.getDate() + 7);
@@ -233,9 +168,6 @@ export default function AutoApplyPage() {
     return `${Math.floor(hours / 24)}d ago`;
   };
 
-  const matchClass = (score: number) =>
-    score >= 70 ? "auto-match-high" : score >= 40 ? "auto-match-mid" : "auto-match-low";
-
   return (
     <ConsoleShell
       activePath="/auto-apply"
@@ -246,7 +178,7 @@ export default function AutoApplyPage() {
           ? "Saving…"
           : saving === "saved"
           ? "All changes saved"
-          : "Set your targets. Approve the matches. We submit the rest."
+          : "Set your targets. Instaply queues and submits matching applications automatically."
       }
       actions={[{ href: "/applications", label: "View activity", variant: "secondary" }]}
     >
@@ -257,7 +189,7 @@ export default function AutoApplyPage() {
             <h2>Enable Auto-Apply</h2>
             <p>
               When on, the agent searches Indeed, LinkedIn, and ZipRecruiter
-              daily for jobs matching your profile.
+              daily for jobs matching your profile and queues the best matches automatically.
             </p>
             <div className="auto-master-status">
               <span className={`auto-pill ${enabled ? "auto-pill-active" : "auto-pill-paused"}`}>
@@ -397,7 +329,7 @@ export default function AutoApplyPage() {
                 +
               </button>
             </div>
-            <span className="auto-helper">Stops once we hit {config.auto_apply_daily_cap} confirmed applies</span>
+            <span className="auto-helper">Stops once we queue {config.auto_apply_daily_cap} applications for the day</span>
           </div>
 
           <div className="auto-field auto-field-row">
@@ -433,61 +365,21 @@ export default function AutoApplyPage() {
         </article>
       </section>
 
-      {/* PENDING APPROVAL */}
-      {pending.length > 0 && (
-        <section className="console-section">
-          <article className="glass auto-pending-card">
-            <header className="auto-card-head">
-              <div>
-                <p className="eyebrow">Awaiting your approval</p>
-                <h3>
-                  {pending.length} job{pending.length === 1 ? "" : "s"} the agent wants to apply to
-                </h3>
-                <p className="auto-card-sub">
-                  These match your targets. Approve the ones you actually want — the agent only applies to approved jobs.
-                </p>
-              </div>
-            </header>
-
-            <div className="auto-pending-list">
-              {pending.slice(0, 5).map((p) => (
-                <div className="auto-pending-row" key={p.id}>
-                  <div className="auto-pending-main">
-                    <strong>{p.jobs.title}</strong>
-                    <span>
-                      {p.jobs.company_name}
-                      {p.jobs.location ? ` · ${p.jobs.location}` : ""}
-                    </span>
-                  </div>
-                  <span className={`auto-match-badge ${matchClass(p.match_score)}`}>
-                    {p.match_score}% match
-                  </span>
-                  <div className="auto-pending-actions">
-                    <button type="button" className="btn-primary auto-btn-sm" onClick={() => decideOne(p.id, "approved")}>
-                      Approve
-                    </button>
-                    <button type="button" className="btn-secondary auto-btn-sm" onClick={() => decideOne(p.id, "skipped")}>
-                      Skip
-                    </button>
-                  </div>
-                </div>
-              ))}
-              {pending.length > 5 && (
-                <div className="auto-pending-more">+ {pending.length - 5} more</div>
-              )}
+      <section className="console-section">
+        <article className="glass auto-card">
+          <header className="auto-card-head">
+            <div>
+              <p className="eyebrow">Autonomous mode</p>
+              <h3>Instaply keeps the queue moving</h3>
+              <p className="auto-card-sub">
+                Matching jobs are queued automatically. One blocked application does not pause the rest —
+                rows that need you surface under <strong>Needs attention</strong> in the dashboard.
+              </p>
             </div>
-
-            <footer className="auto-pending-footer">
-              <button type="button" className="auto-btn-danger" onClick={() => decideAll("skipped")}>
-                Skip all {pending.length}
-              </button>
-              <button type="button" className="btn-primary" onClick={() => decideAll("approved")}>
-                Approve all {pending.length}
-              </button>
-            </footer>
-          </article>
-        </section>
-      )}
+            <Sparkles size={18} />
+          </header>
+        </article>
+      </section>
 
       {/* RECENT ACTIVITY */}
       {recent.length > 0 && (
@@ -528,8 +420,8 @@ export default function AutoApplyPage() {
           <div className="auto-trust-item">
             <Lock size={16} />
             <div>
-              <strong>You approve every application.</strong>
-              <p>Nothing goes out without your click.</p>
+              <strong>Instaply applies automatically.</strong>
+              <p>Instaply only pulls you in when human input is actually needed.</p>
             </div>
           </div>
           <div className="auto-trust-item">

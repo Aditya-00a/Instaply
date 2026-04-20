@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "Instaply",
+  "version": "0.0.1",
+  "description": "Helps Instaply complete job applications in your browser when captcha or verification is required.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA8X0K2/irO3AEn0NmL3LI32zHAilm/eE5IjzWRAJluykuKZB+IhXJbWIGf5bIsV00GGMnio09cQDEKeDSkcOjJeedZKUAtYpMaR184Pm9dTOuF8YA5J/eSloC6bVe0C++ZDMXJBfVG1UtQbr/xFA8YqpQPTXiaK/pe6MIWJ23cMieDQARe3BBiDV/gVXTY0wacoQtBHj7jmCpnmwAe7vhIaJf06NaDegE2yDhqn0wd46mDQSbL43QVdRsD+YdE86cbEXaIywP/bygUz4X/gcwUCWNVotI2kRGGRXAEHOH03eOywCAOx1UOuANd9K0IYqFabrxB+tFoX+p7MwOn/QNmQIDAQAB",
+  "minimum_chrome_version": "116",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://job-boards.greenhouse.io/*",
+    "https://boards.greenhouse.io/*",
+    "https://*.greenhouse.io/*",
+    "https://jobs.lever.co/*"
+  ],
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://job-boards.greenhouse.io/*/jobs/*",
+        "https://boards.greenhouse.io/*/jobs/*"
+      ],
+      "js": ["content/_fillers.js", "content/greenhouse.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://jobs.lever.co/*"
+      ],
+      "js": ["content/_fillers.js", "content/lever.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Instaply",
+    "default_popup": "popup/popup.html"
+  },
+  "externally_connectable": {
+    "matches": [
+      "https://instaply.asion.ai/*",
+      "http://localhost:3000/*"
+    ]
+  }
+}

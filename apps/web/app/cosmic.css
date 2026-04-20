@@ -958,3 +958,102 @@ body:has(.cosmic-root)::before { display: none; }
   .cosmic-stack-side { grid-template-columns: 1fr 1fr; }
   .cosmic-footer-bottom { flex-direction: column; gap: 8px; }
 }
+
+/* ───── Minimal autonomous-first holding page ───── */
+.cosmic-landing-min {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 32px;
+}
+.cosmic-min-wrap {
+  max-width: 760px;
+  text-align: center;
+}
+.cosmic-min-title {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-size: clamp(48px, 7vw, 84px);
+  line-height: 1.02;
+  letter-spacing: -0.025em;
+  color: var(--fg);
+  margin: 32px 0 28px;
+}
+.cosmic-min-title em {
+  font-style: italic;
+  color: var(--accent);
+}
+.cosmic-min-sub {
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--fg-muted);
+  margin: 0 auto 36px;
+  max-width: 640px;
+}
+.cosmic-min-install {
+  margin: 0 auto 36px;
+  padding: 16px 22px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: inline-block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.cosmic-min-install code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--fg);
+  white-space: nowrap;
+}
+.cosmic-min-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  margin-bottom: 56px;
+  flex-wrap: wrap;
+}
+.cosmic-min-trust {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  margin-bottom: 48px;
+  flex-wrap: wrap;
+}
+.cosmic-min-trust > div:not(.cosmic-min-trust-sep) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.cosmic-min-trust strong {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-size: 28px;
+  font-weight: 400;
+  color: var(--fg);
+  margin-bottom: 2px;
+}
+.cosmic-min-trust span {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+.cosmic-min-trust-sep {
+  width: 1px;
+  height: 28px;
+  background: var(--border);
+}
+.cosmic-min-foot {
+  font-size: 13px;
+  color: var(--fg-dim);
+  font-style: italic;
+}
+
+@media (max-width: 700px) {
+  .cosmic-min-install code { font-size: 11px; white-space: normal; word-break: break-all; }
+  .cosmic-min-trust { gap: 16px; }
+  .cosmic-min-trust-sep { display: none; }
+}

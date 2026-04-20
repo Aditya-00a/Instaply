@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Quick question? Reach the maintainers
+    url: mailto:hello@asion.ai
+    about: For anything that doesn't fit a template, send an email.
+  - name: 📖 Documentation & Quickstart
+    url: https://instaply.asion.ai
+    about: Setup walkthrough, troubleshooting, and the full how-to.

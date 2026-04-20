@@ -226,13 +226,18 @@ def check_profile_json() -> Check:
             detail=str(exc),
             fix="Fix the syntax error or re-run `python setup.py profile --force`.",
         )
+    target_roles = (
+        data.get("target_roles")
+        or (data.get("targets") or {}).get("roles")
+        or []
+    )
     missing = []
     if not data.get("name"):
         missing.append("name")
     if not (data.get("contact") or {}).get("email"):
         missing.append("contact.email")
-    if not (data.get("targets") or {}).get("roles"):
-        missing.append("targets.roles")
+    if not target_roles:
+        missing.append("targets.roles / target_roles")
     if missing:
         return Check(
             name="data/profile.json complete",
@@ -240,6 +245,11 @@ def check_profile_json() -> Check:
             detail=f"missing: {', '.join(missing)}",
             fix="Re-run `python setup.py profile` to fill the gaps.",
         )
+    return Check(
+        name="data/profile.json valid",
+        ok=True,
+        detail=f"{data['name']} / {len(target_roles)} target roles",
+    )
     return Check(
         name="data/profile.json valid",
         ok=True,

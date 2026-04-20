@@ -1,0 +1,104 @@
+name: 🐛 Bug report
+description: Something broke or didn't behave the way you expected.
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. The more specific you can be, the faster I can fix it.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug.
+      placeholder: When I ran `instaply apply`, it crashed with...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Walk me through it. If it's about a specific job posting, include the URL.
+      placeholder: |
+        1. Run `instaply init`
+        2. Run `instaply apply <url>`
+        3. ...
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: input
+    id: ats
+    attributes:
+      label: Which ATS / posting URL?
+      description: e.g. boards.greenhouse.io, jobs.lever.co, jobs.smartrecruiters.com
+      placeholder: https://boards.greenhouse.io/...
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / error output
+      description: |
+        Run with `--debug` if you can: `instaply apply --debug <url>`.
+        Paste the output here. The DOM and screenshot in `~/.instaply/runs/<id>/` are also super helpful — feel free to attach them.
+      render: shell
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: Instaply version
+      description: Run `instaply --version`
+      placeholder: e.g. 0.1.2
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS
+        - Linux
+        - Windows
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      description: Run `python --version`
+      placeholder: e.g. 3.12.3
+    validations:
+      required: true
+
+  - type: dropdown
+    id: llm
+    attributes:
+      label: LLM provider you're using
+      options:
+        - NVIDIA NIM
+        - Ollama
+        - OpenAI
+        - Other OpenAI-compatible
+        - Not sure / not relevant
+    validations:
+      required: false

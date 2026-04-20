@@ -23,6 +23,17 @@ type State =
   | { kind: "live"; resumes: DocRow[]; coverLetters: DocRow[] }
   | { kind: "error"; message: string };
 
+async function analyzePrimaryResume(accessToken: string) {
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.asion.ai";
+  const res = await fetch(`${apiBase}/profile/analyze-resume`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    throw new Error(await res.text() || "Resume analysis failed");
+  }
+}
+
 function fmtSize(b: number | null): string {
   if (!b) return "";
   if (b < 1024) return `${b} B`;
@@ -141,6 +152,17 @@ export default function DocumentsPage() {
       }).select().single();
       if (insErr) throw insErr;
 
+      if (kind === "resume" && willBePrimary) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          try {
+            await analyzePrimaryResume(session.access_token);
+          } catch (e) {
+            console.warn("Resume analysis after upload failed:", e);
+          }
+        }
+      }
+
       // Refresh the list
       setState((prev) => {
         if (prev.kind !== "live") return prev;
@@ -230,6 +252,14 @@ export default function DocumentsPage() {
                       // Clear all primary flags, then set this one
                       await supabase.from("resumes").update({ is_primary: false }).eq("user_id", user.id);
                       await supabase.from("resumes").update({ is_primary: true }).eq("id", d.id);
+                      const { data: { session } } = await supabase.auth.getSession();
+                      if (session?.access_token) {
+                        try {
+                          await analyzePrimaryResume(session.access_token);
+                        } catch (e) {
+                          console.warn("Resume analysis after primary switch failed:", e);
+                        }
+                      }
                       setState((prev) => prev.kind === "live" ? {
                         ...prev,
                         resumes: prev.resumes.map((r) => ({ ...r, is_primary: r.id === d.id })),

@@ -7,10 +7,7 @@
 
 These Terms of Service (**"Terms"**) govern your use of **Instaply** (the "Service"), operated by:
 
-**Ravendise** (legally registered as "REVENDISE" for GST purposes; amendment in progress)
-A Proprietorship owned by **Aditya Sanjay Sakhale**
-Registered office: Block 3, Plot No 3, Near Ram Manohar Lohiya, Kadolkar Colony 1, Talegaon Dabhade, Pune, Maharashtra 410506, India
-GSTIN: 27OFHPS0892J1ZJ · PAN: OFHPS0892J · Udyam: UDYAM-MH-26-0294628
+**Ravendise**
 
 Contact: **support@asion.ai**
 
@@ -130,8 +127,5 @@ You acknowledge that hiring decisions depend on many factors (your qualification
 
 Questions, notices, or legal correspondence:
 
-**Ravendise**
-Attn: Aditya Sanjay Sakhale, Proprietor
-Block 3, Plot No 3, Near Ram Manohar Lohiya, Kadolkar Colony 1
-Talegaon Dabhade, Pune, Maharashtra 410506, India
+**Ravendise Support**
 Email: **support@asion.ai**

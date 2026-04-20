@@ -526,16 +526,25 @@ export default function SearchPage() {
         {results === null && !searching && (!suggested || suggested.length === 0) && (
           <div className="search-hint">
             <p>
-              Real-time search across millions of US jobs. Try
-              &ldquo;Registered Nurse&rdquo;, &ldquo;Mechanical Engineer&rdquo;,
-              &ldquo;Marketing Manager&rdquo;, or anything else.
-              Click Apply and we&apos;ll fill out the form for you.
+              Real-time search across multiple sources. Type a role above —
+              <em>&ldquo;Data Analyst&rdquo;</em>, <em>&ldquo;Mechanical Engineer&rdquo;</em>,
+              <em>&ldquo;Marketing Manager&rdquo;</em> — and hit Search.
+            </p>
+            <p>
+              Today the agent applies automatically only to <strong>Greenhouse</strong> and{" "}
+              <strong>Lever</strong> roles. For other sources you&apos;ll see an{" "}
+              <em>Apply&nbsp;↗</em> button that opens the job in a new tab so you can apply manually.
+            </p>
+            <p>
+              <strong>Looking for jobs we&apos;ve already matched to your profile?</strong>{" "}
+              Check your <Link href="/dashboard">Dashboard</Link> — that&apos;s where
+              queued applications, action-required rows, and blocked runs show up.
             </p>
             {targetTitles.length === 0 && (
               <p>
-                <strong>Tip:</strong> Set your target roles in{" "}
-                <Link href="/onboarding">Profile</Link> to see personalized
-                recommendations here.
+                <strong>Heads up:</strong> you haven&apos;t set any target roles yet.
+                Add them in your <Link href="/profile">Profile</Link> so the agent can
+                find matches for you in the background.
               </p>
             )}
           </div>

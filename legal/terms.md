@@ -7,10 +7,7 @@
 
 These Terms of Service (**"Terms"**) govern your use of **Instaply** (the "Service"), operated by:
 
-**Ravendise** (legally registered as "REVENDISE" for GST purposes; amendment in progress)
-A Proprietorship owned by **Aditya Sanjay Sakhale**
-Registered office: Block 3, Plot No 3, Near Ram Manohar Lohiya, Kadolkar Colony 1, Talegaon Dabhade, Pune, Maharashtra 410506, India
-GSTIN: 27OFHPS0892J1ZJ · PAN: OFHPS0892J · Udyam: UDYAM-MH-26-0294628
+**Ravendise**
 
 Contact: **support@asion.ai**
 
@@ -46,7 +43,7 @@ The free tier is limited to **one account per person**. Creating multiple accoun
 ### 5.2 Paid Credits (Pay-as-you-go)
 Applications beyond the free tier are billed on a **pay-per-application basis at USD 1.00 per credit** (each credit = one submitted application). Credits are purchased in prepaid packs with a **minimum top-up of USD 10**. Credits do not expire while your account is active. Refunds are governed by the Refund Policy.
 
-Payments are processed by our merchant of record, **Paddle.com Market Limited** ("Paddle"). Paddle is the seller of record for paid credits and handles payment processing, invoicing, and applicable taxes for customers outside India.
+Payments are processed by **Razorpay Software Private Limited** ("Razorpay"), our payment processor. Ravendise is the seller of record for paid credits; Razorpay handles card processing, payment authorization, and settlement. Applicable taxes are collected and remitted by Ravendise per the customer's jurisdiction.
 
 ### 5.3 Subscription plans (future)
 We may introduce subscription plans (e.g., unlimited monthly, premium-model tiers) in the future. Any such plan, its pricing, and renewal terms will be disclosed at checkout at the time of purchase.
@@ -130,8 +127,5 @@ You acknowledge that hiring decisions depend on many factors (your qualification
 
 Questions, notices, or legal correspondence:
 
-**Ravendise**
-Attn: Aditya Sanjay Sakhale, Proprietor
-Block 3, Plot No 3, Near Ram Manohar Lohiya, Kadolkar Colony 1
-Talegaon Dabhade, Pune, Maharashtra 410506, India
+**Ravendise Support**
 Email: **support@asion.ai**

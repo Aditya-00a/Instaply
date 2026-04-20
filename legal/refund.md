@@ -3,7 +3,7 @@
 **Effective Date:** 14 April 2026
 **Last Updated:** 14 April 2026
 
-This Refund Policy is part of our Terms of Service at **instaply.asion.ai/legal/terms** and governs refunds for the Instaply service operated by **Ravendise** (A Proprietorship of Aditya Sanjay Sakhale).
+This Refund Policy is part of our Terms of Service at **instaply.asion.ai/legal/terms** and governs refunds for the Instaply service operated by **Ravendise**.
 
 ## 1. Free Tier — No charge, no refund
 
@@ -23,7 +23,7 @@ If you are dissatisfied with your **first paid credit pack purchase**, you may r
 - You contact us at **support@asion.ai** within the 14-day window
 - You briefly explain why the Service did not meet your expectations (helps us improve)
 
-Refunds under this clause are issued to your original payment method within **7 business days** of approval. The payment is processed and refunded by our merchant of record, **Paddle.com Market Limited**.
+Refunds under this clause are issued to your original payment method within **7 business days** of approval. Refunds are processed by our payment processor, **Razorpay Software Private Limited**.
 
 ### 2.3 Unused credits on subsequent purchases
 After your first pack, remaining **unused** credits from a later purchase may be refunded on a pro-rata basis within **14 days** of that purchase at our discretion, less any promotional bonus credits already consumed. Consumed credits are non-refundable.
@@ -63,8 +63,5 @@ This Refund Policy is governed by Indian law and subject to the exclusive jurisd
 
 ## 7. Contact
 
-**Ravendise**
-Attn: Aditya Sanjay Sakhale, Proprietor
-Block 3, Plot No 3, Near Ram Manohar Lohiya, Kadolkar Colony 1
-Talegaon Dabhade, Pune, Maharashtra 410506, India
+**Ravendise Support**
 Email: **support@asion.ai**

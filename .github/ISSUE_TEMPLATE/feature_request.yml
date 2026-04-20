@@ -1,0 +1,39 @@
+name: ✨ Feature request
+description: Suggest a new feature or improvement.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Start with the pain, not the solution. What were you trying to do when you wished this existed?
+      placeholder: I was trying to apply to a Workday job and...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How do you imagine this working?
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Are you up for contributing this?
+      options:
+        - label: Yes, I'd like to send a PR
+        - label: Yes, with some guidance
+        - label: No, just suggesting
+    validations:
+      required: false

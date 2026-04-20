@@ -24,10 +24,11 @@ from __future__ import annotations
 import io
 import json
 import logging
+import zipfile
+from xml.etree import ElementTree as ET
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
-from PyPDF2 import PdfReader
 
 from .auth import current_user_id
 from .config import settings
@@ -40,16 +41,24 @@ router = APIRouter(tags=["profile"])
 
 CEREBRAS_URL = "https://api.cerebras.ai/v1/chat/completions"
 
-EXTRACTION_PROMPT = """You are a resume analysis expert. Extract the following from this resume text and return ONLY valid JSON, no markdown, no explanation:
+EXTRACTION_PROMPT = """You are a conservative resume analysis expert. Extract the following from this resume text and return ONLY valid JSON, no markdown, no explanation.
+
+Rules:
+- Use ONLY facts explicitly supported by the resume text.
+- If a field is not clearly stated, return null (or [] for lists), do not guess.
+- Do NOT infer a major or field of study from skills, tools, or job titles.
+- Do NOT infer a computer-science or software-engineering background unless the resume text clearly states it.
+- For experience_years, prefer a conservative lower-bound estimate from clearly dated professional experience. If unclear, return null.
+- Keep the summary factual and grounded in the resume text only.
 
 {
   "skills": ["list of technical and soft skills mentioned"],
-  "experience_years": <number of years of professional experience, estimate from dates>,
-  "education": {"degree": "<highest degree>", "major": "<field of study>", "school": "<university name>"},
+  "experience_years": <number or null>,
+  "education": {"degree": "<highest degree or null>", "major": "<field of study or null>", "school": "<university name or null>"},
   "industries": ["list of industries the person has worked in"],
   "titles_held": ["list of job titles held"],
   "certifications": ["list of certifications or licenses"],
-  "summary": "<2 sentence professional summary>"
+  "summary": "<1-2 sentence factual professional summary or null>"
 }
 
 Resume text:
@@ -76,7 +85,13 @@ async def _call_cerebras(prompt: str) -> str:
                 "Content-Type": "application/json",
             },
             json={
-                "model": "llama-3.3-70b",
+                # Cerebras returns 404 for `llama-3.3-70b` on this account
+                # (only `llama3.1-8b` and `qwen-3-235b-a22b-instruct-2507`
+                # are entitled — verified live on 2026-04-19 and previously
+                # in worker/autofill/llm.py). Match the worker's primary
+                # model so resume analysis and autofill grounding stay
+                # in sync on the same Cerebras tier.
+                "model": "qwen-3-235b-a22b-instruct-2507",
                 "messages": [
                     {"role": "system", "content": "You extract structured data from resumes. Always return valid JSON only."},
                     {"role": "user", "content": prompt},
@@ -92,6 +107,8 @@ async def _call_cerebras(prompt: str) -> str:
 
 def _extract_pdf_text(pdf_bytes: bytes) -> str:
     """Extract text from PDF bytes."""
+    from PyPDF2 import PdfReader
+
     reader = PdfReader(io.BytesIO(pdf_bytes))
     text_parts = []
     for page in reader.pages:
@@ -99,6 +116,44 @@ def _extract_pdf_text(pdf_bytes: bytes) -> str:
         if text:
             text_parts.append(text)
     return "\n".join(text_parts)
+
+
+def _extract_docx_text(docx_bytes: bytes) -> str:
+    """Extract visible text from a DOCX payload without extra dependencies."""
+    try:
+        with zipfile.ZipFile(io.BytesIO(docx_bytes)) as zf:
+            xml_bytes = zf.read("word/document.xml")
+    except Exception:
+        return ""
+
+    try:
+        root = ET.fromstring(xml_bytes)
+    except ET.ParseError:
+        return ""
+
+    ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+    paragraphs: list[str] = []
+    for para in root.findall(".//w:p", ns):
+        parts: list[str] = []
+        for node in para.findall(".//w:t", ns):
+            if node.text:
+                parts.append(node.text)
+        text = "".join(parts).strip()
+        if text:
+            paragraphs.append(text)
+    return "\n".join(paragraphs)
+
+
+def _extract_resume_text(file_name: str, blob: bytes) -> str:
+    lower = (file_name or "").lower()
+    if lower.endswith(".pdf"):
+        return _extract_pdf_text(blob)
+    if lower.endswith(".docx"):
+        return _extract_docx_text(blob)
+    try:
+        return blob.decode("utf-8", errors="ignore")
+    except Exception:
+        return ""
 
 
 @router.post("/profile/analyze-resume")
@@ -127,20 +182,13 @@ async def analyze_resume(
 
     # 2. Download from Supabase Storage
     try:
-        pdf_bytes = db.storage.from_("resumes").download(storage_path)
+        resume_bytes = db.storage.from_("resumes").download(storage_path)
     except Exception as e:
         log.error("Failed to download resume %s: %s", storage_path, e)
         raise HTTPException(500, "Could not download resume file")
 
     # 3. Extract text
-    if file_name.lower().endswith(".pdf"):
-        resume_text = _extract_pdf_text(pdf_bytes)
-    else:
-        # For docx, try plain decode
-        try:
-            resume_text = pdf_bytes.decode("utf-8", errors="ignore")
-        except Exception:
-            resume_text = ""
+    resume_text = _extract_resume_text(file_name, resume_bytes)
 
     if not resume_text or len(resume_text) < 50:
         raise HTTPException(400, "Could not extract text from resume. Try uploading a different format.")

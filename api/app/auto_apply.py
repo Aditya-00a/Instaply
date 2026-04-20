@@ -2,16 +2,17 @@
 
 Triggered by a scheduled job (cron). For each user with auto_apply_enabled:
   1. Skip if paused (paused_until > now) or in quiet hours
-  2. Skip if daily cap already hit
+  2. Skip if the daily queue cap is already hit
   3. Search JobSpy for each target_title × target_location
   4. Score each result against the user's resume
-  5. Insert top matches into pending_approval (status='pending')
-  6. User approves via UI → applications row created
-  7. Submitter picks up applications → autofill → submit
+  5. Insert top matches directly into applications (status='queued')
+  6. Worker picks them up independently → autofill → submit
+  7. Rows that need human help settle into needs_review / failed without
+     blocking the rest of the queue
 
 Also exposes endpoints for the UI to:
-  - Approve/skip pending jobs
   - Trigger a manual discovery run
+  - Handle legacy approve/skip rows for backward compatibility only
 """
 from __future__ import annotations
 
@@ -100,20 +101,49 @@ def _score_job_against_skills(
 
     # 4. EXPERIENCE LEVEL (10%) — entry/mid/senior alignment
     exp_years = skills.get("experience_years") or 0
+    seniority_pref = (skills.get("_seniority_pref") or "any").lower()
+    is_senior_job = any(w in title for w in ("senior", "staff", "principal", "lead", "iii", "iv", "manager", "director", "head"))
+    is_staff_plus_job = any(w in title for w in ("staff", "principal", "director", "head", "vp"))
+    is_entry_job = any(w in title for w in ("junior", "entry", "associate", "intern", "graduate", "trainee", " i ", " ii"))
+    is_mid_job = not is_senior_job and not is_entry_job
+
     if exp_years:
-        # Detect target level from job title
-        is_senior_job = any(w in title for w in ("senior", "staff", "principal", "lead", "iii", "iv", "manager", "director", "head"))
-        is_entry_job = any(w in title for w in ("junior", "entry", "associate", "intern", "graduate", "trainee", " i ", " ii"))
         # Match: senior people for senior jobs; entry people for entry jobs
         if exp_years >= 5 and is_senior_job:
             score += 0.10
         elif exp_years <= 2 and is_entry_job:
             score += 0.10
-        elif 3 <= exp_years < 5 and not is_senior_job and not is_entry_job:
+        elif 3 <= exp_years < 5 and is_mid_job:
             score += 0.10
-        elif not is_senior_job and not is_entry_job:
+        elif is_mid_job:
             score += 0.05  # neutral title, partial credit
         factors += 0.10
+
+    # User's explicit seniority preference: hard penalty for mismatches.
+    # This dominates inferred experience-level matching above.
+    if seniority_pref != "any":
+        wants_entry = seniority_pref == "entry"
+        wants_mid = seniority_pref == "mid"
+        wants_senior = seniority_pref == "senior"
+        wants_staff_plus = seniority_pref == "staff_plus"
+
+        mismatch = (
+            (wants_entry and is_senior_job)
+            or (wants_mid and (is_senior_job or is_entry_job))
+            or (wants_senior and not (is_senior_job or is_staff_plus_job))
+            or (wants_senior and is_entry_job)
+            or (wants_staff_plus and not is_staff_plus_job)
+        )
+        match_pref = (
+            (wants_entry and is_entry_job)
+            or (wants_mid and is_mid_job)
+            or (wants_senior and is_senior_job and not is_staff_plus_job)
+            or (wants_staff_plus and is_staff_plus_job)
+        )
+        if mismatch:
+            score -= 0.20
+        elif match_pref:
+            score += 0.10
 
     # 5. EDUCATION RELEVANCE (10%) — degree/major mentioned in desc
     education = skills.get("education") or {}
@@ -128,7 +158,9 @@ def _score_job_against_skills(
                 score += 0.05
         factors += 0.10
 
-    return round((score / factors) * 100) if factors > 0 else 0
+    if factors <= 0:
+        return 0
+    return max(0, min(100, round((score / factors) * 100)))
 
 
 # ─── LLM-based match analysis (Cerebras) ─────────────────────────
@@ -173,7 +205,14 @@ Return ONLY a number 0-100. No explanation. Just the number."""
                 "https://api.cerebras.ai/v1/chat/completions",
                 headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
                 json={
-                    "model": "llama-3.3-70b",
+                    # Cerebras only entitles `llama3.1-8b` and
+                    # `qwen-3-235b-a22b-instruct-2507` on this account
+                    # (same constraint that bit resume_analyzer.py on
+                    # 2026-04-19). 8B is plenty for a 0–100 numeric
+                    # score and ~10× faster than the 235B Qwen for top-5
+                    # parallel calls. Falls back to heuristic if even
+                    # this 404s.
+                    "model": "llama3.1-8b",
                     "messages": [{"role": "user", "content": prompt}],
                     "temperature": 0.1,
                     "max_tokens": 8,
@@ -302,10 +341,12 @@ async def decide(
     if not pending.data:
         raise HTTPException(404, "Pending item not found")
 
+    # Belt + suspenders: also gate the UPDATE by user_id, in case another
+    # session/user races between the SELECT above and this UPDATE.
     db.table("pending_approval").update({
         "status": decision,
         "decided_at": datetime.now(timezone.utc).isoformat(),
-    }).eq("id", pending_id).execute()
+    }).eq("id", pending_id).eq("user_id", user_id).execute()
 
     if decision == "approved":
         db.table("applications").insert({
@@ -336,18 +377,20 @@ async def run_now(
 
     profile = db.table("profiles").select("extracted_skills").eq("id", user_id).single().execute()
     skills = (profile.data.get("extracted_skills") if profile.data else {}) or {}
+    skills["_seniority_pref"] = prefs.data.get("seniority") or "any"
 
     min_score = prefs.data.get("auto_apply_min_match", 70)
     keywords = prefs.data.get("auto_apply_keywords") or []
+    daily_cap = int(prefs.data.get("auto_apply_daily_cap") or 5)
 
     # Try discovery — if nothing found, try again with relaxed criteria
-    inserted = await _discover_for_user(db, user_id, titles, locations, skills, min_score, keywords)
+    inserted = await _discover_for_user(db, user_id, titles, locations, skills, min_score, keywords, daily_cap=daily_cap)
     if inserted == 0 and min_score > 50:
         log.info("First pass found 0 jobs for %s -- relaxing min_score to 50", user_id[:8])
-        inserted = await _discover_for_user(db, user_id, titles, locations, skills, 50, keywords)
+        inserted = await _discover_for_user(db, user_id, titles, locations, skills, 50, keywords, daily_cap=daily_cap)
     if inserted == 0:
         log.info("Second pass found 0 jobs for %s -- searching with no location filter", user_id[:8])
-        inserted = await _discover_for_user(db, user_id, titles, [], skills, 40, keywords)
+        inserted = await _discover_for_user(db, user_id, titles, [], skills, 40, keywords, daily_cap=daily_cap)
 
     db.table("preferences").update({
         "auto_apply_last_run_at": datetime.now(timezone.utc).isoformat(),
@@ -364,8 +407,22 @@ async def _discover_for_user(
     skills: dict[str, Any],
     min_score: int,
     keywords: list[str] | None = None,
+    daily_cap: int = 5,
 ) -> int:
-    """Async helper: scrape, score, upsert jobs, insert pending_approval."""
+    """Async helper: scrape, score, upsert jobs, queue applications.
+
+    As of 2026-04-19 the user-approval middleware is removed. Matching
+    jobs go straight into `applications` with `status='queued'` so the
+    worker picks them up immediately. Dedupe is enforced by the
+    existing UNIQUE (user_id, job_id) constraint on `applications`
+    (migration 0001_init.sql:145). The daily cap is enforced inline by
+    counting applications queued today against `daily_cap`.
+
+    Credits remain safe: deduction happens via the
+    `application_confirmed` Postgres trigger (migration 0006), which
+    only fires when `confirmed_at` is set on a row — direct queue
+    inserts do not consume credits.
+    """
     jobs = await _scrape_for_targets_multi(titles, locations, keywords or [], skills)
     log.info("Discovered %d raw jobs for user %s", len(jobs), user_id[:8])
     if not jobs:
@@ -409,16 +466,40 @@ async def _discover_for_user(
             scored.sort(key=lambda x: -x[0])
             log.info("After LLM: %s", [(s, j["title"][:30]) for s, j in scored[:5]])
 
-    # Restrict to ATS hosts the agent can reliably submit on:
-    # Greenhouse + Lever (battle-tested). Skip Indeed/LinkedIn/Adzuna
-    # (bot blocks) and Workday (multi-step not yet supported).
+    # Restrict to ATS hosts the agent can reliably submit on.
+    # Greenhouse + Lever only — battle-tested, low-friction forms.
+    # Workday is OFF: the multi-step forms ask too many custom questions
+    # the bot can't answer (most stalled at needs_review with 5+ Qs per
+    # form). Re-enable once the agent has a richer answer pool or we add
+    # an LLM that can reason through novel screening questions.
     SUPPORTED_HOSTS = ("greenhouse.io", "lever.co")
 
     def is_supported(url: str) -> bool:
         return any(h in (url or "").lower() for h in SUPPORTED_HOSTS)
 
+    # Daily cap budget. Count today's queued applications for this user
+    # (any status — once queued, the row counts against the cap even if
+    # the worker advances it to in_progress / submitted / failed before
+    # the next discovery pass). This prevents a user from being spammed
+    # with 50 applications a day if the cron drifts.
+    today_iso = datetime.now(timezone.utc).date().isoformat() + "T00:00:00+00:00"
+    try:
+        already_today = (
+            db.table("applications")
+            .select("id", count="exact")
+            .eq("user_id", user_id)
+            .gte("queued_at", today_iso)
+            .execute()
+        )
+        already_count = already_today.count or 0
+    except Exception:
+        already_count = 0  # fail-open on a count error; insert dedup will still protect
+    remaining_budget = max(0, daily_cap - already_count)
+
     inserted = 0
     for score, job in scored:
+        if remaining_budget <= 0:
+            break
         if score < min_score:
             continue
         if not is_supported(job.get("apply_url", "")):
@@ -448,16 +529,28 @@ async def _discover_for_user(
             log.warning("job upsert failed: %s", e)
             continue
 
-        # Insert into pending_approval (skip if already there)
+        # Direct insert into applications with status='queued'. The user-
+        # approval middleware is gone (2026-04-19) — matching jobs go
+        # straight to the worker. Dedupe via UNIQUE (user_id, job_id);
+        # the duplicate signal is the same shape as the old
+        # pending_approval path, so log discipline is unchanged.
         try:
-            db.table("pending_approval").insert({
+            db.table("applications").insert({
                 "user_id": user_id,
                 "job_id": job_id,
-                "match_score": score,
+                "status": "queued",
+                # match_score is 0-100 int; applications.fit_score is
+                # 0-1 float per existing rows. Normalize.
+                "fit_score": float(score) / 100.0,
             }).execute()
             inserted += 1
-        except Exception:
-            pass  # likely duplicate, skip
+            remaining_budget -= 1
+        except Exception as e:
+            msg = str(e).lower()
+            if "duplicate" in msg or "unique" in msg or "23505" in msg:
+                continue  # already queued for this user — expected
+            log.warning("applications insert failed for user=%s job=%s: %s",
+                        user_id[:8], job_id[:8], e)
 
     return inserted
 
@@ -467,17 +560,21 @@ async def _discover_for_user(
 @router.post("/auto-apply/cron")
 async def cron_run(request: Request):
     """Run discovery for ALL eligible users. Protected by a shared secret."""
+    import hmac
     from .config import settings
     auth_header = request.headers.get("authorization", "")
-    expected = f"Bearer {settings.cron_secret}" if settings.cron_secret else None
-    if not expected or auth_header != expected:
+    if not settings.cron_secret:
+        raise HTTPException(401, "Bad cron secret")
+    expected = f"Bearer {settings.cron_secret}"
+    # Constant-time comparison to neutralize byte-by-byte timing attacks
+    if not hmac.compare_digest(auth_header.encode(), expected.encode()):
         raise HTTPException(401, "Bad cron secret")
 
     db = service_client()
     eligible = (
         db.table("preferences")
         .select("user_id, target_titles, target_locations, auto_apply_keywords, auto_apply_min_match, "
-                "auto_apply_quiet_start, auto_apply_quiet_end, auto_apply_paused_until")
+                "auto_apply_quiet_start, auto_apply_quiet_end, auto_apply_paused_until, seniority")
         .eq("auto_apply_enabled", True)
         .execute()
     )
@@ -503,13 +600,15 @@ async def cron_run(request: Request):
         user_id = pref["user_id"]
         profile = db.table("profiles").select("extracted_skills").eq("id", user_id).single().execute()
         skills = (profile.data.get("extracted_skills") if profile.data else {}) or {}
+        skills["_seniority_pref"] = pref.get("seniority") or "any"
         min_score = pref.get("auto_apply_min_match", 70)
 
         try:
             n = await _discover_for_user(
                 db, user_id, titles,
                 pref.get("target_locations") or [], skills, min_score,
-                pref.get("auto_apply_keywords") or []
+                pref.get("auto_apply_keywords") or [],
+                daily_cap=int(pref.get("auto_apply_daily_cap") or 5),
             )
             summary["found"] += n
             summary["ran"] += 1

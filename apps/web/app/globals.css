@@ -10383,3 +10383,111 @@ p {
   line-height: 1.5;
 }
 
+
+/* ---------- Story landing additions (instaply OSS pivot) ---------- */
+
+.info-narrow {
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.info-heading {
+  font-size: clamp(24px, 3vw, 32px);
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  color: var(--text);
+  margin: 48px 0 16px;
+}
+
+.info-code-pill {
+  display: inline-flex;
+  align-items: center;
+  background: #0a0b0d;
+  color: #e8eaf0;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  padding: 12px 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  user-select: all;
+}
+
+.info-cta-secondary {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  text-decoration: none;
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.info-cta-secondary:hover {
+  background: var(--panel-strong);
+  border-color: var(--accent);
+}
+
+.info-cta-primary {
+  display: inline-flex;
+  align-items: center;
+  background: var(--accent);
+  color: #ffffff;
+  text-decoration: none;
+  padding: 14px 24px;
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  font-weight: 600;
+  margin-top: 20px;
+  transition: background 0.15s ease;
+}
+
+.info-cta-primary:hover {
+  background: var(--accent-2);
+}
+
+.info-inline-code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  background: var(--accent-3);
+  color: var(--text);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.info-code-block {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  background: #0a0b0d;
+  color: #e8eaf0;
+  padding: 20px 24px;
+  border-radius: var(--radius-md);
+  text-align: left;
+  white-space: pre;
+  overflow-x: auto;
+  margin: 16px auto 8px;
+  max-width: 480px;
+  border: 1px solid var(--line);
+}
+
+.info-signoff {
+  margin-top: 48px;
+  font-size: 15px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.info-signoff-sub {
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.info-cta-final {
+  text-align: center;
+  padding: 56px 24px 80px;
+}

@@ -290,6 +290,7 @@ def run_wizard(parsed: dict[str, Any], *, auto_yes: bool = False) -> ProfileAnsw
 #  JSON writers
 # ─────────────────────────────────────────────────────────────────────
 def to_profile_json(a: ProfileAnswers) -> dict[str, Any]:
+    # Keep legacy aliases until all runtime consumers read from targets.*.
     return {
         "name": a.legal_name,
         "preferred_name": a.preferred_name or a.first_name,
@@ -319,6 +320,9 @@ def to_profile_json(a: ProfileAnswers) -> dict[str, Any]:
             "salary_expectation": a.salary_expectation,
             "start_date": a.start_date,
         },
+        "target_roles": a.target_roles,
+        "target_locations": a.target_locations,
+        "location": a.target_locations,
         "eeo": {
             "gender": a.gender,
             "race": a.race,

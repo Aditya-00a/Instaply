@@ -17,7 +17,7 @@ const SURFACES = [
       "Sign up at instaply.asion.ai",
       "Upload your resume and fill your profile",
       "Connect a Gmail inbox for confirmation verification",
-      "Review the match queue and approve (or auto-submit) applications",
+      "Turn on auto-apply and only step in for Needs attention rows",
     ],
   },
   {

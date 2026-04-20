@@ -14,16 +14,15 @@ export function CosmicWhy() {
         </div>
         <div className="cosmic-why-right">
           <p>
-            I sent more than 1,300 job applications during my own search. I&rsquo;m
-            an international student, I needed visa sponsorship, and the math
-            for someone in my spot is brutal — apply to 20× more roles to land
-            the same number of replies.
+            Instaply started from a familiar problem: job seekers often need to
+            send hundreds of applications just to get a handful of replies, and
+            the existing tools either charge too much or push personal data into
+            someone else&rsquo;s cloud.
           </p>
           <p>
-            So I built the agent I wished I&rsquo;d had, then put it on GitHub
-            under MIT. Free, local-first, no signup, no paid tier. The codebase
-            is the whole product. If it lands you a job, the only thing I want
-            back is you telling a friend.
+            So this project stays simple on purpose: free, local-first, no
+            signup, no paid tier, and fully inspectable under MIT. If it helps
+            someone land a role, that&rsquo;s the whole point.
           </p>
           <p
             style={{
@@ -34,7 +33,7 @@ export function CosmicWhy() {
               marginTop: 8,
             }}
           >
-            — Aditya Sanjay Sakhale, NYU MS Risk Analytics &rsquo;26
+            — Instaply open-source maintainers
           </p>
           <div className="cosmic-why-tags">
             <span>MIT licensed</span>

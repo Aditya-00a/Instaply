@@ -36,7 +36,7 @@
 ## ⚡ Get running in 5 commands
 
 ```bash
-git clone https://github.com/Aditya-00a/Instaply
+git clone https://github.com/instaply/instaply
 cd Instaply/agent
 
 python setup.py                                       # detect HW + install Ollama + pick model
@@ -88,7 +88,7 @@ to review and submit.
 > and click submit. MIT licensed, no subscriptions, no telemetry, no
 > servers in the loop. **Free forever.**
 >
-> If it helps you land a role, [open an issue titled "Got the job"](https://github.com/Aditya-00a/Instaply/issues/new). That's the only metric that matters.
+> If it helps you land a role, [open an issue titled "Got the job"](https://github.com/instaply/instaply/issues/new). That's the only metric that matters.
 
 <br />
 
@@ -330,11 +330,11 @@ good first issues.
 
 ## 📈 Star history
 
-<a href="https://star-history.com/#Aditya-00a/Instaply&Date">
+<a href="https://star-history.com/#instaply/instaply&Date">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=Aditya-00a/Instaply&type=Date&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=Aditya-00a/Instaply&type=Date" />
-    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=Aditya-00a/Instaply&type=Date" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=instaply/instaply&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=instaply/instaply&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=instaply/instaply&type=Date" />
   </picture>
 </a>
 
@@ -346,11 +346,11 @@ good first issues.
 
 ### If Instaply helped you land a job…
 
-[**Open an issue titled "Got the job"**](https://github.com/Aditya-00a/Instaply/issues/new) — it's the only metric that matters.
+[**Open an issue titled "Got the job"**](https://github.com/instaply/instaply/issues/new) — it's the only metric that matters.
 
 ### If you want to support the project…
 
-[**⭐ Star the repo**](https://github.com/Aditya-00a/Instaply) — it's the cheapest way to help other students find this.
+[**⭐ Star the repo**](https://github.com/instaply/instaply) — it's the cheapest way to help other students find this.
 
 <br />
 

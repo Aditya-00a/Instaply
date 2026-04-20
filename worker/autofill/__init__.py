@@ -1,17 +1,3 @@
-"""Autofill subsystem: rules → answer cache → LLM fallback.
+"""Compatibility wrappers for the legacy ``worker.autofill`` package."""
 
-Public surface:
-  resolve_field(candidate, profile, cache, llm)  -> FieldDecision
-
-Everything else is internal.
-"""
-from .engine import resolve_field
-from .models import FieldCandidate, FieldDecision, UserProfile, DecisionSource
-
-__all__ = [
-    "resolve_field",
-    "FieldCandidate",
-    "FieldDecision",
-    "UserProfile",
-    "DecisionSource",
-]
+from instaply.autofill import *  # noqa: F401,F403

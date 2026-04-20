@@ -3,7 +3,7 @@
 **Effective Date:** 14 April 2026
 **Last Updated:** 14 April 2026
 
-This Refund Policy is part of our Terms of Service at **instaply.asion.ai/legal/terms** and governs refunds for the Instaply service operated by **Ravendise** (A Proprietorship of Aditya Sanjay Sakhale).
+This Refund Policy is part of our Terms of Service at **instaply.asion.ai/legal/terms** and governs refunds for the Instaply service operated by **Ravendise**.
 
 ## 1. Free Tier — No charge, no refund
 
@@ -63,8 +63,5 @@ This Refund Policy is governed by Indian law and subject to the exclusive jurisd
 
 ## 7. Contact
 
-**Ravendise**
-Attn: Aditya Sanjay Sakhale, Proprietor
-Block 3, Plot No 3, Near Ram Manohar Lohiya, Kadolkar Colony 1
-Talegaon Dabhade, Pune, Maharashtra 410506, India
+**Ravendise Support**
 Email: **support@asion.ai**

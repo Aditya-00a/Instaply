@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: "Current operational status of the Instaply service.",
 };
 
-type Svc = { name: string; state: "up" | "degraded"; note?: string };
+type Svc = { name: string; state: "up" | "degraded" | "paused"; note?: string };
 
 // Static placeholder. Swap to a live feed (UptimeRobot, BetterStack, or
 // a small /health aggregator) once we have a public dashboard.
@@ -14,12 +14,12 @@ const SERVICES: Svc[] = [
   { name: "Web dashboard (instaply.asion.ai)", state: "up" },
   { name: "API (applications + billing)", state: "up" },
   { name: "Application worker", state: "up" },
-  { name: "Confirmation-email verifier", state: "up" },
+  { name: "Confirmation-email verifier", state: "degraded", note: "Not deployed yet — applications stop at 'Submitted'. Users are not billed until this is live." },
   { name: "Greenhouse pipeline", state: "up" },
   { name: "Lever pipeline", state: "up" },
-  { name: "SmartRecruiters pipeline", state: "up" },
-  { name: "Workday pipeline", state: "degraded", note: "Private beta; coverage rolling out per employer." },
-  { name: "Paddle payment processing", state: "up" },
+  { name: "SmartRecruiters pipeline", state: "degraded", note: "Adapter exists, not yet validated end-to-end. Avoid for now." },
+  { name: "Workday pipeline", state: "paused", note: "Being rebuilt as a browser extension — login-walled portals run more reliably from the user's own browser. See /how-it-works." },
+  { name: "Razorpay payment processing", state: "up" },
 ];
 
 export default function StatusPage() {
@@ -49,7 +49,7 @@ export default function StatusPage() {
             />
             <span className="status-row-label">{s.name}</span>
             <span className="status-row-state">
-              {s.state === "up" ? "Operational" : "Partial"}
+              {s.state === "up" ? "Operational" : s.state === "paused" ? "Paused" : "Partial"}
               {s.note ? ` · ${s.note}` : ""}
             </span>
           </div>

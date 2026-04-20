@@ -317,6 +317,21 @@ async def queue_live(
         if not body.get(k):
             raise HTTPException(400, f"{k} is required")
 
+    # apply_url is rendered as <a href={...}> in the dashboard AND opened
+    # in a Playwright browser by the submitter. Both paths trust the URL,
+    # so allowlist the scheme to neutralize javascript:/file://data: URIs.
+    apply_url = (body.get("apply_url") or "").strip()
+    if not (apply_url.startswith("https://") or apply_url.startswith("http://")):
+        raise HTTPException(400, "apply_url must be http(s)://")
+    # Length cap so a runaway client can't shove a massive URL into the DB
+    body["apply_url"] = apply_url[:2048]
+    # Light-weight caps on the other free-form fields for the same reason
+    body["title"] = (body.get("title") or "").strip()[:300]
+    body["company_name"] = (body.get("company_name") or "").strip()[:200]
+    body["external_id"] = (body.get("external_id") or "").strip()[:200]
+    if body.get("location"):
+        body["location"] = str(body["location"]).strip()[:200]
+
     db = service_client()
 
     # Source comes from JobSpy as 'indeed', 'linkedin', etc.
@@ -327,6 +342,20 @@ async def queue_live(
                      "indeed", "linkedin", "zip_recruiter", "google", "glassdoor", "bayt"}
     if source not in valid_sources:
         source = "manual"
+
+    # Canary safety: only let testers queue sources the worker can actually
+    # process today. Without this, a tester queues a Workday/LinkedIn job,
+    # the worker fails it with a confusing message, and trust erodes.
+    # Keep this list aligned with `worker/adapters/` + the dashboard copy.
+    SUPPORTED_FOR_QUEUE = {"greenhouse", "lever"}
+    if source not in SUPPORTED_FOR_QUEUE:
+        raise HTTPException(
+            400,
+            f"This job's ATS ({source}) isn't supported for auto-apply yet. "
+            "Today we apply to Greenhouse and Lever automatically — for other "
+            "portals, open the job in a new tab and apply manually. "
+            "See instaply.asion.ai/how-it-works for current coverage.",
+        )
 
     # Upsert the job into our jobs table
     job_payload = {

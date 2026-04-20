@@ -7,10 +7,14 @@ import { useEffect } from "react";
 import { ConsoleShell } from "../../components/console-shell";
 
 /**
- * Paddle Checkout success redirect lands here. Paddle has already
+ * Razorpay Checkout success redirect lands here. Razorpay has already
  * processed the payment; the credit grant happens server-side via the
- * Paddle webhook (which calls apply_paddle_topup). This page is purely
- * the user-facing confirmation while that webhook completes.
+ * Razorpay webhook (see api/app/razorpay_webhook.py). This page is
+ * purely the user-facing confirmation while the webhook completes.
+ *
+ * The legacy Paddle path that used to terminate here has been removed
+ * (2026-04-19). Old Paddle success URLs continue to work because the
+ * route just redirects back to /billing after 6 seconds regardless.
  */
 export default function BillingSuccessPage() {
   useEffect(() => {

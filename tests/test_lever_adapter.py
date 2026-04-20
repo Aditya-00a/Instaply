@@ -12,18 +12,18 @@ from worker.autofill import resolve_field
 from worker.autofill.cache import MemoryAnswerCache
 from worker.autofill.models import DecisionSource, FieldType, UserProfile
 
-FIXTURE = Path(__file__).parent / "fixtures" / "lever_sample.html"
+FIXTURE = Path(__file__).resolve().parents[1] / "worker" / "tests" / "fixtures" / "lever_sample.html"
 
 
 PROFILE = UserProfile(
     user_id="22222222-2222-2222-2222-222222222222",
-    first_name="Aditya",
-    last_name="Sakhale",
-    full_name="Aditya Sakhale",
-    email="aditya@example.com",
+    first_name="Jordan",
+    last_name="Lee",
+    full_name="Jordan Lee",
+    email="jordan.lee@example.com",
     phone_e164="+12125551234",
-    linkedin_url="https://linkedin.com/in/aditya",
-    github_url="https://github.com/aditya",
+    linkedin_url="https://linkedin.com/in/jordan-lee",
+    github_url="https://github.com/jordanlee",
     portfolio_url="https://asion.ai",
     current_company="Ravendise",
     work_auth_status="opt",
@@ -72,8 +72,8 @@ def test_full_pipeline():
     # Map by visible label for readability
     by_label = {c.label: decisions[c.dom_id] for c in cands if c.label}
 
-    assert by_label["Full name"].value == "Aditya Sakhale"
-    assert by_label["Email"].value == "aditya@example.com"
+    assert by_label["Full name"].value == "Jordan Lee"
+    assert by_label["Email"].value == "jordan.lee@example.com"
     assert by_label["Phone"].value == "+12125551234"
     assert by_label["Current company"].value == "Ravendise"
     assert "linkedin.com" in by_label["LinkedIn URL"].value
@@ -82,14 +82,18 @@ def test_full_pipeline():
     assert by_label["Resume/CV"].value == "/tmp/resume.pdf"
     assert by_label["Highest degree"].value == "Master's"
 
-    # Work auth + sponsorship match by substring in label text
+    # Work auth + sponsorship match by substring in label text.
+    # As of 2026-04-18 the dynamic resolver only escalates these when
+    # the profile is ambiguous. PROFILE has work_auth_status='opt'
+    # (not US citizen / GC → still review-required) and
+    # needs_sponsorship=True (explicit → auto-answer, no review).
     for label, dec in by_label.items():
         if "authorized to work" in label.lower():
             assert dec.value == "Yes"
-            assert dec.required_review is True
+            assert dec.required_review is True   # opt is ambiguous → review
         if "sponsorship" in label.lower():
             assert dec.value == "Yes"
-            assert dec.required_review is True
+            assert dec.required_review is False  # explicit → auto-answer
 
     # Free-text "Why" has no rule/cache/llm → REVIEW (not silent skip)
     for label, dec in by_label.items():

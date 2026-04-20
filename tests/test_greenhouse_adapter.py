@@ -16,18 +16,18 @@ from worker.autofill import resolve_field
 from worker.autofill.cache import MemoryAnswerCache
 from worker.autofill.models import DecisionSource, FieldType, UserProfile
 
-FIXTURE = Path(__file__).parent / "fixtures" / "greenhouse_sample.html"
+FIXTURE = Path(__file__).resolve().parents[1] / "worker" / "tests" / "fixtures" / "greenhouse_sample.html"
 
 
 PROFILE = UserProfile(
     user_id="11111111-1111-1111-1111-111111111111",
-    first_name="Aditya",
-    last_name="Sakhale",
-    full_name="Aditya Sakhale",
-    email="aditya@example.com",
+    first_name="Jordan",
+    last_name="Lee",
+    full_name="Jordan Lee",
+    email="jordan.lee@example.com",
     phone_e164="+12125551234",
-    linkedin_url="https://linkedin.com/in/aditya",
-    github_url="https://github.com/aditya",
+    linkedin_url="https://linkedin.com/in/jordan-lee",
+    github_url="https://github.com/jordanlee",
     portfolio_url="https://asion.ai",
     city="New York",
     state="NY",
@@ -112,9 +112,9 @@ def test_full_engine_pipeline_against_fixture():
 
     # Contact block — all rules, all high confidence
     assert by_id["first_name"].source == DecisionSource.RULE
-    assert by_id["first_name"].value == "Aditya"
-    assert by_id["last_name"].value == "Sakhale"
-    assert by_id["email"].value == "aditya@example.com"
+    assert by_id["first_name"].value == "Jordan"
+    assert by_id["last_name"].value == "Lee"
+    assert by_id["email"].value == "jordan.lee@example.com"
     assert by_id["phone"].value == "+12125551234"
 
     # Resume + cover letter
@@ -127,11 +127,13 @@ def test_full_engine_pipeline_against_fixture():
     assert "github.com" in by_id["urls_github"].value
     assert by_id["urls_portfolio"].value == "https://asion.ai"
 
-    # Work auth + sponsorship — rule fills, but required_review must be True
+    # Work auth + sponsorship — dynamic-review semantics (added 2026-04-18):
+    # - work_auth on profile.work_auth_status='opt' is ambiguous → review.
+    # - sponsorship with explicit needs_sponsorship=True → auto-answer.
     assert by_id["q_work_auth"].value == "Yes"
     assert by_id["q_work_auth"].required_review is True
     assert by_id["q_sponsor"].value == "Yes"
-    assert by_id["q_sponsor"].required_review is True
+    assert by_id["q_sponsor"].required_review is False
 
     # Education
     assert by_id["q_school"].value == "New York University"

@@ -32,13 +32,13 @@ const STEPS = [
   },
   {
     n: 5,
-    title: "Review the match queue",
-    body: "Instaply scores roles against your profile. You see every pending match and can approve, skip, or block a company before we submit. Strong matches (~85%+) can be auto-submitted if you prefer hands-off mode.",
+    title: "Instaply queues strong matches automatically",
+    body: "Instaply scores roles against your profile and queues the best matches automatically. You only get pulled in when a row needs review answers, manual verification, or a finish-in-browser step.",
   },
   {
     n: 6,
     title: "We submit, track, and confirm",
-    body: "For each approved role we fill the ATS form, upload your resume, answer screening questions, complete EEO fields where applicable, and submit. We watch for the employer confirmation email for 30 minutes.",
+    body: "For each queued role we fill the ATS form, upload your resume, answer screening questions, complete EEO fields where applicable, and submit. We watch for the employer confirmation email for 30 minutes.",
   },
   {
     n: 7,
@@ -116,7 +116,7 @@ export default function HowItWorksPage() {
           </li>
           <li>
             <strong>No subscriptions.</strong> You pay for what you use.
-            Top-ups are one-time purchases processed by Paddle.
+            Top-ups are one-time purchases processed by Razorpay.
           </li>
         </ul>
       </section>

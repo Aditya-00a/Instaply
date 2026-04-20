@@ -41,9 +41,10 @@ from supabase import Client, create_client
 
 from .actions import ExecutionReport, execute_decisions
 from .adapters import adapter_for_html, adapter_for_url
-from .autofill.cache import SupabaseAnswerCache
+from .adapters.base import AtsKind
+from .autofill.cache import SupabaseAnswerCache, field_question
 from .autofill.engine import resolve_field
-from .autofill.llm import NimClient
+from .autofill.llm import CerebrasClient
 from .autofill.models import EngineConfig, FieldDecision, UserProfile
 from .verifier import ConfirmationHit, EmailVerifier, NullVerifier
 
@@ -91,23 +92,85 @@ class CompanyLimiter:
 
 
 # ─── Claim a job (atomic) ───────────────────────────────────────
-def _claim_one(db: Client) -> Optional[dict]:
-    """Claim a single queued application, setting it to in_progress.
+# ─── Feature-flag gating (canary rollout) ───────────────────────
+# This worker only claims applications belonging to users who have
+# explicitly opted in via `preferences.use_native_worker = true` (see
+# migration 0015). Until at least one user is opted in, the worker is
+# inert — it polls and finds nothing, leaving every queued app for the
+# legacy Revize-imported submitter (`instaply-submitter` Fly app) to
+# pick up. This makes deploying `instaply-worker` zero-risk for
+# existing users on day one.
+_OPTED_IN_CACHE: dict[str, Any] = {"ids": [], "ts": 0.0}
+_OPTED_IN_TTL_SECONDS = float(os.getenv("WORKER_OPTED_IN_TTL_SECONDS", "60"))
 
-    We use `status='queued' -> 'in_progress'` with a timestamp guard.
-    For true SELECT FOR UPDATE SKIP LOCKED we'd need psycopg — this is
-    good enough at current scale because the update is atomic and
-    `started_at` is used as the idempotency key.
+
+def _opted_in_user_ids(db: Client, *, force_refresh: bool = False) -> list[str]:
+    """Return the list of user_ids currently opted into the native worker.
+
+    Cached for `_OPTED_IN_TTL_SECONDS` to avoid hammering `preferences`
+    on every claim attempt. Fail-closed: if the lookup raises (e.g.
+    transient network), we return the LAST cached value rather than
+    accidentally claiming nothing — the alternative (returning `[]`)
+    would freeze the worker silently on a hiccup.
     """
-    # RPC call is cleaner; for now use the REST filter update pattern:
-    # atomic: update ... where status='queued' returning *. Supabase-py
-    # only returns affected rows, so one row wins per call.
+    now = time.time()
+    if not force_refresh and (now - _OPTED_IN_CACHE["ts"] < _OPTED_IN_TTL_SECONDS):
+        return list(_OPTED_IN_CACHE["ids"])
+    try:
+        resp = (
+            db.table("preferences")
+            .select("user_id")
+            .eq("use_native_worker", True)
+            .execute()
+        )
+        ids = [r["user_id"] for r in (resp.data or []) if r.get("user_id")]
+        _OPTED_IN_CACHE["ids"] = ids
+        _OPTED_IN_CACHE["ts"] = now
+        return list(ids)
+    except Exception:
+        log.exception("opted_in_lookup_failed")
+        return list(_OPTED_IN_CACHE["ids"])
+
+
+def _claim_one(db: Client) -> Optional[dict]:
+    """Claim a single queued application from an opted-in user.
+
+    Atomicity: the UPDATE is a single SQL statement with WHERE
+    `status='queued' AND user_id IN (opted_in)` ORDER BY queued_at
+    LIMIT 1 RETURNING *. PostgREST evaluates the filter at update time,
+    so even if the legacy Revize submitter races us, only one PATCH
+    transitions any given row from `queued` → `in_progress` — the
+    other's filter no longer matches and returns zero rows.
+
+    If no users are opted in, return None immediately (no DB roundtrip
+    for the UPDATE itself, just the cached preferences lookup).
+    """
+    opted_in = _opted_in_user_ids(db)
+    if not opted_in:
+        return None
+    # Two-step claim: SELECT the oldest queued candidate ordered by FIFO,
+    # then issue an atomic compare-and-set UPDATE by id. Supabase-py
+    # >=2.13 removed `.order()` from the UPDATE chain, so we can't do it
+    # in one statement anymore — but the UPDATE is still atomic against
+    # any other contender thanks to the `.eq("status","queued")` guard.
+    sel = (
+        db.table("applications")
+        .select("id")
+        .eq("status", "queued")
+        .in_("user_id", opted_in)
+        .order("queued_at", desc=False)
+        .limit(1)
+        .execute()
+    )
+    candidates = sel.data or []
+    if not candidates:
+        return None
+    app_id = candidates[0]["id"]
     resp = (
         db.table("applications")
         .update({"status": "in_progress", "started_at": datetime.now(timezone.utc).isoformat()})
-        .eq("status", "queued")
-        .order("queued_at", desc=False)
-        .limit(1)
+        .eq("id", app_id)
+        .eq("status", "queued")  # atomic guard — only wins if still queued
         .execute()
     )
     rows = resp.data or []
@@ -120,14 +183,81 @@ def _load_job(db: Client, job_id: str) -> Optional[dict]:
 
 
 def _load_profile(db: Client, user_id: str) -> Optional[UserProfile]:
+    """Load a UserProfile from the production Instaply schema.
+
+    Schema notes (see supabase/migrations/0001_init.sql + 0013):
+      - `profiles` stores `full_name` (not first/last), `phone` (single
+        column, not e164/national split), `current_city`/`current_state`/
+        `current_country`/`zip_code`, and `race` (not `race_ethnicity`).
+      - Experience-level and salary preferences live in `preferences`
+        (years_of_experience, salary_min_usd, start_availability, etc.).
+      - Education, titles held, industries, and experience_years fallback
+        live in `profiles.extracted_skills` (jsonb, resume-parser output).
+
+    Missing-from-schema fields (current_company, current_title, etc.)
+    are set to None. The autofill engine tolerates None and will either
+    defer to the LLM or flag for review.
+    """
     r = db.table("profiles").select("*").eq("id", user_id).limit(1).execute()
     row = (r.data or [None])[0]
     if not row:
         return None
 
-    first = row.get("first_name") or ""
-    last = row.get("last_name") or ""
-    full = (row.get("full_name") or f"{first} {last}").strip()
+    # Preferences live in a sibling table — fetch once, tolerate absence.
+    try:
+        pr = db.table("preferences").select("*").eq("user_id", user_id).limit(1).execute()
+        prefs = (pr.data or [{}])[0] or {}
+    except Exception:
+        prefs = {}
+
+    # extracted_skills is the resume-parser's structured output (jsonb).
+    skills = row.get("extracted_skills") or {}
+    if not isinstance(skills, dict):
+        skills = {}
+    education = skills.get("education") or {}
+    if not isinstance(education, dict):
+        education = {}
+
+    # Split full_name -> first/last. Instaply schema only stores full_name.
+    full = (row.get("full_name") or "").strip()
+    parts = full.split(None, 1)
+    first = parts[0] if parts else ""
+    last = parts[1] if len(parts) > 1 else ""
+
+    # Single phone column in Instaply schema. Use it for both slots the
+    # UserProfile model exposes (callers read whichever is populated).
+    phone = row.get("phone") or None
+
+    # Defensive int coercion — jsonb education fields can be strings.
+    def _as_int(v: Any) -> Optional[int]:
+        if v is None or v == "":
+            return None
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return None
+
+    # Start availability → approximate ISO date (engine uses as-is).
+    start_label = prefs.get("start_availability") or "immediately"
+    now_utc = datetime.now(timezone.utc)
+    start_map = {
+        "immediately": now_utc.date().isoformat(),
+        "2_weeks": (now_utc + timedelta(days=14)).date().isoformat(),
+        "1_month": (now_utc + timedelta(days=30)).date().isoformat(),
+        "flexible": None,
+    }
+    earliest_start = start_map.get(start_label)
+
+    # Years of experience — preferences takes precedence, fall back to
+    # the resume-parser's inferred value in extracted_skills.
+    years_exp = _as_int(prefs.get("years_of_experience"))
+    if years_exp is None:
+        years_exp = _as_int(skills.get("experience_years"))
+
+    # Remote preference is stored as boolean `remote_ok` on preferences.
+    remote_pref: Optional[str] = None
+    if prefs.get("remote_ok") is True:
+        remote_pref = "remote"
 
     return UserProfile(
         user_id=user_id,
@@ -135,33 +265,48 @@ def _load_profile(db: Client, user_id: str) -> Optional[UserProfile]:
         last_name=last,
         full_name=full,
         email=row.get("email") or "",
-        phone_e164=row.get("phone_e164"),
-        phone_national=row.get("phone_national"),
+        # Single phone column in Instaply — populate both model slots.
+        phone_e164=phone,
+        phone_national=phone,
         linkedin_url=row.get("linkedin_url"),
         github_url=row.get("github_url"),
-        portfolio_url=row.get("portfolio_url"),
+        # `portfolio_url` is not a separate column; website_url serves both.
+        portfolio_url=row.get("website_url"),
         website_url=row.get("website_url"),
-        city=row.get("city"),
-        state=row.get("state"),
-        country=row.get("country"),
-        postal_code=row.get("postal_code"),
+        # Location — Instaply schema uses `current_*` + `zip_code`.
+        city=row.get("current_city"),
+        state=row.get("current_state"),
+        country=row.get("current_country") or "United States",
+        postal_code=row.get("zip_code"),
         work_auth_status=row.get("work_auth_status"),
         needs_sponsorship=row.get("needs_sponsorship"),
-        current_company=row.get("current_company"),
-        current_title=row.get("current_title"),
-        years_experience=row.get("years_experience"),
-        school=row.get("school"),
-        degree=row.get("degree"),
-        major=row.get("major"),
-        graduation_year=row.get("graduation_year"),
+        # Not stored in Instaply profiles schema today.
+        current_company=None,
+        current_title=None,
+        years_experience=years_exp,
+        # Education fields come from the resume parser's extracted_skills.
+        school=education.get("school"),
+        degree=education.get("degree"),
+        major=education.get("major"),
+        graduation_year=_as_int(education.get("graduation_year")),
         gender=row.get("gender"),
-        race_ethnicity=row.get("race_ethnicity"),
+        # Pronouns: distinct from gender. Read straight; never derive.
+        pronouns=row.get("pronouns"),
+        # Schema column is `race`, not `race_ethnicity`.
+        race_ethnicity=row.get("race"),
         veteran_status=row.get("veteran_status"),
         disability_status=row.get("disability_status"),
-        salary_expectation_usd=row.get("salary_expectation_usd"),
+        # Salary expectation lives in preferences, not profiles.
+        salary_expectation_usd=_as_int(prefs.get("salary_min_usd")),
         willing_to_relocate=row.get("willing_to_relocate"),
-        remote_preference=row.get("remote_preference"),
-        earliest_start_date=row.get("earliest_start_date"),
+        remote_preference=remote_pref,
+        earliest_start_date=earliest_start,
+        # Resume-grounding data for the LLM path. `extracted_skills` is the
+        # best structured resume evidence we currently have in production, and
+        # `resume_text` (when present) is the strongest raw source of truth for
+        # custom free-text questions.
+        resume_parsed_json=skills or None,
+        resume_text_excerpt=(row.get("resume_text") or "")[:4000] or None,
     )
 
 
@@ -171,21 +316,41 @@ def _load_user_preferences(db: Client, user_id: str) -> dict:
 
 
 def _download_resume(db: Client, user_id: str, tmpdir: Path) -> Optional[Path]:
-    """Pull the user's active resume from Supabase Storage into tmpdir."""
+    """Pull the user's primary resume from Supabase Storage into tmpdir.
+
+    Schema (supabase/migrations/0001_init.sql):
+      resumes(id, user_id, label, storage_path, file_name, file_size_bytes,
+              parsed_json, is_primary, created_at)
+
+    Note: no `is_active` or `uploaded_at` or `filename` columns —
+    those are legacy names the worker used to assume.
+    """
     r = (
         db.table("resumes")
-        .select("id, storage_path, filename, parsed_json")
+        .select("id, storage_path, file_name, parsed_json")
         .eq("user_id", user_id)
-        .eq("is_active", True)
-        .order("uploaded_at", desc=True)
+        .eq("is_primary", True)
+        .order("created_at", desc=True)
         .limit(1)
         .execute()
     )
     row = (r.data or [None])[0]
     if not row:
-        return None
+        # Fall back to the most recent resume even if no is_primary flag
+        # is set (defensive — older accounts may predate the flag).
+        r = (
+            db.table("resumes")
+            .select("id, storage_path, file_name, parsed_json")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        row = (r.data or [None])[0]
+        if not row:
+            return None
     storage_path = row["storage_path"]
-    filename = row.get("filename") or "resume.pdf"
+    filename = row.get("file_name") or "resume.pdf"
     dest = tmpdir / filename
     try:
         blob = db.storage.from_("resumes").download(storage_path)
@@ -197,6 +362,13 @@ def _download_resume(db: Client, user_id: str, tmpdir: Path) -> Optional[Path]:
 
 
 # ─── Settlement (status writes) ─────────────────────────────────
+# This worker always tags its writes with submitter_kind='server_instaply'
+# so dashboards and per-kind success-rate queries can distinguish it from
+# the legacy Revize-imported submitter (which migration 0014 backfills as
+# 'server_revize') and the future browser-extension client ('extension').
+SUBMITTER_KIND = "server_instaply"
+
+
 def _write_status(
     db: Client,
     application_id: str,
@@ -208,8 +380,23 @@ def _write_status(
     confirmed_at: Optional[datetime] = None,
     error_message: Optional[str] = None,
     completed: bool = False,
+    submitter_kind: str = SUBMITTER_KIND,
 ) -> None:
-    patch: dict[str, Any] = {"status": status}
+    """PATCH the applications row with whichever fields are non-None.
+
+    Every column written here is verified against
+    supabase/migrations/0001_init.sql + 0014: status, submission_log,
+    screenshot_url, confirmation_email_id, confirmed_at, error_message,
+    completed_at, submitter_kind. No fields are written that don't
+    exist on the live applications table — keeps PATCHes from failing
+    silently due to schema drift.
+    """
+    patch: dict[str, Any] = {
+        "status": status,
+        # Always stamp the submitter so every Instaply-native row carries
+        # its provenance, including `skipped` rows and failure paths.
+        "submitter_kind": submitter_kind,
+    }
     if submission_log is not None:
         patch["submission_log"] = submission_log
     if screenshot_url is not None:
@@ -271,13 +458,20 @@ class RunArtifacts:
     screenshot_bytes: bytes = b""
     report: Optional[ExecutionReport] = None
     decisions: list[FieldDecision] = field(default_factory=list)
+    # Human-readable review questions, built per-run from candidates whose
+    # decisions ended up `required_review=True` or `source=REVIEW`. Persisted
+    # into `submission_log.needs_review` so the dashboard can render the
+    # actual question text + Save & Retry input. Without this the UI sees
+    # an empty array and renders nothing — root cause of the "I can't see
+    # the review question" report from canary on 2026-04-18.
+    needs_review: list[dict] = field(default_factory=list)
 
 
 async def _run_browser(
     apply_url: str,
     profile: UserProfile,
     cache: SupabaseAnswerCache,
-    llm: NimClient,
+    llm: CerebrasClient,
     *,
     dry_run: bool,
     review_before_send: bool,
@@ -319,14 +513,74 @@ async def _run_browser(
                 return art
 
             candidates = adapter.parse_form(html)
+            attempted_urls: list[str] = [apply_url]
+
+            # Small remediation: Lever's canonical apply form lives at
+            # `<jd_url>/apply`, not on the JD page itself. Many job-board
+            # integrations store the JD URL in our `jobs.apply_url`, so
+            # `parse_form` returns 0 candidates on the first hit. Re-try
+            # once with `/apply` appended before declaring failure.
+            if not candidates and getattr(adapter, "kind", None) == AtsKind.LEVER and "/apply" not in apply_url:
+                retry_url = apply_url.rstrip("/") + "/apply"
+                log.info("lever_retry_with_apply_suffix", extra={"retry_url": retry_url})
+                try:
+                    await page.goto(retry_url, wait_until="domcontentloaded", timeout=45000)
+                    try:
+                        await page.wait_for_load_state("networkidle", timeout=8000)
+                    except Exception:
+                        pass
+                    html = await page.content()
+                    art.dom_html = html
+                    candidates = adapter.parse_form(html)
+                    attempted_urls.append(retry_url)
+                except Exception as e:
+                    log.warning("lever_retry_failed", extra={"err": str(e), "retry_url": retry_url})
+
+            # Still no candidates → skip execute_decisions entirely and
+            # record a clear diagnostic. Calling `execute_decisions` with
+            # an empty list would run the submit gate against a page that
+            # has no form and produce the useless `execution_errors=0`
+            # message the canary run surfaced on Whoop.
+            if not candidates:
+                empty_report = ExecutionReport(
+                    filled=0, skipped=0, flagged_review=0, errors=1,
+                    submitted=False, outcomes=[],
+                )
+                empty_report.submit_reason = (
+                    f"no_application_form_found "
+                    f"(adapter={getattr(adapter, 'kind', 'unknown')}, "
+                    f"tried={attempted_urls})"
+                )
+                art.report = empty_report
+                art.decisions = []
+                return art
+
             decisions: list[FieldDecision] = []
             any_review = False
+            review_questions: list[dict] = []
             for cand in candidates:
                 d = resolve_field(cand, profile, cache=cache, llm=llm, config=EngineConfig())
                 decisions.append(d)
                 if d.required_review:
                     any_review = True
+                    # Persist the actual question text so the dashboard can
+                    # render the Save & Retry input. Use the same question
+                    # derivation the cache + answer-vault use, so the
+                    # `/answers/save` POST hashes the same key the engine
+                    # will look up next time.
+                    qtext = field_question(cand)
+                    if qtext:
+                        review_questions.append({
+                            "question": qtext,
+                            "kind": (
+                                "verify_suggested" if d.value not in (None, "")
+                                else "answer_needed"
+                            ),
+                            "dom_id": cand.dom_id,
+                            "suggested": d.value if d.value not in (None, "") else None,
+                        })
             art.decisions = decisions
+            art.needs_review = review_questions
 
             hold_for_review = review_before_send and any_review
 
@@ -335,6 +589,10 @@ async def _run_browser(
                 decisions,
                 candidates,
                 dry_run=dry_run or hold_for_review,
+                # Pass the matched adapter's submit_selectors so the executor
+                # tries Greenhouse/Lever/SmartRecruiters-specific markers
+                # instead of only the generic [type=submit] default.
+                submit_selectors=getattr(adapter, "submit_selectors", None),
             )
             try:
                 art.screenshot_bytes = await page.screenshot(full_page=True, type="png")
@@ -406,8 +664,10 @@ async def run_job(app_row: dict, *, limiter: CompanyLimiter) -> None:
         if resume_path:
             profile = profile.model_copy(update={"resume_local_path": str(resume_path)})
 
-        cache = SupabaseAnswerCache(db, user_id=user_id)
-        llm = NimClient()
+        # SupabaseAnswerCache is per-process; user_id is supplied per-call by
+        # the engine via lookup(profile.user_id, ...) and store(user_id=...).
+        cache = SupabaseAnswerCache(db)
+        llm = CerebrasClient()
         review_before_send = bool(prefs.get("review_before_send", True))
 
         async with limiter.slot(job["company_slug"]):
@@ -436,6 +696,19 @@ async def run_job(app_row: dict, *, limiter: CompanyLimiter) -> None:
             "skipped": rep.skipped if rep else 0,
             "flagged_review": rep.flagged_review if rep else 0,
             "errors": rep.errors if rep else 1,
+            # Persist the executor's submit-phase signal so the dashboard
+            # (and `submission_log->>'submit_reason'` queries) can show
+            # why submit succeeded or failed. Added on 2026-04-17 after
+            # the Whoop canary showed submit_reason dropped on the floor.
+            "submit_reason": getattr(rep, "submit_reason", None) if rep else None,
+            "submitted": bool(getattr(rep, "submitted", False)) if rep else False,
+            # The dashboard's needs_review render path expects
+            # `Array<{question, kind, dom_id, suggested?}>`. Without this
+            # key the UI was rendering nothing for review-required rows
+            # — testers literally couldn't see the questions to answer.
+            # Built per-run inside _run_browser by correlating candidates
+            # with decisions that ended up required_review=True.
+            "needs_review": list(getattr(art, "needs_review", []) or []),
             "outcomes": [o.__dict__ if hasattr(o, "__dict__") else o for o in (rep.outcomes if rep else [])],
             "decisions": [
                 {
@@ -453,13 +726,27 @@ async def run_job(app_row: dict, *, limiter: CompanyLimiter) -> None:
             # Either review-hold or execution error
             needs_review = any(d.required_review for d in art.decisions) and review_before_send
             status = REVIEW_HOLD_STATUS if needs_review else "failed"
+            # Build a user-facing error_message. Priority:
+            #   1. rep.submit_reason — the executor's own explanation
+            #      (e.g. "no_application_form_found", "submit_click_failed: …",
+            #       "no_confirmation_signal via <selector>")
+            #   2. `execution_errors=N` if we actually had per-field errors
+            #   3. The legacy "no_report" fallback when rep is missing entirely
+            # This replaces the old fallback `execution_errors=0` which
+            # surfaced on the Whoop canary with no useful signal.
+            if rep is None:
+                err_msg = "no_report"
+            elif rep.submit_reason:
+                err_msg = rep.submit_reason
+            elif rep.errors > 0:
+                err_msg = f"execution_errors={rep.errors}"
+            else:
+                err_msg = "no_fields_parsed"
             _write_status(
                 db, application_id, status,
                 submission_log=log_trace,
                 screenshot_url=screenshot_url,
-                error_message=None if needs_review else (
-                    f"execution_errors={rep.errors}" if rep else "no_report"
-                ),
+                error_message=None if needs_review else err_msg,
                 completed=not needs_review,
             )
             return

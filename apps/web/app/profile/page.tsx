@@ -26,6 +26,10 @@ type ProfileForm = {
   needs_sponsorship: boolean;
   willing_to_relocate: boolean;
   gender: string;
+  // Distinct from gender — pronouns are NEVER inferred from gender.
+  // Empty string = not set; the worker will escalate pronouns questions
+  // to needs_review until the user explicitly chooses.
+  pronouns: string;
   race: string;
   hispanic_ethnicity: boolean | null;
   veteran_status: string;
@@ -38,6 +42,7 @@ type PrefsForm = {
   auto_apply_keywords: string[];
   licenses_certifications: string[];
   years_of_experience: string;
+  seniority: string;
   salary_min_usd: string;
   salary_max_usd: string;
   start_availability: string;
@@ -55,6 +60,7 @@ const EMPTY_PROFILE: ProfileForm = {
   needs_sponsorship: false,
   willing_to_relocate: true,
   gender: "",
+  pronouns: "",
   race: "",
   hispanic_ethnicity: null,
   veteran_status: "",
@@ -67,6 +73,7 @@ const EMPTY_PREFS: PrefsForm = {
   auto_apply_keywords: [],
   licenses_certifications: [],
   years_of_experience: "",
+  seniority: "any",
   salary_min_usd: "",
   salary_max_usd: "",
   start_availability: "immediately",
@@ -82,6 +89,13 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<"idle" | "saving" | "saved">("idle");
   const [resumeName, setResumeName] = useState<string | null>(null);
+  // Track when the last save landed so the user can SEE that their
+  // changes are persisted (was previously a 1.5s pulse only).
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  // Saved-answer vault rows for the new "Your saved answers" section.
+  type SavedAnswer = { id: string; question_text: string; answer_text: string; times_used: number; last_used_at: string | null };
+  const [savedAnswers, setSavedAnswers] = useState<SavedAnswer[]>([]);
+  const [deletingAnswerId, setDeletingAnswerId] = useState<string | null>(null);
 
   const profileTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prefsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -104,11 +118,15 @@ export default function ProfilePage() {
         return;
       }
 
-      const [{ data: prof }, { data: prefData }, { data: resumes }] = await Promise.all([
+      const [{ data: prof }, { data: prefData }, { data: resumes }, { data: answers }] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
         supabase.from("preferences").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("resumes").select("file_name").eq("user_id", user.id).eq("is_primary", true).limit(1),
+        // Answer-vault rows for the new "Your saved answers" section.
+        // Most-recent first; cap at 50 for the visible list.
+        supabase.from("answers").select("id, question_text, answer_text, times_used, last_used_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
       ]);
+      if (answers) setSavedAnswers(answers as SavedAnswer[]);
 
       if (prof) {
         setProfile({
@@ -122,6 +140,7 @@ export default function ProfilePage() {
           needs_sponsorship: prof.needs_sponsorship ?? false,
           willing_to_relocate: prof.willing_to_relocate ?? true,
           gender: prof.gender || "",
+          pronouns: prof.pronouns || "",
           race: prof.race || "",
           hispanic_ethnicity: prof.hispanic_ethnicity ?? null,
           veteran_status: prof.veteran_status || "",
@@ -136,6 +155,7 @@ export default function ProfilePage() {
           auto_apply_keywords: prefData.auto_apply_keywords || [],
           licenses_certifications: prefData.licenses_certifications || [],
           years_of_experience: prefData.years_of_experience != null ? String(prefData.years_of_experience) : "",
+          seniority: prefData.seniority || "any",
           salary_min_usd: prefData.salary_min_usd != null ? String(prefData.salary_min_usd) : "",
           salary_max_usd: prefData.salary_max_usd != null ? String(prefData.salary_max_usd) : "",
           start_availability: prefData.start_availability || "immediately",
@@ -170,6 +190,7 @@ export default function ProfilePage() {
         needs_sponsorship: next.needs_sponsorship,
         willing_to_relocate: next.willing_to_relocate,
         gender: next.gender || null,
+        pronouns: next.pronouns || null,
         race: next.race || null,
         hispanic_ethnicity: next.hispanic_ethnicity,
         veteran_status: next.veteran_status || null,
@@ -181,6 +202,7 @@ export default function ProfilePage() {
       }
       await supabase.from("profiles").update(update).eq("id", user.id);
       setSaving("saved");
+      setLastSavedAt(new Date());
       setTimeout(() => setSaving((s) => s === "saved" ? "idle" : s), 1500);
     }, 800);
   }, []);
@@ -200,6 +222,7 @@ export default function ProfilePage() {
         auto_apply_keywords: next.auto_apply_keywords,
         licenses_certifications: next.licenses_certifications,
         years_of_experience: next.years_of_experience ? parseInt(next.years_of_experience, 10) : null,
+        seniority: next.seniority || "any",
         salary_min_usd: next.salary_min_usd ? parseInt(next.salary_min_usd, 10) : null,
         salary_max_usd: next.salary_max_usd ? parseInt(next.salary_max_usd, 10) : null,
         start_availability: next.start_availability,
@@ -207,6 +230,7 @@ export default function ProfilePage() {
         updated_at: new Date().toISOString(),
       });
       setSaving("saved");
+      setLastSavedAt(new Date());
       setTimeout(() => setSaving((s) => s === "saved" ? "idle" : s), 1500);
     }, 800);
   }, []);
@@ -246,6 +270,100 @@ export default function ProfilePage() {
     updatePrefs({ [key]: list.filter((x) => x !== value) } as Partial<PrefsForm>);
   };
 
+  // Flush any pending debounced save and persist immediately. Wired
+  // to the new "Save now" button so users who don't want to wait the
+  // 800 ms auto-save window get an explicit confirmation moment.
+  const saveNow = async () => {
+    if (profileTimer.current) clearTimeout(profileTimer.current);
+    if (prefsTimer.current) clearTimeout(prefsTimer.current);
+    const supabase = getBrowserSupabase();
+    if (!supabase) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    setSaving("saving");
+    const profileUpdate: Record<string, unknown> = {
+      full_name: profile.full_name || null,
+      phone: profile.phone || null,
+      linkedin_url: profile.linkedin_url || null,
+      github_url: profile.github_url || null,
+      current_city: profile.current_city || null,
+      current_state: profile.current_state || null,
+      needs_sponsorship: profile.needs_sponsorship,
+      willing_to_relocate: profile.willing_to_relocate,
+      gender: profile.gender || null,
+      pronouns: profile.pronouns || null,
+      race: profile.race || null,
+      hispanic_ethnicity: profile.hispanic_ethnicity,
+      veteran_status: profile.veteran_status || null,
+      disability_status: profile.disability_status || null,
+      updated_at: new Date().toISOString(),
+    };
+    if (VALID_WORK_AUTH.includes(profile.work_auth_status)) {
+      profileUpdate.work_auth_status = profile.work_auth_status;
+    }
+    await Promise.all([
+      supabase.from("profiles").update(profileUpdate).eq("id", user.id),
+      supabase.from("preferences").upsert({
+        user_id: user.id,
+        target_titles: prefs.target_titles,
+        target_locations: prefs.target_locations,
+        auto_apply_keywords: prefs.auto_apply_keywords,
+        licenses_certifications: prefs.licenses_certifications,
+        years_of_experience: prefs.years_of_experience ? parseInt(prefs.years_of_experience, 10) : null,
+        seniority: prefs.seniority || "any",
+        salary_min_usd: prefs.salary_min_usd ? parseInt(prefs.salary_min_usd, 10) : null,
+        salary_max_usd: prefs.salary_max_usd ? parseInt(prefs.salary_max_usd, 10) : null,
+        start_availability: prefs.start_availability,
+        willing_background_check: prefs.willing_background_check,
+        updated_at: new Date().toISOString(),
+      }),
+    ]);
+    setSaving("saved");
+    setLastSavedAt(new Date());
+    setTimeout(() => setSaving((s) => s === "saved" ? "idle" : s), 1500);
+  };
+
+  // Delete a saved-answer-vault row. The agent will re-ask the
+  // question on the next application that surfaces it (and the user
+  // can save a new answer then).
+  const deleteSavedAnswer = async (answerId: string) => {
+    const supabase = getBrowserSupabase();
+    if (!supabase) return;
+    setDeletingAnswerId(answerId);
+    try {
+      await supabase.from("answers").delete().eq("id", answerId);
+      setSavedAnswers((rows) => rows.filter((r) => r.id !== answerId));
+    } finally {
+      setDeletingAnswerId(null);
+    }
+  };
+
+  // Compute which "high-impact" fields are missing — these are the
+  // ones that historically broke real applications (LinkedIn URL on
+  // Wealthfront, phone on most Greenhouse forms, work auth on every
+  // EEO-aware ATS, current city for location-screened roles). Pronouns
+  // is intentionally NOT in this list — empty pronouns is a valid
+  // "prefer not to say" choice and the worker handles it correctly.
+  const missingCritical: { label: string; field: string }[] = [];
+  if (!profile.full_name?.trim()) missingCritical.push({ label: "Full name", field: "full_name" });
+  if (!profile.phone?.trim()) missingCritical.push({ label: "Phone number", field: "phone" });
+  if (!profile.linkedin_url?.trim()) missingCritical.push({ label: "LinkedIn URL", field: "linkedin_url" });
+  if (!profile.current_city?.trim()) missingCritical.push({ label: "Current city", field: "current_city" });
+  if (!profile.work_auth_status?.trim()) missingCritical.push({ label: "Work authorization status", field: "work_auth_status" });
+  if (!resumeName) missingCritical.push({ label: "Resume", field: "resume" });
+
+  const fmtRelative = (d: Date | null): string => {
+    if (!d) return "";
+    const sec = Math.max(0, Math.floor((Date.now() - d.getTime()) / 1000));
+    if (sec < 5) return "just now";
+    if (sec < 60) return `${sec}s ago`;
+    const min = Math.floor(sec / 60);
+    if (min < 60) return `${min}m ago`;
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return `${hr}h ago`;
+    return d.toLocaleString();
+  };
+
   if (loading) {
     return (
       <ConsoleShell activePath="/profile" eyebrow="Profile" title="Your profile" description="">
@@ -270,6 +388,85 @@ export default function ProfilePage() {
       }
       actions={[{ href: "/dashboard", label: "Back to dashboard", variant: "secondary" }]}
     >
+      {/* MISSING-INFO WARNING — applications likely fail without these */}
+      {missingCritical.length > 0 && (
+        <section className="console-section">
+          <article
+            className="glass auto-card"
+            style={{
+              border: "1px solid rgba(255, 153, 51, 0.35)",
+              background: "rgba(255, 153, 51, 0.06)",
+            }}
+          >
+            <header className="auto-card-head">
+              <div>
+                <p className="eyebrow" style={{ color: "#ff9933" }}>Heads up</p>
+                <h3 style={{ marginBottom: 6 }}>
+                  Applications might fail without these {missingCritical.length === 1 ? "field" : "fields"}
+                </h3>
+                <p className="auto-card-sub">
+                  Most employer forms ask for these directly. Fill them now so the agent can submit cleanly without stopping for review:
+                </p>
+                <ul style={{ margin: "10px 0 0", paddingLeft: 20, fontSize: 13.5, lineHeight: 1.7 }}>
+                  {missingCritical.map((m) => (
+                    <li key={m.field}><strong>{m.label}</strong></li>
+                  ))}
+                </ul>
+              </div>
+            </header>
+          </article>
+        </section>
+      )}
+
+      {/* SAVE STATUS BAR — explicit "Save now" + last-saved timestamp */}
+      <section className="console-section">
+        <article
+          className="glass"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            padding: "10px 14px",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 12,
+            background: "rgba(255,255,255,0.03)",
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13 }}>
+            <span
+              style={{
+                display: "inline-block",
+                width: 9,
+                height: 9,
+                borderRadius: 99,
+                background:
+                  saving === "saving" ? "#7caee5"
+                  : saving === "saved" ? "#7adfa3"
+                  : lastSavedAt ? "#7adfa3"
+                  : "rgba(255,255,255,0.25)",
+              }}
+            />
+            <span style={{ color: "var(--muted)" }}>
+              {saving === "saving" && "Saving…"}
+              {saving === "saved" && "Saved just now"}
+              {saving === "idle" && lastSavedAt && `Saved ${fmtRelative(lastSavedAt)}`}
+              {saving === "idle" && !lastSavedAt && "Changes save automatically"}
+            </span>
+          </div>
+          <button
+            type="button"
+            className="btn-secondary auto-btn-sm"
+            onClick={saveNow}
+            disabled={saving === "saving"}
+            title="Flush any pending edits and save right now"
+          >
+            {saving === "saving" ? "Saving…" : "Save now"}
+          </button>
+        </article>
+      </section>
+
       {/* RESUME */}
       <section className="console-section">
         <article className="glass auto-card">
@@ -303,7 +500,7 @@ export default function ProfilePage() {
           <div className="wiz-field-grid">
             <label className="wiz-label">
               <span>Full name</span>
-              <input value={profile.full_name} onChange={(e) => updateProfile({ full_name: e.target.value })} placeholder="Aditya Sakhale" />
+              <input value={profile.full_name} onChange={(e) => updateProfile({ full_name: e.target.value })} placeholder="Your full name" />
             </label>
             <label className="wiz-label">
               <span>Phone</span>
@@ -458,6 +655,16 @@ export default function ProfilePage() {
               <input type="number" min="0" max="50" value={prefs.years_of_experience} onChange={(e) => updatePrefs({ years_of_experience: e.target.value })} placeholder="e.g. 3" />
             </label>
             <label className="wiz-label">
+              <span>Seniority level</span>
+              <select value={prefs.seniority} onChange={(e) => updatePrefs({ seniority: e.target.value })}>
+                <option value="any">Any level</option>
+                <option value="entry">Entry level (0–2 yrs)</option>
+                <option value="mid">Mid-career (3–6 yrs)</option>
+                <option value="senior">Senior (7+ yrs)</option>
+                <option value="staff_plus">Staff / Principal+</option>
+              </select>
+            </label>
+            <label className="wiz-label">
               <span>Start availability</span>
               <select value={prefs.start_availability} onChange={(e) => updatePrefs({ start_availability: e.target.value })}>
                 <option value="immediately">Immediately</option>
@@ -533,6 +740,18 @@ export default function ProfilePage() {
               </select>
             </label>
             <label className="wiz-label">
+              <span>Pronouns <em>(optional, distinct from gender)</em></span>
+              <select value={profile.pronouns} onChange={(e) => updateProfile({ pronouns: e.target.value })}>
+                <option value="">Prefer not to say</option>
+                <option value="she/her">she / her</option>
+                <option value="he/him">he / him</option>
+                <option value="they/them">they / them</option>
+                <option value="she/they">she / they</option>
+                <option value="he/they">he / they</option>
+                <option value="any pronouns">any pronouns</option>
+              </select>
+            </label>
+            <label className="wiz-label">
               <span>Race / ethnicity <em>(optional)</em></span>
               <select value={profile.race} onChange={(e) => updateProfile({ race: e.target.value })}>
                 <option value="">Prefer not to say</option>
@@ -574,6 +793,72 @@ export default function ProfilePage() {
               </select>
             </label>
           </div>
+        </article>
+      </section>
+
+      {/* SAVED ANSWERS — read + delete the answer-vault rows the
+          worker reuses across applications. New section so users can
+          actually see what's been remembered (was previously
+          invisible). Edits aren't supported here — to change an answer
+          the user can delete the row, and the agent will re-ask the
+          question on the next application that surfaces it. */}
+      <section className="console-section">
+        <article className="glass auto-card">
+          <header className="auto-card-head">
+            <div>
+              <p className="eyebrow">Saved answers</p>
+              <h3>What the agent remembers from past applications</h3>
+              <p className="auto-card-sub">
+                Every time you answer a screening question, we save it here so the agent can reuse it on future applications without asking you again. Delete a row to be re-asked next time.
+              </p>
+            </div>
+          </header>
+          {savedAnswers.length === 0 ? (
+            <p style={{ margin: "16px 0 0", fontSize: 13, color: "var(--muted)" }}>
+              No saved answers yet. They&apos;ll appear here as you answer review questions on the dashboard.
+            </p>
+          ) : (
+            <ul style={{ margin: "16px 0 0", padding: 0, listStyle: "none", display: "grid", gap: 10 }}>
+              {savedAnswers.map((a) => (
+                <li
+                  key={a.id}
+                  style={{
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: 10,
+                    padding: 12,
+                    background: "rgba(255,255,255,0.03)",
+                    display: "flex",
+                    gap: 12,
+                    alignItems: "flex-start",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: 12.5, color: "var(--muted)", marginBottom: 4 }}>
+                      {a.question_text}
+                    </div>
+                    <div style={{ fontSize: 14, color: "#e9eaee", wordBreak: "break-word" }}>
+                      {a.answer_text}
+                    </div>
+                    {(a.times_used > 0 || a.last_used_at) && (
+                      <div style={{ marginTop: 4, fontSize: 11, color: "#7adfa3" }}>
+                        Reused {a.times_used}× {a.last_used_at ? `· last ${fmtRelative(new Date(a.last_used_at))}` : ""}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-secondary auto-btn-sm"
+                    disabled={deletingAnswerId === a.id}
+                    onClick={() => deleteSavedAnswer(a.id)}
+                    style={{ flexShrink: 0 }}
+                  >
+                    {deletingAnswerId === a.id ? "Deleting…" : "Delete"}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </article>
       </section>
     </ConsoleShell>

@@ -21,7 +21,7 @@ This policy applies to all Instaply surfaces: the web app at **instaply.asion.ai
 - **Work authorization:** citizenship/visa status, sponsorship needs, location
 - **Demographic data (optional, for EEO compliance):** gender, race/ethnicity, veteran status, disability status — provided only if you choose to fill them
 - **Preferences:** target roles, locations, salary expectations, excluded companies
-- **Payment data:** handled by our merchant of record (Paddle). We never store your full card number.
+- **Payment data:** handled by our payment processor (Razorpay). We never store your full card number.
 
 ### 2.2 Automatically
 - Log data (IP address, user agent, timestamps)
@@ -56,7 +56,7 @@ Under the Indian **Digital Personal Data Protection Act, 2023** ("DPDP Act") and
 | Railway / Fly.io | API + worker hosting | USA / EU |
 | NVIDIA Corporation (NIM) | AI inference for ranking + cover letters | USA |
 | Anthropic / OpenAI (optional fallback) | AI inference | USA |
-| Paddle.com Market Ltd. | Payment processing, merchant of record | Ireland / UK |
+| Razorpay Software Pvt. Ltd. | Payment processing | India |
 | Google LLC (Gmail API) | Confirmation-email verification (if you connect) | USA |
 | Vercel Inc. | Frontend hosting | USA |
 

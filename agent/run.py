@@ -107,8 +107,13 @@ def _acquire_lock():
                 )
                 time.sleep(1)
 
-    # Write our PID
-    LOCKFILE.write_text(str(os.getpid()))
+    # Write our PID. On Windows this can fail early if another process has
+    # already locked the file, so handle that path gracefully.
+    try:
+        LOCKFILE.write_text(str(os.getpid()))
+    except PermissionError:
+        print("ERROR: Could not update lockfile - another runner may be active. Exiting.")
+        sys.exit(0)
 
     # On Windows, use msvcrt file locking for true mutual exclusion
     if sys.platform == "win32":

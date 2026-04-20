@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { Resend } from "resend";
+import { createServerClient } from "@supabase/ssr";
 
 /**
  * POST /api/email/welcome
@@ -8,32 +9,84 @@ import { Resend } from "resend";
  * after Supabase auth.signUp succeeds. If RESEND_API_KEY is not set,
  * silently skips (so local dev never fails).
  *
- * Body: { email: string, name?: string }
+ * Auth: caller must be the signed-in user the email is being sent to
+ * (verified via Supabase session cookie). Prevents abuse where any actor
+ * could spam our domain with arbitrary "welcome" emails to victims.
+ *
+ * Body: { name?: string } — email comes from the verified session.
  */
+
+// In-process rate limiter: max 3 welcome emails per user per hour.
+const _windows: Map<string, { count: number; resetAt: number }> = new Map();
+function rateLimitOk(key: string, max = 3, windowMs = 3600_000): boolean {
+  const now = Date.now();
+  const w = _windows.get(key);
+  if (!w || now > w.resetAt) {
+    _windows.set(key, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+  if (w.count >= max) return false;
+  w.count += 1;
+  return true;
+}
+
+// HTML escape for any user-controlled content interpolated into the email body
+function htmlEscape(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export async function POST(request: NextRequest) {
   const key = process.env.RESEND_API_KEY;
   if (!key) {
     return NextResponse.json({ sent: false, reason: "RESEND_API_KEY not set" });
   }
 
-  let body: { email?: string; name?: string };
+  // 1. Require a valid Supabase session — auth-side identifies the user
+  const supaUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supaKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supaUrl || !supaKey) {
+    return NextResponse.json({ error: "Auth not configured" }, { status: 500 });
+  }
+  const supabase = createServerClient(supaUrl, supaKey, {
+    cookies: {
+      getAll: () => request.cookies.getAll(),
+      setAll: () => { /* read-only here */ },
+    },
+  });
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user || !user.email) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  // 2. Rate limit per user
+  if (!rateLimitOk(user.id)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
+  // 3. Parse + sanitize body. Email comes from the session, NOT the body.
+  let body: { name?: string };
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid body" }, { status: 400 });
-  }
-
-  if (!body.email) {
-    return NextResponse.json({ error: "email required" }, { status: 400 });
+    body = {};
   }
 
   const resend = new Resend(key);
-  const firstName = body.name?.split(" ")[0] || "there";
+  const rawName = (body.name || user.user_metadata?.full_name || "").toString();
+  // Truncate, then escape for HTML interpolation. This neuters any
+  // injection attempts via display_name (e.g. <img onerror>).
+  const firstName = htmlEscape(rawName.split(/\s+/)[0]?.slice(0, 60) || "there");
+  const recipient = user.email;
 
   try {
     await resend.emails.send({
       from: "Instaply <hello@asion.ai>",
-      to: body.email,
+      to: recipient,
       subject: "Welcome to Instaply — 3 free applications are ready",
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 32px 0;">

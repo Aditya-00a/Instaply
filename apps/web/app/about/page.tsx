@@ -31,8 +31,8 @@ const WHAT = [
 const ATS = [
   { name: "Greenhouse", status: "Supported" },
   { name: "Lever", status: "Supported" },
-  { name: "SmartRecruiters", status: "Supported" },
-  { name: "Workday", status: "Beta" },
+  { name: "SmartRecruiters", status: "In development" },
+  { name: "Workday", status: "Paused" },
   { name: "Ashby", status: "Roadmap" },
   { name: "iCIMS", status: "Roadmap" },
 ];

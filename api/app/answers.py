@@ -25,15 +25,34 @@ router = APIRouter(tags=["answers"])
 
 
 def _normalize_question(q: str) -> str:
-    """Normalize question text for hashing. Strip whitespace, lowercase, drop punctuation."""
-    q = (q or "").lower().strip()
-    q = re.sub(r"\s+", " ", q)
-    q = re.sub(r"[^\w\s]", "", q)
-    return q
+    """Normalize question text for hashing.
+
+    MUST stay byte-identical to `worker.autofill.cache.question_hash`'s
+    normalization, otherwise the answer vault becomes write-only — the
+    API saves answers under one hash and the worker looks them up under
+    another, and `times_used` stays 0 forever (which is exactly what
+    happened on 2026-04-18: every saved answer was orphaned and the
+    user got stuck in a needs_review → queued → needs_review loop).
+
+    The worker is the canonical implementation because it runs the
+    cache LOOKUP path; the API only writes. So we mirror the worker:
+    lowercase, collapse internal whitespace, strip leading/trailing
+    non-word characters only. Internal punctuation is preserved (so
+    "what's your name" and "what is your name" stay distinct, which
+    is the conservative default).
+    """
+    s = (q or "").lower().strip()
+    s = re.sub(r"\s+", " ", s)
+    s = re.sub(r"^[\W_]+|[\W_]+$", "", s)
+    return s
 
 
 def _question_hash(q: str) -> str:
-    return hashlib.sha256(_normalize_question(q).encode("utf-8")).hexdigest()[:32]
+    """Full sha256 hex (64 chars). MUST match
+    `worker.autofill.cache.question_hash` exactly — see _normalize_question
+    for the prior incident.
+    """
+    return hashlib.sha256(_normalize_question(q).encode("utf-8")).hexdigest()
 
 
 @router.post("/answers/save")
@@ -44,10 +63,16 @@ async def save_answer(
 ):
     """Save (or update) the user's answer to a question."""
     body = await request.json()
-    question = (body.get("question") or "").strip()
-    answer = (body.get("answer") or "").strip()
+    # Length caps prevent a malicious or runaway client from shoving megabytes
+    # into the answers table. Real screening Qs and answers fit well under these.
+    question = (body.get("question") or "").strip()[:1000]
+    answer = (body.get("answer") or "").strip()[:5000]
     company = body.get("company_slug") or None
+    if isinstance(company, str):
+        company = company.strip()[:64] or None
     application_id = body.get("application_id")
+    if isinstance(application_id, str):
+        application_id = application_id.strip()[:64] or None
 
     if not question or not answer:
         raise HTTPException(400, "question and answer required")
@@ -85,14 +110,28 @@ async def save_answer(
 
     # If this answer was for a specific application that's failed/needs_review,
     # re-queue it so the submitter tries again with the new answer.
+    # IMPORTANT: only re-queue if the app is in a re-queueable state — never
+    # touch an in_progress row (would race with the worker → double-submit).
+    requeued = False
     if application_id:
-        db.table("applications").update({
-            "status": "queued",
-            "error_message": None,
-            "started_at": None,
-        }).eq("id", application_id).eq("user_id", user_id).execute()
+        result = (
+            db.table("applications")
+            .update({
+                "status": "queued",
+                "error_message": None,
+                "started_at": None,
+                # Clear stale submission_log so the dashboard's audio cue
+                # re-fires if the app stalls again on the next attempt.
+                "submission_log": None,
+            })
+            .eq("id", application_id)
+            .eq("user_id", user_id)
+            .in_("status", ["failed", "needs_review", "skipped"])
+            .execute()
+        )
+        requeued = bool(result.data)
 
-    return {"ok": True, "answer_id": ans_id, "requeued": bool(application_id)}
+    return {"ok": True, "answer_id": ans_id, "requeued": requeued}
 
 
 @router.get("/applications/{app_id}/needs-review")

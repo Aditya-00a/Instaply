@@ -12,17 +12,17 @@ from worker.autofill import resolve_field
 from worker.autofill.cache import MemoryAnswerCache
 from worker.autofill.models import DecisionSource, UserProfile
 
-FIXTURE = Path(__file__).parent / "fixtures" / "smartrecruiters_sample.html"
+FIXTURE = Path(__file__).resolve().parents[1] / "worker" / "tests" / "fixtures" / "smartrecruiters_sample.html"
 
 
 PROFILE = UserProfile(
     user_id="33333333-3333-3333-3333-333333333333",
-    first_name="Aditya",
-    last_name="Sakhale",
-    full_name="Aditya Sakhale",
-    email="aditya@example.com",
+    first_name="Jordan",
+    last_name="Lee",
+    full_name="Jordan Lee",
+    email="jordan.lee@example.com",
     phone_e164="+12125551234",
-    linkedin_url="https://linkedin.com/in/aditya",
+    linkedin_url="https://linkedin.com/in/jordan-lee",
     work_auth_status="opt",
     needs_sponsorship=True,
     degree="Master's",
@@ -51,9 +51,9 @@ def test_full_pipeline():
     by_id = {c.id_attr: c for c in cands if c.id_attr}
     decisions = {c.dom_id: resolve_field(c, PROFILE, cache=MemoryAnswerCache()) for c in cands}
 
-    assert decisions[by_id["firstName"].dom_id].value == "Aditya"
-    assert decisions[by_id["lastName"].dom_id].value == "Sakhale"
-    assert decisions[by_id["email"].dom_id].value == "aditya@example.com"
+    assert decisions[by_id["firstName"].dom_id].value == "Jordan"
+    assert decisions[by_id["lastName"].dom_id].value == "Lee"
+    assert decisions[by_id["email"].dom_id].value == "jordan.lee@example.com"
     assert decisions[by_id["phone"].dom_id].value == "+12125551234"
     assert "linkedin.com" in decisions[by_id["linkedin"].dom_id].value
     assert decisions[by_id["resume"].dom_id].value == "/tmp/resume.pdf"

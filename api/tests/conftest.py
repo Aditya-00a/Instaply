@@ -71,11 +71,15 @@ class FakeDB:
 @pytest.fixture
 def fake_db(monkeypatch):
     db = FakeDB()
-    # Patch both callsites: main module + audit module.
-    from app import db as dbmod, audit as auditmod, paddle as paddlemod
+    # Patch every module that imports service_client at module load
+    # time. Razorpay replaced Paddle on 2026-04-18 — paddle.py was
+    # removed but conftest still imported it, blowing up every API
+    # test with `ImportError: cannot import name 'paddle'`. The
+    # razorpay_webhook module now owns the same patch point.
+    from app import db as dbmod, audit as auditmod, razorpay_webhook as razorpaymod
     monkeypatch.setattr(dbmod, "service_client", lambda: db)
     monkeypatch.setattr(auditmod, "service_client", lambda: db)
-    monkeypatch.setattr(paddlemod, "service_client", lambda: db)
+    monkeypatch.setattr(razorpaymod, "service_client", lambda: db)
     # main.py uses `from .db import service_client` — patch that too.
     from app import main as mainmod
     monkeypatch.setattr(mainmod, "service_client", lambda: db)

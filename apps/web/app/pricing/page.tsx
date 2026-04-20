@@ -60,7 +60,7 @@ const FAQ = [
   },
   {
     q: "Which job portals are supported?",
-    a: "At launch: Greenhouse, Lever, and SmartRecruiters. Workday support is in beta for selected companies. More portals are added as we test them end-to-end.",
+    a: "Live today: Greenhouse and Lever. Workday is paused while we rebuild it as a browser extension (login-walled portals are more reliable when run from your own browser). SmartRecruiters and other ATS platforms are in active development. We add new portals as we validate them end-to-end against real applications.",
   },
   {
     q: "Do you guarantee interviews or offers?",

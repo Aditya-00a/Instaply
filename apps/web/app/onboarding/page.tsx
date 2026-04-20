@@ -77,6 +77,18 @@ const EMPTY_IDENTITY: Identity = {
   needsSponsorship: false,
 };
 
+async function analyzePrimaryResume(accessToken: string) {
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.asion.ai";
+  const res = await fetch(`${apiBase}/profile/analyze-resume`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    throw new Error(await res.text() || "Resume analysis failed");
+  }
+  return res.json();
+}
+
 export default function OnboardingPage() {
   const router = useRouter();
   const ready = isSupabaseConfigured();
@@ -273,6 +285,18 @@ export default function OnboardingPage() {
         file_size_bytes: file.size,
         is_primary: true,
       });
+
+      // Keep extracted_skills / resume_text in sync with the latest primary
+      // resume so the worker answers from current resume evidence instead of
+      // stale profile-derived guesses.
+      const accessToken = (await supabase.auth.getSession()).data.session?.access_token;
+      if (accessToken) {
+        try {
+          await analyzePrimaryResume(accessToken);
+        } catch (e) {
+          console.warn("Resume analysis after upload failed:", e);
+        }
+      }
     } catch (e) {
       setUploadError(e instanceof Error ? e.message : "Upload failed.");
     } finally {

@@ -1,117 +1,27 @@
 "use client";
 
 /**
- * Paddle.js loader and singleton.
+ * Credit-pack math helpers.
  *
- * Loads Paddle's CDN script lazily on first checkout open, initializes
- * with the client-side token from NEXT_PUBLIC_PADDLE_CLIENT_TOKEN, and
- * caches the global instance so subsequent checkouts open instantly.
+ * NOTE on the file name: this file is named `paddle.ts` for historical
+ * reasons — Paddle was the original payment processor and several
+ * components import from `../lib/paddle`. The Paddle SDK loader and
+ * `getPaddle()` / `isPaddleConfigured()` were removed on 2026-04-19
+ * after Razorpay became the sole live processor (see
+ * `api/app/razorpay_webhook.py` and `apps/web/app/billing/page.tsx`).
+ *
+ * What remains are two pure, processor-agnostic functions used by
+ * `components/pricing-custom.tsx`:
+ *
+ *   - `bonusForAmount(usd)` — bonus tier table:
+ *     +10% at $25, +15% at $50, +20% at $100, capped at +20%.
+ *   - `totalCreditsForCustom(usd)` — applies the bonus and floors to
+ *     an integer credit count.
+ *
+ * Both stay here so the pricing-custom component keeps a single
+ * import path and we don't churn the file tree just for a rename.
  */
 
-type PaddleCheckoutItem = { priceId: string; quantity: number };
-
-type PaddleCheckoutSettings = {
-  displayMode?: "overlay" | "inline";
-  theme?: "light" | "dark";
-  successUrl?: string;
-  allowLogout?: boolean;
-};
-
-type PaddleEventData = {
-  status: string;
-  transaction_id?: string;
-  customer?: { email?: string };
-  items?: Array<{ price_id: string; quantity: number }>;
-};
-
-type PaddleEvent = {
-  name: string;
-  data?: PaddleEventData;
-};
-
-type PaddleSDK = {
-  Initialize: (opts: {
-    token: string;
-    environment?: "production" | "sandbox";
-    eventCallback?: (e: PaddleEvent) => void;
-  }) => void;
-  Checkout: {
-    open: (opts: {
-      items: PaddleCheckoutItem[];
-      customer?: { email?: string; id?: string };
-      customData?: Record<string, unknown>;
-      settings?: PaddleCheckoutSettings;
-    }) => void;
-  };
-  Environment?: { set: (env: "production" | "sandbox") => void };
-};
-
-declare global {
-  interface Window {
-    Paddle?: PaddleSDK;
-  }
-}
-
-const PADDLE_CDN = "https://cdn.paddle.com/paddle/v2/paddle.js";
-
-let loadingPromise: Promise<PaddleSDK | null> | null = null;
-
-export function isPaddleConfigured(): boolean {
-  return Boolean(process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN);
-}
-
-export async function getPaddle(): Promise<PaddleSDK | null> {
-  if (typeof window === "undefined") return null;
-
-  if (window.Paddle) return window.Paddle;
-  if (loadingPromise) return loadingPromise;
-
-  const token = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN;
-  if (!token) return null;
-
-  loadingPromise = new Promise<PaddleSDK | null>((resolve) => {
-    const existing = document.querySelector<HTMLScriptElement>(
-      `script[src="${PADDLE_CDN}"]`
-    );
-    if (existing && window.Paddle) {
-      resolve(window.Paddle);
-      return;
-    }
-
-    const script = existing ?? document.createElement("script");
-    if (!existing) {
-      script.src = PADDLE_CDN;
-      script.async = true;
-      document.head.appendChild(script);
-    }
-
-    script.addEventListener("load", () => {
-      const sdk = window.Paddle;
-      if (!sdk) {
-        resolve(null);
-        return;
-      }
-      try {
-        sdk.Initialize({
-          token,
-          environment: token.startsWith("test_") ? "sandbox" : "production",
-        });
-      } catch {
-        // If already initialized, that's fine.
-      }
-      resolve(sdk);
-    });
-
-    script.addEventListener("error", () => resolve(null));
-  });
-
-  return loadingPromise;
-}
-
-/**
- * Bonus-tier table (mirrors what the webhook handler will apply
- * server-side for real credit grants).
- */
 export function bonusForAmount(amount: number): { pct: number; label: string } {
   if (amount >= 100) return { pct: 0.20, label: "+20% bonus" };
   if (amount >= 50) return { pct: 0.15, label: "+15% bonus" };

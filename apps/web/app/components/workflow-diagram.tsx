@@ -42,7 +42,7 @@ const STAGES: Stage[] = [
   {
     icon: <Send size={22} />,
     title: "Submit",
-    caption: "For approved matches, we fill the ATS form and submit on your behalf.",
+    caption: "For matched roles, we fill the ATS form and submit on your behalf.",
     accent: "blue",
   },
   {

@@ -1,0 +1,67 @@
+name: 🎉 Got the job
+description: Did Instaply help you land an offer? I want to hear about it. This is the only metric I care about.
+title: "Got the job: <company> — <role>"
+labels: ["got-the-job", "celebrate"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Congratulations 🎉
+
+        Seriously — this is the entire point of the project. Tell me as much or as little as you want.
+        None of these fields are required. Skip anything that feels too personal.
+
+  - type: input
+    id: company
+    attributes:
+      label: Company
+      placeholder: e.g. Acme Corp
+    validations:
+      required: false
+
+  - type: input
+    id: role
+    attributes:
+      label: Role
+      placeholder: e.g. Software Engineer
+    validations:
+      required: false
+
+  - type: input
+    id: applications
+    attributes:
+      label: How many applications did you send before this one?
+      placeholder: e.g. about 200
+    validations:
+      required: false
+
+  - type: textarea
+    id: story
+    attributes:
+      label: Your story (optional)
+      description: Anything you want to share — the search, the visa situation, what worked, what didn't.
+      placeholder: |
+        I was applying for X months and...
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: international
+    attributes:
+      label: Were you applying as an international candidate / needed sponsorship?
+      options:
+        - label: Yes
+        - label: No
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: share
+    attributes:
+      label: Can I share your story (anonymously) with other students?
+      options:
+        - label: Yes, anonymized
+        - label: Yes, with my name/handle
+        - label: No, keep this private to the maintainers
+    validations:
+      required: false

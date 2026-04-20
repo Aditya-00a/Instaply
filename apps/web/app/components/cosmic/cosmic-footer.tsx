@@ -53,7 +53,7 @@ export function CosmicFooter({ repoUrl }: Props) {
         </div>
       </div>
       <div className="cosmic-footer-bottom">
-        <span>© 2026 Aditya Sakhale</span>
+        <span>© 2026 Instaply Contributors</span>
         <span>MIT licensed · No cookies · No tracking</span>
       </div>
     </footer>

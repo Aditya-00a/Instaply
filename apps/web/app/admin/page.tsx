@@ -15,6 +15,21 @@ type UserRow = {
 
 type Stat = { label: string; value: string | number };
 
+// Operator allowlist — only these emails can load the admin dashboard.
+// Anyone else hitting /admin gets a friendly "not authorized" instead of
+// silently loading every other user's PII.
+//
+// Set NEXT_PUBLIC_ADMIN_EMAILS in your environment as a comma-separated list,
+// e.g. "you@example.com,ops@example.com". We never hardcode operator emails
+// in the public repo — that would tell an attacker exactly which account to
+// target with credential-stuffing.
+const ADMIN_EMAILS = new Set<string>(
+  (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "")
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean),
+);
+
 export default function AdminPage() {
   const ready = isSupabaseConfigured();
   const [users, setUsers] = useState<UserRow[]>([]);
@@ -22,15 +37,33 @@ export default function AdminPage() {
   const [creditBals, setCreditBals] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [authorized, setAuthorized] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!ready) {
       setLoading(false);
+      setAuthorized(false);
       return;
     }
     (async () => {
       const supabase = getBrowserSupabase();
-      if (!supabase) return;
+      if (!supabase) {
+        setAuthorized(false);
+        setLoading(false);
+        return;
+      }
+
+      // Verify caller is in the allowlist BEFORE pulling any data.
+      // (Belt + suspenders — RLS should also restrict, but a misconfigured
+      // RLS policy on profiles/credit_ledger would otherwise leak everything.)
+      const { data: { user } } = await supabase.auth.getUser();
+      const email = (user?.email || "").toLowerCase();
+      if (!email || !ADMIN_EMAILS.has(email)) {
+        setAuthorized(false);
+        setLoading(false);
+        return;
+      }
+      setAuthorized(true);
 
       try {
         // Load all profiles
@@ -74,6 +107,23 @@ export default function AdminPage() {
     { label: "Total queued apps", value: Object.values(appCounts).reduce((a, b) => a + b, 0) },
     { label: "Total credits issued", value: Object.values(creditBals).reduce((a, b) => a + b, 0) },
   ];
+
+  if (authorized === false) {
+    return (
+      <ConsoleShell
+        activePath="/admin"
+        eyebrow="Admin"
+        title="Not authorized"
+        description="This area is for the platform operators only."
+      >
+        <section className="console-section">
+          <article className="glass auto-card">
+            <p>You don&apos;t have access to the admin dashboard. If you think this is a mistake, contact the platform owner.</p>
+          </article>
+        </section>
+      </ConsoleShell>
+    );
+  }
 
   return (
     <ConsoleShell

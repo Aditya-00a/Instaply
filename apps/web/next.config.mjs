@@ -3,8 +3,8 @@
 // Security headers — best-practice defaults for a SaaS web app.
 // CSP intentionally allows the third-party origins we depend on:
 //   - *.supabase.co for auth + storage signed URLs
-//   - cdn.paddle.com for Paddle.js
-//   - vercel-insights.com for analytics if/when we add it
+//   - checkout.razorpay.com for the payment overlay
+//   - api.asion.ai for our backend
 const securityHeaders = [
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -18,7 +18,10 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://*.supabase.co",
+      // 'unsafe-inline' is required for Next.js inline runtime + Razorpay's
+      // SDK; 'unsafe-eval' has been dropped — Razorpay v1 doesn't need it
+      // and Next.js app-router doesn't either. Reduces XSS blast radius.
+      "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://*.supabase.co",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' data: https://fonts.gstatic.com",
       "img-src 'self' data: blob: https:",

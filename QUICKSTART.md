@@ -9,7 +9,7 @@ Get Instaply applying to jobs while you sleep, in about 5 commands.
 ## 1. Clone the repo
 
 ```bash
-git clone https://github.com/Aditya-00a/Instaply
+git clone https://github.com/instaply/instaply
 cd Instaply/agent
 ```
 

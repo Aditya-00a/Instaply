@@ -27,7 +27,7 @@ const PILLARS = [
   },
   {
     title: "Payment security",
-    body: "Paddle is our merchant of record. We never see or store your full card number. Paddle is PCI-DSS Level 1 compliant.",
+    body: "Razorpay processes all payments. We never see or store your full card number. Razorpay is PCI-DSS Level 1 compliant.",
   },
 ];
 

@@ -17,6 +17,8 @@ const PROTECTED_PREFIXES = [
   "/billing",
   "/settings",
   "/search",
+  "/profile",
+  "/mcp",
   "/admin",
 ];
 

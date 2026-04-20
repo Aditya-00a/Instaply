@@ -7,10 +7,7 @@
 
 The Data Fiduciary / Controller of personal data processed by Instaply is:
 
-**Ravendise** (A Proprietorship of Aditya Sanjay Sakhale)
-Block 3, Plot No 3, Near Ram Manohar Lohiya, Kadolkar Colony 1
-Talegaon Dabhade, Pune, Maharashtra 410506, India
-GSTIN: 27OFHPS0892J1ZJ · Udyam: UDYAM-MH-26-0294628
+**Ravendise**
 
 Privacy contact: **privacy@asion.ai**
 
@@ -24,7 +21,7 @@ This policy applies to all Instaply surfaces: the web app at **instaply.asion.ai
 - **Work authorization:** citizenship/visa status, sponsorship needs, location
 - **Demographic data (optional, for EEO compliance):** gender, race/ethnicity, veteran status, disability status — provided only if you choose to fill them
 - **Preferences:** target roles, locations, salary expectations, excluded companies
-- **Payment data:** handled by our merchant of record (Paddle). We never store your full card number.
+- **Payment data:** handled by our payment processor (Razorpay). We never store your full card number.
 
 ### 2.2 Automatically
 - Log data (IP address, user agent, timestamps)
@@ -59,7 +56,7 @@ Under the Indian **Digital Personal Data Protection Act, 2023** ("DPDP Act") and
 | Railway / Fly.io | API + worker hosting | USA / EU |
 | NVIDIA Corporation (NIM) | AI inference for ranking + cover letters | USA |
 | Anthropic / OpenAI (optional fallback) | AI inference | USA |
-| Paddle.com Market Ltd. | Payment processing, merchant of record | Ireland / UK |
+| Razorpay Software Pvt. Ltd. | Payment processing | India |
 | Google LLC (Gmail API) | Confirmation-email verification (if you connect) | USA |
 | Vercel Inc. | Frontend hosting | USA |
 
@@ -141,10 +138,7 @@ Material changes will be notified by email and via in-app banner at least 14 day
 **Privacy / DPDP / GDPR requests:** privacy@asion.ai
 **Grievance Officer** (per DPDP Act § 8(9)):
 
-Aditya Sanjay Sakhale
-Proprietor, Ravendise
-Block 3, Plot No 3, Near Ram Manohar Lohiya, Kadolkar Colony 1
-Talegaon Dabhade, Pune, Maharashtra 410506, India
+Ravendise Privacy Team
 Email: grievance@asion.ai
 
 Response time: within 30 days of receipt.

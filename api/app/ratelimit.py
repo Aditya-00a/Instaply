@@ -29,6 +29,13 @@ from .config import settings
 # (bucket_key -> deque of timestamps in seconds)
 _WINDOWS: dict[str, Deque[float]] = defaultdict(deque)
 _WINDOW_SECONDS = 60.0
+# Cap on distinct keys we'll track — prevents unbounded growth on a long-lived
+# Fly machine when many distinct users / IPs hit the API. When we exceed the
+# cap, we evict empty buckets first, then oldest. Conservative cap chosen to
+# accommodate a few thousand concurrent users with multiple scopes each.
+_MAX_BUCKETS = 50_000
+_LAST_GC = [0.0]
+_GC_INTERVAL_SECONDS = 300.0  # opportunistic GC at most once per 5 min
 
 
 def _prune(q: Deque[float], now: float) -> None:
@@ -37,8 +44,29 @@ def _prune(q: Deque[float], now: float) -> None:
         q.popleft()
 
 
+def _maybe_gc(now: float) -> None:
+    """Drop empty deques (buckets whose last hit aged past the window).
+
+    Cheap: only runs when we hit the bucket cap or every 5 min on entry,
+    iterates the dict once. Without this, _WINDOWS grows unbounded with
+    the number of distinct users * scopes the API has ever served.
+    """
+    if len(_WINDOWS) < _MAX_BUCKETS and (now - _LAST_GC[0]) < _GC_INTERVAL_SECONDS:
+        return
+    _LAST_GC[0] = now
+    cutoff = now - _WINDOW_SECONDS
+    # First pass: drop buckets that are empty or fully aged out
+    to_delete = [
+        k for k, q in _WINDOWS.items()
+        if not q or q[-1] < cutoff
+    ]
+    for k in to_delete:
+        _WINDOWS.pop(k, None)
+
+
 def _check(bucket_key: str, limit: int) -> None:
     now = time.monotonic()
+    _maybe_gc(now)
     q = _WINDOWS[bucket_key]
     _prune(q, now)
     if len(q) >= limit:

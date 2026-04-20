@@ -60,9 +60,9 @@ export const metadata: Metadata = {
     follow: true,
   },
   applicationName: "Instaply",
-  authors: [{ name: "Aditya Sanjay Sakhale", url: SITE_URL }],
-  creator: "Aditya Sanjay Sakhale",
-  publisher: "Aditya Sanjay Sakhale",
+  authors: [{ name: "Instaply Contributors", url: SITE_URL }],
+  creator: "Instaply Contributors",
+  publisher: "Instaply Contributors",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

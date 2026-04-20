@@ -97,8 +97,7 @@ block a launch / paid customer, not by what was hardest to build.
 1. **Paddle live verification.** Sandbox works; production requires
    their KYC review. Status: pending.
 2. **Webhook backend deployed.** Without it, payments succeed but
-   credits don't grant. Code lives in `C:\Ravendise\Instaply\api\`,
-   needs `fly deploy`.
+   credits don't grant. Code lives in `api/`, needs `fly deploy`.
 3. **Webhook signature verification.** Already in `paddle.py`; just
    needs `PADDLE_WEBHOOK_SECRET` set in Fly secrets.
 

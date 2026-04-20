@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640" role="img" aria-label="Instaply social preview">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b0d18"/>
+      <stop offset="100%" stop-color="#0a0c14"/>
+    </linearGradient>
+    <radialGradient id="g1" cx="22%" cy="28%" r="55%">
+      <stop offset="0%" stop-color="#5f8cff" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#5f8cff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="g2" cx="78%" cy="22%" r="50%">
+      <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#a78bfa" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="g3" cx="55%" cy="92%" r="55%">
+      <stop offset="0%" stop-color="#60a5fa" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#60a5fa" stop-opacity="0"/>
+    </radialGradient>
+
+    <linearGradient id="wm" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#6e9eff"/>
+      <stop offset="50%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#5f8cff"/>
+    </linearGradient>
+
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M48 0 L0 0 0 48" fill="none" stroke="#ffffff" stroke-opacity="0.025" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <rect width="1280" height="640" fill="url(#grid)"/>
+  <rect width="1280" height="640" fill="url(#g1)"/>
+  <rect width="1280" height="640" fill="url(#g2)"/>
+  <rect width="1280" height="640" fill="url(#g3)"/>
+
+  <!-- Top strip: status pill + repo handle -->
+  <g transform="translate(80 70)">
+    <rect x="0" y="0" width="220" height="38" rx="19" fill="#22c55e" fill-opacity="0.15" stroke="#22c55e" stroke-opacity="0.5"/>
+    <circle cx="22" cy="19" r="5" fill="#22c55e"/>
+    <text x="38" y="24" font-family="Inter, sans-serif" font-size="13" font-weight="600" fill="#a7e9bf">Free · MIT · Open source</text>
+  </g>
+  <text x="1200" y="93" text-anchor="end" font-family="ui-monospace, 'SF Mono', monospace" font-size="14" fill="#7d8590">github.com/instaply/instaply</text>
+
+  <!-- Wordmark -->
+  <g transform="translate(640 290)" text-anchor="middle">
+    <text font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif"
+          font-weight="800" font-size="156" letter-spacing="-0.045em" fill="url(#wm)">
+      instaply
+    </text>
+  </g>
+
+  <!-- Main tagline -->
+  <g transform="translate(640 380)" text-anchor="middle">
+    <text font-family="Inter, sans-serif" font-weight="600" font-size="34" letter-spacing="-0.015em" fill="#e8eaf0">
+      The job-application agent I wished I had
+    </text>
+    <text y="42" font-family="Inter, sans-serif" font-weight="600" font-size="34" letter-spacing="-0.015em" fill="#e8eaf0">
+      at 1,300 apps in.
+    </text>
+  </g>
+
+  <!-- Sub -->
+  <g transform="translate(640 480)" text-anchor="middle">
+    <text font-family="Inter, sans-serif" font-weight="400" font-size="20" fill="#94a3b8">
+      Free, local-first, MIT. Built by a student, for students.
+    </text>
+  </g>
+
+  <!-- Install command -->
+  <g transform="translate(640 540)" text-anchor="middle">
+    <rect x="-220" y="-26" width="440" height="52" rx="14" fill="#000000" fill-opacity="0.5" stroke="#5f8cff" stroke-opacity="0.4"/>
+    <text font-family="ui-monospace, 'SF Mono', monospace" font-size="20" fill="#e8eaf0">
+      <tspan fill="#5f8cff" font-weight="700">$</tspan> pipx install instaply
+    </text>
+  </g>
+
+  <!-- Author byline (bottom) -->
+  <g transform="translate(640 600)" text-anchor="middle">
+    <text font-family="Inter, sans-serif" font-size="13" fill="#64748b">
+      built for students, by the open-source community
+    </text>
+  </g>
+
+  <!-- Floating accent dots -->
+  <circle cx="160" cy="170" r="6" fill="#5f8cff" opacity="0.7"/>
+  <circle cx="1130" cy="200" r="5" fill="#a78bfa" opacity="0.7"/>
+  <circle cx="1180" cy="430" r="4" fill="#60a5fa" opacity="0.6"/>
+  <circle cx="120" cy="470" r="7" fill="#a78bfa" opacity="0.6"/>
+  <rect x="1090" y="145" width="14" height="14" fill="none" stroke="#5f8cff" stroke-width="1.5" transform="rotate(20 1097 152)"/>
+  <polygon points="200,420 215,440 185,440" fill="none" stroke="#a78bfa" stroke-width="1.5"/>
+</svg>

@@ -207,25 +207,28 @@ export interface CandidateWorkspaceProfile {
   automation: AutomationPreferences;
 }
 
+// NOTE: Demo profile only. Replace with the signed-in user's data at runtime.
+// Do NOT put real names, phone numbers, or personal emails here — this file is
+// shipped to the browser and lives in a public repo.
 export const starterCandidateWorkspaceProfile: CandidateWorkspaceProfile = {
   identity: {
-    firstName: "Aditya",
-    lastName: "Sakhale",
-    legalFullName: "Aditya Sakhale",
-    primaryEmail: "adityasakhale03@gmail.com",
-    secondaryEmail: "aditya.sakhale@nyu.edu",
-    phoneNumber: "+1 (929) 683-3207",
+    firstName: "Jane",
+    lastName: "Doe",
+    legalFullName: "Jane Doe",
+    primaryEmail: "jane.doe@example.com",
+    secondaryEmail: "",
+    phoneNumber: "+1 (555) 555-0123",
     currentCity: "New York",
     currentRegion: "NY",
     currentCountry: "United States",
-    linkedinUrl: "https://linkedin.com/in/aditya-sakhale",
+    linkedinUrl: "https://linkedin.com/in/jane-doe",
     portfolioUrl: "",
-    githubUrl: "https://github.com/Aditya-00a"
+    githubUrl: ""
   },
   authorization: {
-    workAuthorizationSummary: "Needs sponsorship for long-term U.S. employment.",
-    requiresSponsorship: true,
-    needsStemOptSupport: true,
+    workAuthorizationSummary: "Authorized to work in the United States.",
+    requiresSponsorship: false,
+    needsStemOptSupport: false,
     eligibleCountries: ["United States"],
     willingToRelocate: true,
     openToHybrid: true,
@@ -278,64 +281,48 @@ export const starterCandidateWorkspaceProfile: CandidateWorkspaceProfile = {
     avoidPhrases: ["passionate self-starter", "dream company"]
   },
   application: {
-    currentTitle: "AI Business Analyst Intern",
-    yearsOfExperienceClaim: 3,
-    educationSummary: "NYU MS in Risk Analytics, expected May 2026, 3.8 GPA, with applied AI, consulting, and risk research experience.",
+    currentTitle: "Software Engineer",
+    yearsOfExperienceClaim: 2,
+    educationSummary: "BS in Computer Science from State University, graduated 2024.",
     educationEntries: [
-      "New York University - MS in Risk Analytics - 3.8 GPA - Expected May 2026",
-      "NYU SPS x SAS Cortex Challenge Winner - XGBoost uplift model and about $8.69M optimization",
-      "NASA Hackathon - Best Use of Data Award"
+      "State University - BS in Computer Science - GPA 3.6 - Graduated 2024"
     ],
     workExperienceEntries: [
-      "Fulcrum Digital - AI Business Analyst Intern - Designed AI solution architectures and client implementation roadmaps for Fortune 500 engagements.",
-      "NextAML - AI Risk Management Intern - Built stablecoin risk monitoring models and LLM-based explainability workflows.",
-      "NYU SPS Trust and Safety Lab - AI Sandbox Admin - Managed NVIDIA DGX Spark AI sandbox and agent evaluation frameworks.",
-      "Ravendise - Data Scientist - Built ML, RAG, analytics, and business operations systems across client and internal workflows."
+      "Acme Corp - Software Engineer - Built and shipped backend services in Python and TypeScript.",
+      "Beta Inc - Software Engineering Intern - Contributed to internal tooling and CI/CD."
     ],
     projectEntries: [
-      "JPMorgan Chase AI Strategy Project - Led conversational AI strategy, architecture comparison, and executive-facing roadmap delivery.",
-      "NextLLM RAG Platform - Built regulatory research workflow using Llama, LangChain, and Supabase.",
-      "Multi-Stablecoin Risk Monitoring System - Tracked over $184B market cap with ensemble ML and 0.94 AUC-ROC.",
-      "ImmigrationMail AI - Built agentic email workflow using FastAPI, local models, and Gmail IMAP automation."
+      "Open-source contributions to a popular web framework.",
+      "Personal portfolio site built with Next.js and deployed on Vercel."
     ],
-    researchPaperEntries: [
-      "AI Powered Stablecoin Risk Monitoring Using Ensemble ML and LLM Explainability - NEDSI 2026 - For Publication",
-      "AI-Powered Early Warning System for Hospital Financial Distress - NEDSI 2026 - For Publication"
-    ],
-    compensationNotes: "Open to market compensation for entry-level roles.",
-    signatureDefault: "Aditya Sakhale",
+    researchPaperEntries: [],
+    compensationNotes: "Open to market compensation.",
+    signatureDefault: "Jane Doe",
     experienceHighlights: [
-      "Designed AI solution architectures and implementation roadmaps for Fortune 500 clients at Fulcrum Digital.",
-      "Built stablecoin risk monitoring models with 0.94 AUC-ROC and LLM explainability at NextAML.",
-      "Scaled Ravendise from concept into a live learning business with analytics, delivery, and operations ownership."
+      "Shipped production features used by thousands of users.",
+      "Wrote and maintained automated tests across the stack."
     ],
     projectHighlights: [
-      "Led a JPMorgan Chase AI strategy engagement with executive-facing deliverables.",
-      "Won the NYU SPS x SAS Cortex Challenge with an XGBoost uplift model optimizing about $8.69M in operating surplus.",
-      "Built a RAG platform for regulatory research using Llama, LangChain, and Supabase."
+      "Built a side project with 1k+ GitHub stars.",
+      "Contributed bug fixes to several open-source libraries."
     ],
     coreSkills: [
       "Python",
+      "TypeScript",
       "SQL",
-      "Tableau",
-      "Power BI",
-      "XGBoost",
-      "LangChain",
-      "Supabase",
-      "FastAPI",
-      "Risk analytics",
-      "Stakeholder management"
+      "React",
+      "Node.js"
     ],
     defaultResponses: [
       {
         questionKey: "work_authorization",
-        answer: "Will require sponsorship for long-term U.S. employment.",
-        notes: "Reuse only when the portal asks about sponsorship directly."
+        answer: "Authorized to work in the United States without sponsorship.",
+        notes: "Replace with the candidate's true authorization at runtime."
       },
       {
         questionKey: "location_preference",
-        answer: "Open to New York City, nearby hybrid roles, and remote positions in the U.S.",
-        notes: "Escalate if relocation policy is a decision factor."
+        answer: "Open to onsite, hybrid, and remote roles in the U.S.",
+        notes: "Replace with the candidate's true preference at runtime."
       }
     ]
   },

@@ -7,10 +7,7 @@
 
 The Data Fiduciary / Controller of personal data processed by Instaply is:
 
-**Ravendise** (A Proprietorship of Aditya Sanjay Sakhale)
-Block 3, Plot No 3, Near Ram Manohar Lohiya, Kadolkar Colony 1
-Talegaon Dabhade, Pune, Maharashtra 410506, India
-GSTIN: 27OFHPS0892J1ZJ · Udyam: UDYAM-MH-26-0294628
+**Ravendise**
 
 Privacy contact: **privacy@asion.ai**
 
@@ -141,10 +138,7 @@ Material changes will be notified by email and via in-app banner at least 14 day
 **Privacy / DPDP / GDPR requests:** privacy@asion.ai
 **Grievance Officer** (per DPDP Act § 8(9)):
 
-Aditya Sanjay Sakhale
-Proprietor, Ravendise
-Block 3, Plot No 3, Near Ram Manohar Lohiya, Kadolkar Colony 1
-Talegaon Dabhade, Pune, Maharashtra 410506, India
+Ravendise Privacy Team
 Email: grievance@asion.ai
 
 Response time: within 30 days of receipt.

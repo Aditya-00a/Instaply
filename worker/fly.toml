@@ -5,7 +5,9 @@ app            = "instaply-worker"
 primary_region = "bom"   # Mumbai
 
 [build]
-  dockerfile = "worker/Dockerfile"
+  # Path is resolved relative to this fly.toml (i.e. C:/Ravendise/Instaply/worker/).
+  # The Dockerfile uses `COPY .` so the build context = this directory too.
+  dockerfile = "Dockerfile"
 
 [env]
   LOG_LEVEL              = "INFO"

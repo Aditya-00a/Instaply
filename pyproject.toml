@@ -1,0 +1,77 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "instaply"
+version = "0.1.0"
+description = "A free, local-first AI agent that fills out and submits job applications for you."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [
+  { name = "Instaply Contributors", email = "support@asion.ai" }
+]
+keywords = ["job-application", "automation", "playwright", "ats", "mcp", "agent"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: End Users/Desktop",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Office/Business",
+]
+
+dependencies = [
+  "click>=8.1",
+  "rich>=13.7",
+  "tomli>=2.0; python_version < '3.11'",
+  "tomli-w>=1.0",
+  "pydantic>=2.9",
+  "playwright>=1.48",
+  "beautifulsoup4>=4.12",
+  "lxml>=5.3",
+  "openai>=1.54",          # works against NIM, OpenAI, and any OAI-compat endpoint
+  "tenacity>=9.0",
+  "httpx>=0.27",
+  "google-auth>=2.35",
+  "google-auth-oauthlib>=1.2",
+  "google-api-python-client>=2.149",
+  "mcp>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3",
+  "pytest-asyncio>=0.24",
+  "ruff>=0.7",
+]
+ui = [
+  "fastapi>=0.115",
+  "uvicorn>=0.32",
+  "jinja2>=3.1",
+]
+
+[project.urls]
+Homepage      = "https://instaply.asion.ai"
+Documentation = "https://instaply.asion.ai"
+Issues        = "https://github.com/instaply/instaply/issues"
+Source        = "https://github.com/instaply/instaply"
+
+[project.scripts]
+instaply = "instaply.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["instaply"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

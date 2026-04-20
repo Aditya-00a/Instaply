@@ -23,7 +23,7 @@ If you are dissatisfied with your **first paid credit pack purchase**, you may r
 - You contact us at **hello@asion.ai** within the 14-day window
 - You briefly explain why the Service did not meet your expectations (helps us improve)
 
-Refunds under this clause are issued to your original payment method within **7 business days** of approval. The payment is processed and refunded by our merchant of record, **Paddle.com Market Limited**.
+Refunds under this clause are issued to your original payment method within **7 business days** of approval. Refunds are processed by our payment processor, **Razorpay Software Private Limited**.
 
 ### 2.3 Unused credits on subsequent purchases
 After your first pack, remaining **unused** credits from a later purchase may be refunded on a pro-rata basis within **14 days** of that purchase at our discretion, less any promotional bonus credits already consumed. Consumed credits are non-refundable.

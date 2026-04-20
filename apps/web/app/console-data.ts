@@ -22,6 +22,7 @@ export const consoleNavItems: ConsoleNavItem[] = [
   { href: "/review", label: "Answers", section: "workspace" },
   { href: "/documents", label: "Documents", section: "workspace" },
   { href: "/profile", label: "Profile", section: "workspace" },
+  { href: "/mcp", label: "MCP", section: "workspace" },
   { href: "/billing", label: "Billing", section: "account" },
   { href: "/settings", label: "Settings", section: "account" }
 ];

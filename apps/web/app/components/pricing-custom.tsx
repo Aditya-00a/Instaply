@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { bonusForAmount, getPaddle, isPaddleConfigured, totalCreditsForCustom } from "../lib/paddle";
-import { getBrowserSupabase, isSupabaseConfigured } from "../lib/supabase-browser";
+import { bonusForAmount, totalCreditsForCustom } from "../lib/paddle";
 
 /**
  * Custom top-up calculator.
@@ -11,20 +10,22 @@ import { getBrowserSupabase, isSupabaseConfigured } from "../lib/supabase-browse
  * Rule: $1 = 1 credit at the standard rate, minimum $10.
  * Bonuses: +10% at $25, +15% at $50, +20% at $100. Capped at +20%.
  *
- * On the public /pricing page we link to /sign-in. On the signed-in
- * /billing page we open the Paddle overlay directly.
+ * Payment is handled on /billing via Razorpay (see
+ * apps/web/app/billing/page.tsx). This component only renders the
+ * pricing preview and routes — public pages link to /sign-in, and the
+ * signed-in /billing page passes `inApp` to swap the CTA to a direct
+ * "Open billing" button that scrolls the user to their pack choices.
  */
 const MIN = 10;
 const STEP = 5;
 
 type Props = {
-  /** When true, opens Paddle Checkout instead of routing to /sign-in. */
+  /** When true, sends the user to /billing to check out via Razorpay. */
   inApp?: boolean;
 };
 
 export function PricingCustom({ inApp = false }: Props) {
   const [amount, setAmount] = useState<number>(15);
-  const [busy, setBusy] = useState(false);
 
   const clamped = Math.max(MIN, Math.floor(amount || 0));
   const bonus = bonusForAmount(clamped);
@@ -33,51 +34,12 @@ export function PricingCustom({ inApp = false }: Props) {
   const bonusCredits = totalCredits - baseCredits;
   const perApp = clamped / totalCredits;
 
-  const customPriceId = process.env.NEXT_PUBLIC_PADDLE_PRICE_CREDIT;
-
-  const handleCheckout = async () => {
-    if (!isPaddleConfigured() || !customPriceId) {
-      alert("Checkout isn't fully configured yet. Email hello@asion.ai.");
-      return;
-    }
-    setBusy(true);
-    try {
-      const paddle = await getPaddle();
-      if (!paddle) {
-        alert("Could not load Paddle. Try again in a moment.");
-        return;
-      }
-
-      let customerEmail: string | undefined;
-      let customerId: string | undefined;
-      if (isSupabaseConfigured()) {
-        const supabase = getBrowserSupabase();
-        if (supabase) {
-          const {
-            data: { user },
-          } = await supabase.auth.getUser();
-          customerEmail = user?.email ?? undefined;
-          customerId = user?.id;
-        }
-      }
-
-      paddle.Checkout.open({
-        items: [{ priceId: customPriceId, quantity: clamped }],
-        customer: customerEmail ? { email: customerEmail } : undefined,
-        customData: customerId
-          ? { user_id: customerId, pack: "custom", base_credits: clamped }
-          : { pack: "custom", base_credits: clamped },
-        settings: {
-          displayMode: "overlay",
-          theme: "light",
-          successUrl:
-            typeof window !== "undefined"
-              ? `${window.location.origin}/billing/success`
-              : undefined,
-        },
-      });
-    } finally {
-      setBusy(false);
+  const handleCheckout = () => {
+    // Razorpay checkout lives on /billing — route there with the
+    // chosen amount hinted in the query string. Billing page picks
+    // up ?amount=N and pre-selects the matching pack.
+    if (typeof window !== "undefined") {
+      window.location.href = `/billing?amount=${clamped}`;
     }
   };
 
@@ -127,9 +89,8 @@ export function PricingCustom({ inApp = false }: Props) {
             type="button"
             className="pricing-card-cta"
             onClick={handleCheckout}
-            disabled={busy}
           >
-            {busy ? "Opening checkout…" : `Buy ${totalCredits} credits — $${clamped}`}
+            {`Buy ${totalCredits} credits — $${clamped}`}
           </button>
         ) : (
           <Link href="/sign-in" className="pricing-card-cta">

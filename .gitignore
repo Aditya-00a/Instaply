@@ -6,6 +6,14 @@ dist/
 build/
 
 artifacts/
+agent/artifacts/
+agent/data/*.db
+agent/data/*.sqlite
+agent/data/*.sqlite3
+agent/data/profile.json
+agent/data/master-resume.json
+agent/data/company_scan_state.json
+agent/data/logs/
 instaply-dev.log
 
 .env
@@ -24,4 +32,6 @@ mcp/bundle/
 mcp/dist/
 .pytest_cache/
 .vercel
+.claude/
+supabase/.temp/
 .env*.local

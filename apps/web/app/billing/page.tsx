@@ -59,7 +59,8 @@ function humanReason(reason: string): string {
     signup_bonus: "Signup bonus",
     topup: "Top-up",
     paid_topup: "Top-up",
-    paddle_topup: "Top-up (Paddle)",
+    paddle_topup: "Top-up (legacy)",
+    razorpay_topup: "Top-up",
     application_confirmed: "Confirmed application",
     refund: "Refund",
     adjustment: "Admin adjustment",
@@ -272,7 +273,10 @@ export default function BillingPage() {
               <span>Lifetime purchased</span>
               <strong>
                 {ledger
-                  .filter((l) => l.reason === "topup" || l.reason === "paddle_topup")
+                  // Include legacy "paddle_topup" reason so users with
+                  // pre-Razorpay ledger history still see their lifetime
+                  // total. Modern top-ups land as "topup" or "razorpay_topup".
+                  .filter((l) => ["topup", "paddle_topup", "razorpay_topup"].includes(l.reason))
                   .reduce((s, l) => s + Math.max(l.delta, 0), 0)}{" "}
                 <em>credits</em>
               </strong>
