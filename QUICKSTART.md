@@ -1,174 +1,193 @@
 # Quickstart
 
-Get Instaply running inside Claude (or any MCP client) in about 2 minutes.
+Get Instaply applying to jobs while you sleep, in about 60 seconds.
 
-> **TL;DR for Claude Desktop users:** [download `instaply.mcpb`](https://instaply.asion.ai/instaply.mcpb), double-click, you're done. The rest of this doc is for everyone else.
+> **TL;DR:** clone the repo, run `python setup.py`, drop your profile,
+> hit `python run.py` (or install the scheduled task). Done.
 
 ---
 
-## 1. Pick your client
+## 1. Clone the repo
 
-Instaply is an **MCP server**. It plugs into any local MCP-aware app:
+```bash
+git clone https://github.com/Aditya-00a/Instaply
+cd Instaply/agent
+```
 
-| Client | Install method |
+You need **Python 3.10 or newer**. Check with `python --version`.
+
+If you don't have it: [python.org](https://python.org) (Windows / macOS) or `sudo apt install python3.12` (Ubuntu / Debian).
+
+---
+
+## 2. Run the setup wizard
+
+```bash
+python setup.py
+```
+
+The wizard handles everything that's painful about local LLMs:
+
+| Step | What it does |
 |---|---|
-| **Claude Desktop** | Download [`instaply.mcpb`](https://instaply.asion.ai/instaply.mcpb), double-click |
-| **Claude Code** | `claude mcp add instaply -- uvx instaply-mcp` |
-| **Cursor / Windsurf / Zed / Codex CLI** | Add the JSON snippet below to that app's MCP config |
-| **Anything else MCP-compatible** | Same JSON snippet |
+| 🔍 **Detect** | OS, RAM, CPU cores, NVIDIA / Apple Silicon / AMD GPU, VRAM |
+| 🦙 **Install Ollama** | If you don't have it: `brew install --cask ollama` (Mac), `winget install Ollama.Ollama` (Windows), or `curl -fsSL https://ollama.com/install.sh \| sh` (Linux) |
+| 🎯 **Pick a model** | The biggest model that fits in ~85% of your usable memory budget. Walks `qwen2.5:3b → llama3.2:3b → llama3.1:8b → qwen2.5:7b → qwen2.5:14b → qwen3-coder:30b → llama3.1:70b` |
+| ⬇️ **Pull the model** | `ollama pull <chosen>` (this is the biggest download — typically 2–20 GB) |
+| ✏️ **Write `.env`** | Drops the right `LLM_PROVIDER` + `MODEL_NAME` + `OLLAMA_BASE_URL` into `config/.env` |
 
-It does **not** work in Claude.ai web, ChatGPT.com, or Codex Cloud — those run in sandboxes that can't open a real browser. Instaply needs your local Chrome.
+Flags:
+- `--yes` / `-y` — skip every confirmation (CI / scripted use)
+- `--detect-only` — print the hardware + recommendation as JSON and exit (useful for "what would it pick on my machine?")
+
+Example:
+
+```bash
+python setup.py --detect-only
+# {
+#   "hardware": {"os_name": "Darwin", "ram_gb": 16, "vram_gb": null, "apple_silicon": true},
+#   "recommendation": {"name": "llama3.1:8b", "label": "Llama 3.1 8B", ...}
+# }
+```
 
 ---
 
-## 2. Manual MCP config (for clients without a one-click install)
-
-```json
-{
-  "mcpServers": {
-    "instaply": {
-      "command": "uvx",
-      "args": ["instaply-mcp"]
-    }
-  }
-}
-```
-
-`uvx` comes with [uv](https://github.com/astral-sh/uv) — install it once with:
+## 3. Install Python dependencies
 
 ```bash
-# macOS / Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
+pip install -r requirements.txt    # if you have one
+# or, minimally:
+pip install playwright httpx pydantic python-dotenv beautifulsoup4 lxml \
+    requests psutil openai sqlite-utils
 
-# Windows
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-```
-
-Then `uvx instaply-mcp` will auto-fetch the latest version on every launch.
-
-### Plain pip (alternative)
-
-```bash
-pip install instaply-mcp
-```
-
-Then point your client at `python -m instaply_mcp` instead of `uvx instaply-mcp`.
-
----
-
-## 3. Add the browser (one-time, ~150 MB)
-
-For the `apply_to_job` tool to actually open a browser, you need Playwright's Chromium:
-
-```bash
-pip install "instaply-mcp[worker]"
 python -m playwright install chromium
 ```
 
-The `.mcpb` bundle ships these already — skip this step if you installed via Claude Desktop.
+The Chromium download is ~150 MB, downloaded once, reused forever.
 
 ---
 
-## 4. First chat
+## 4. Drop in your profile + master resume
 
-Open Claude (Desktop / Code / wherever), make sure Instaply shows up in the tools list, and just talk:
+The agent reads two files at boot:
 
 ```
-You: Import my resume from ~/Desktop/cv.pdf
-Claude: ✓ Imported. Saved 12 skills, inferred role targets:
-        Data Analyst, Risk Analyst, Quantitative Analyst.
-
-You: Find me 5 entry-level data analyst roles, US, no sponsorship needed
-Claude: Found 5. Here they are…
-
-You: Apply to #2
-Claude: Opening Chrome on your machine. Filled 14 fields from your
-        profile, paused at the captcha. Solve it + click Submit, then
-        say "done".
-
-You: done
-Claude: ✓ Logged. Application #7. status=submitted.
+agent/data/profile.json          # contact, work auth, EEO, target roles, salary
+agent/data/master-resume.json    # the full resume the tailor module re-ranks per JD
 ```
 
-That's the whole product loop.
+Schemas live at `backend/models/schemas.py`. A profile-bootstrapping
+wizard is on the roadmap; for now you author these manually.
 
 ---
 
-## 5. (Optional) Save a screening answer once, reuse it forever
+## 5. Run it
 
-```
-You: When asked "Why do you want to work here?", save this answer:
-     "I'm drawn to roles where rigorous data work directly shapes risk decisions…"
-Claude: Saved.
-```
-
-Next time any ATS asks that exact question (or a close paraphrase — we hash-normalize), Instaply auto-fills the saved answer.
-
-```
-You: Show me what answers you've saved
-Claude: 4 answers cached. (lists them)
-```
-
----
-
-## 6. Where your data lives
-
-```
-~/.instaply/
-└── data.db    # profile, applications, saved answers, job cache
-```
-
-That's it. One SQLite file. Delete the folder to factory-reset.
-
-Override the location with:
+### Foreground (recommended for the first run)
 
 ```bash
-export INSTAPLY_DATA_DIR=/path/you/prefer
+python run.py
 ```
+
+You'll see the loop tick: discover → score → tailor → queue. The first
+cycle takes a few minutes (cold ATS pool scans). Subsequent cycles are
+incremental.
+
+### Background — Windows (scheduled task)
+
+```powershell
+.\scripts\setup-scheduler.ps1
+```
+
+That registers a Task Scheduler entry that runs the daily cycle and a
+watchdog that restarts the loop if it dies.
+
+Manage it with:
+
+```powershell
+.\scripts\manage.ps1 status        # see if it's running
+.\scripts\manage.ps1 stop          # stop it
+.\scripts\manage.ps1 start         # start it back up
+```
+
+### Background — macOS / Linux
+
+The cron / launchd setup scripts are on the roadmap. For now the
+hand-rolled equivalent on Linux:
+
+```bash
+crontab -e
+# Add this line to run every 30 minutes:
+*/30 * * * * cd /path/to/Instaply/agent && /usr/bin/python run.py >> data/logs/cron.log 2>&1
+```
+
+---
+
+## 6. Review the queue
+
+The agent **never silently submits**. It drafts applications into a
+queue at `~/.instaply/data.db` (status: `packet_generated`). When you're
+ready, run:
+
+```bash
+python apply_now.py             # walks the queue interactively
+```
+
+For each draft:
+1. Opens your real Chrome
+2. Autofills the form (~80% from rules, ~20% from your local LLM)
+3. **Pauses** at the captcha (you solve it)
+4. **Pauses** at the final Submit button (you click it)
+5. Logs the result + a screenshot to `data/artifacts/<job-id>/`
+
+---
+
+## Where things live
+
+```
+agent/
+├── data/
+│   ├── profile.json           # YOU EDIT THIS — your identity, work auth, EEO, targets
+│   ├── master-resume.json     # YOU EDIT THIS — the full resume to tailor from
+│   ├── jobs.db                # auto-managed — discovered jobs + applications
+│   └── company_pools/         # ATS slug pools (greenhouse, lever, ashby, workday)
+├── config/
+│   ├── .env                   # YOU EDIT THIS — LLM provider, SMTP if you want, etc.
+│   ├── resume_rules.json      # per-role tailoring rules (override per profile)
+│   └── …
+└── backend/                   # services — usually no reason to touch
+```
+
+You own all of this. Delete `data/` to factory-reset.
 
 ---
 
 ## Troubleshooting
 
-### "instaply" doesn't appear in Claude's tool list
+### "Ollama not running"
+`ollama serve` in another terminal, or run any `ollama run <model>` once
+to launch the daemon.
 
-- **Claude Desktop:** Quit fully (Cmd-Q on Mac, right-click tray icon → Quit on Windows) and relaunch.
-- **Claude Code:** Run `claude mcp list` — does Instaply show "✓ Connected"? If not, `claude mcp remove instaply` and re-add.
-- **Other clients:** Check the client's MCP log — usually it says exactly what failed.
-
-### "Browser not found" when calling `apply_to_job`
+### "Form filled, but the wrong values"
+Check what was filled vs your profile:
 
 ```bash
-pip install "instaply-mcp[worker]"
-python -m playwright install chromium
+python -c "import json; print(json.load(open('data/profile.json')))"
 ```
 
-The `.mcpb` bundle ships these already. If you installed via `pip` or `uvx` you have to do this once.
+Then look at the screenshot in `data/artifacts/<job-id>/` and the
+field-decision log next to it.
 
-### Form filled, but the wrong values
+### "ATS X isn't supported"
+Today: **Greenhouse**, **Lever**, **SmartRecruiters**. Workday is in
+beta. Ashby and iCIMS are roadmap. File an issue with a sample URL,
+or contribute an adapter ([CONTRIBUTING.md](./CONTRIBUTING.md)).
 
-Ask Claude to show you the field decisions:
-
-```
-You: That last apply — show me what you filled where
-```
-
-It can read from `~/.instaply/data.db` and walk you through it. Update your profile or saved answers and re-run.
-
-### A specific ATS isn't supported
-
-Currently supported: **Greenhouse**, **Lever**, **SmartRecruiters**. Workday/Ashby/iCIMS are on the roadmap. File an issue with a sample URL — or contribute an adapter, see [CONTRIBUTING.md](./CONTRIBUTING.md).
-
----
-
-## Updating
-
-| How you installed | How to update |
-|---|---|
-| `uvx instaply-mcp` | Automatic — pulls the latest on each launch |
-| `pip install instaply-mcp` | `pip install --upgrade instaply-mcp` |
-| `.mcpb` bundle | Re-download from [instaply.asion.ai/instaply.mcpb](https://instaply.asion.ai/instaply.mcpb) |
-| GitHub Release `.mcpb` | Re-download from [latest release](https://github.com/Aditya-00a/Instaply/releases/latest) |
+### "Setup wizard recommended a model that's too small / big"
+Pass `--detect-only` to see the math. The wizard's budget formula is
+`VRAM + (system RAM / 2)` for NVIDIA, full system RAM for Apple
+Silicon, system RAM for CPU-only. If you want a different model, just
+edit `config/.env` and `ollama pull <model>` manually.
 
 ---
 
@@ -176,8 +195,8 @@ Currently supported: **Greenhouse**, **Lever**, **SmartRecruiters**. Workday/Ash
 
 Three things Instaply will never do silently:
 
-1. **Solve captcha** — hCaptcha / reCAPTCHA pause for you
-2. **Click Submit** — always your final call
-3. **Confirm landing** — look for the confirmation page yourself, then tell Claude "done"
+1. **Solve captcha** — hCaptcha / reCAPTCHA Enterprise pause for you
+2. **Click final Submit** — always your call
+3. **Confirm landing** — look for the confirmation page yourself, then mark it done
 
-Everything else is automated.
+Everything else runs unattended.

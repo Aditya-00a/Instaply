@@ -12,13 +12,13 @@ A pragmatic step-by-step for shipping this to the world. Two parts:
 ### Repo settings (https://github.com/Aditya-00a/Instaply/settings)
 
 - [ ] **About** (top-right of the repo page → gear icon):
-  - **Description:** `Free, local-first job-application agent. MCP server for Claude Desktop / Claude Code / Cursor / Codex / Windsurf / Zed. Plus a background loop that applies while you sleep.`
+  - **Description:** `Free, open-source job-application agent that runs on your laptop while you sleep. Discovers, scores, and drafts applications across Greenhouse / Lever / SmartRecruiters. Pauses for you to solve captcha and click submit.`
   - **Website:** `https://instaply.asion.ai`
-  - **Topics:** `mcp` `claude` `claude-desktop` `claude-code` `model-context-protocol` `job-search` `job-application` `automation` `playwright` `ats` `greenhouse` `lever` `python` `ollama` `local-first` `open-source` `students`
+  - **Topics:** `job-search` `job-application` `automation` `playwright` `ats` `greenhouse` `lever` `smartrecruiters` `python` `ollama` `local-first` `local-llm` `open-source` `students` `autonomous-agent`
   - Tick: **Releases**, **Packages**, **Deployments** (so they show in the right rail)
 
 - [ ] **Features** (Settings → General → Features):
-  - Wikis: **off** (everything is in `docs/` + README)
+  - Wikis: **off** (everything is in the README + QUICKSTART)
   - Issues: **on**
   - Discussions: **on** (bigger community surface than issues, lower friction)
   - Projects: **on** (use one for the public roadmap)
@@ -26,68 +26,71 @@ A pragmatic step-by-step for shipping this to the world. Two parts:
 - [ ] **Branches** (Settings → Branches):
   - Branch protection on `main`:
     - Require PR before merging
-    - Require status checks to pass (the GitHub Action `publish-mcp.yml` ideally)
+    - Require status checks to pass (once you add CI)
     - Require linear history (no merge commits)
     - Allow force pushes from admins only
   - Default branch is `main`
 
 - [ ] **Pages** (Settings → Pages):
-  - Source: deploy from `main` / `/docs` (if you want a docs site later) — skip for v1
-  - The marketing site is already on Vercel at `instaply.asion.ai`, that's enough
-
-- [ ] **Secrets** (Settings → Secrets and variables → Actions):
-  - You don't need any — PyPI publish uses Trusted Publishing (already set up)
+  - The marketing site is on Vercel at `instaply.asion.ai`, so you don't need GitHub Pages
 
 - [ ] **Sponsors** (Settings → Sponsors → Set up GitHub Sponsors):
-  - Worth doing even if you don't expect dollars — it adds the "Sponsor" button at the top of the repo, which is a soft "you can support this" signal
+  - Worth doing even if you don't expect dollars — adds the "Sponsor" button at the top of the repo, soft "you can support this" signal
   - Enable, then add a small message ("Star the repo and tell a student. Or sponsor a coffee if you can.")
   - Update `.github/FUNDING.yml` to point at your Sponsors username (it already exists in the repo)
 
 ### Files already present (verify they're current)
 
 - [x] `LICENSE` — MIT
-- [x] `README.md` — beautified, install-cards layout
-- [x] `CONTRIBUTING.md` — verify it doesn't have personal email; it should send people to issues, not your inbox
+- [x] `README.md` — autonomous-first, with the install grid + architecture diagram
+- [x] `QUICKSTART.md` — the `python setup.py` walkthrough
+- [x] `CONTRIBUTING.md` — verify it doesn't have personal email; should send people to issues
 - [x] `CODE_OF_CONDUCT.md` — Contributor Covenant
-- [x] `SECURITY.md` — verify the contact email is project-level, not personal (`security@instaply.asion.ai` if you want a project alias, otherwise GitHub Security Advisories)
+- [x] `SECURITY.md` — verify the contact is project-level, not personal (use GitHub Security Advisories)
 - [x] `CHANGELOG.md` — keep updated per release
+- [x] `LAUNCH.md` — this file
 - [x] `.github/ISSUE_TEMPLATE/*` — bug, feature, "got the job"
 - [x] `.github/PULL_REQUEST_TEMPLATE.md`
-- [x] `.github/workflows/publish-mcp.yml` — auto-publishes to PyPI on tag push
 - [x] `.github/FUNDING.yml` — Sponsors button
+- [x] `.github/banner.svg` / `architecture.svg` / `demo.svg` — refreshed for the autonomous flow
 
 ### Pin issues + create the public roadmap
 
-- [ ] Create 3-5 **good first issues** (label them `good first issue`):
-  - "Add Workday adapter" (in beta)
+- [ ] Create 5 **good first issues** (label them `good first issue`):
+  - "Profile wizard: replace manual `data/profile.json` editing with an interactive setup"
+  - "Add Workday adapter (in beta — needs hardening against Workday's anti-automation)"
   - "Add Ashby adapter"
   - "Add iCIMS adapter"
-  - "Make autofill EEO defaults profile-driven (post-lift TODO)"
-  - "Build a simple `localhost:3001` review-queue dashboard"
+  - "macOS launchd + Linux cron equivalents of `setup-scheduler.ps1`"
+  - "Local web review dashboard at `localhost:3001`"
 - [ ] Pin those issues to the repo (Issues page → "..." → Pin issue)
 - [ ] Create a **Project (beta)** named "Instaply Roadmap" with three columns: Now / Next / Later. Throw the roadmap items in.
 
 ### Pre-launch sanity check
 
 ```bash
-# 1. The MCP package installs
-pip install instaply-mcp
-python -m instaply_mcp --help    # any output is good; no ImportError
+# 1. Fresh clone works on a clean machine (try a friend's laptop or a VM)
+git clone https://github.com/Aditya-00a/Instaply
+cd Instaply/agent
 
-# 2. The .mcpb is downloadable
-curl -I https://instaply.asion.ai/instaply.mcpb   # expect HTTP 200
-curl -I https://github.com/Aditya-00a/Instaply/releases/download/v0.4.3/instaply.mcpb
+# 2. Setup wizard runs
+python setup.py --detect-only   # prints JSON, exits 0
 
-# 3. The agent setup wizard runs
-cd agent && python setup.py --detect-only   # prints JSON, exits 0
+# 3. Imports clean
+python -c "import sys; sys.path.insert(0,'.'); import importlib.util; \
+  spec=importlib.util.spec_from_file_location('run','run.py'); \
+  m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m); \
+  print('run.py imports clean')"
 
-# 4. The README renders cleanly
-# Open https://github.com/Aditya-00a/Instaply in an incognito window — the
-# install grid table should look right, the architecture SVG should load,
-# the star history chart should show.
+# 4. The README renders cleanly on the public repo page
+# Open https://github.com/Aditya-00a/Instaply in an incognito window —
+# the install block, architecture SVG, demo SVG, comparison table,
+# and star history chart should all load.
 ```
 
-If any of those fail, fix before announcing. **The single biggest mistake is launching with a broken install path** — people try once, fail, and never come back.
+If any of those fail, fix before announcing. **The single biggest mistake
+is launching with a broken install path** — people try once, fail, and
+never come back.
 
 ---
 
@@ -95,47 +98,49 @@ If any of those fail, fix before announcing. **The single biggest mistake is lau
 
 ### T−7 days: prep
 
-- [ ] Record a **30–60s screen capture** of the chat-style demo. Tools: Loom, OBS, QuickTime, Cleanshot. You're looking for: open Claude Desktop → Instaply tools listed → "import resume from …" → "find data analyst roles" → "apply to #2" → browser opens, gets to captcha, you solve it, click submit, "done", logged.
+- [ ] Record a **30–60s screen capture** of the setup wizard + the agent finding + drafting jobs. Tools: Loom, OBS, QuickTime, Cleanshot. Money shot: `python setup.py` → wizard detects hardware → installs Ollama → recommends model → "Hardware: M3 Max, 36 GB · Recommended: Qwen3-Coder 30B" → `python run.py` → loop ticks → "12 strong matches queued for review."
 - [ ] Convert to a GIF (≤ 8 MB so it embeds inline on Twitter/Reddit/HN). `ffmpeg -i demo.mp4 -vf "fps=12,scale=720:-1" -loop 0 demo.gif`
 - [ ] Write the announcement copy ahead of time (drafts below). Don't write it the morning of.
 - [ ] Pick the **launch day**: Tuesday, Wednesday, or Thursday. Avoid Mondays (people are buried) and Fridays (post gets buried over the weekend). 8–10 AM Eastern is the HN sweet spot.
 
 ### T−1 day: dry runs
 
-- [ ] Submit the package to **Awesome MCP Servers** (the canonical community list): https://github.com/punkpeye/awesome-mcp-servers — open a PR adding Instaply under the Productivity section
 - [ ] Send a quiet DM to 3–5 friends/peers who'll +1 and comment thoughtfully on launch day. Not vote-rigging, just: a post with 0 comments looks dead.
+- [ ] Test the setup wizard on a machine that has *never* run it before (a fresh VM or a friend's laptop). The wizard's first impression is the whole product.
 
 ### Launch day order (start at 8 AM ET)
 
 1. **Hacker News (first, biggest leverage)**
    - URL: https://news.ycombinator.com/submit
-   - Title: **`Show HN: Instaply – local-first job-application agent for Claude Desktop`**
+   - Title: **`Show HN: Instaply – open-source job-application agent that runs locally`**
    - URL field: `https://github.com/Aditya-00a/Instaply` (not the marketing site — HN trusts repos more)
    - First comment (post immediately yourself, anchors the discussion):
-     > I built this after sending 1,300+ applications during my own job search. The thing that broke me wasn't the rejections — it was the 30 minutes per application typing the same answers. Existing tools want $30–80/mo for what is fundamentally a form-filling problem.
+     > I built this after sending 1,300+ applications during my own job search. The thing that broke me wasn't the rejections — it was the 30 minutes per application typing the same answers, then doing it 1,300 times. Existing automation tools want $30–80/mo for what is fundamentally a form-filling problem, and they do it from a datacenter IP that gets bot-detected within seconds.
      >
-     > Instaply ships as an MCP server (so it plugs into Claude Desktop / Claude Code / Cursor / Codex / Windsurf / Zed in one click) and a Python autonomous loop you can run as a scheduled task. Both share the same engine — 39 deterministic field rules + an LLM fallback for the gnarly ones — and run entirely on your laptop with your IP and your cookies. There's no Instaply server in the loop.
+     > Instaply runs as a background loop on your own laptop. One command sets it up — `python setup.py` detects your hardware, installs Ollama if you don't have it, picks the right local model for your GPU/RAM (3B for tiny laptops up to 70B for workstations), and writes your config. Then it discovers fresh jobs across Greenhouse / Lever / SmartRecruiters / JobSpy sources, scores them against your profile (39 deterministic field rules + LLM fallback), and drafts tailored applications into a queue. You wake up to 12 drafts ready to review.
      >
-     > Free, MIT, no telemetry, no signup. Setup wizard auto-detects your hardware and recommends the right local Ollama model.
+     > It pauses at every captcha and at every final Submit button — never silently submits anything. Your IP, your cookies, your real Chrome session. There's no Instaply server in the loop, no telemetry, no signup, no subscription. MIT.
      >
-     > Happy to answer anything about the architecture, the autofill rules, the captcha-pause-for-human design, or the wider question of "should this even exist."
+     > Happy to answer anything about the architecture, the autofill rule design, the captcha-pause-for-human policy, why I gave up on the SaaS path, or whether this should even exist.
 
 2. **Reddit (immediately after, in this order — don't shotgun all at once)**
-   - **r/LocalLLaMA** — this audience LOVES "auto-installs Ollama, picks the right model for your hardware". Title: `Free local-first job-application agent (MCP for Claude, picks the right Ollama model for your hardware)`
-   - **r/ClaudeAI** — title: `I built an MCP server that fills out and submits job applications for you (free, MIT, runs locally)`
+   - **r/LocalLLaMA** — this audience LOVES "auto-installs Ollama, picks the right model for your hardware". Title: `Free local-first job-application agent (auto-picks the right Ollama model for your machine)`
    - **r/cscareerquestions** — title: `Open-sourced the job-application agent I built after 1,300 apps`. **Read the rules before posting** — they're strict about self-promotion. Frame as "sharing what I built", not "use my product".
    - **r/csMajors** + **r/internships** — same post, slightly more student-focused
-   - Wait 24 hours before more subreddit cross-posts (mods downrank cross-spam)
+   - **r/jobs** — broader audience, less technical framing
+   - **r/Python** — angle: "interesting Python project, here's the architecture"
+   - **r/selfhosted** — angle: "self-hosted alternative to paid job-application SaaS"
+   - Wait 24 hours between subreddit cross-posts (mods downrank cross-spam)
 
 3. **Twitter/X (about an hour after HN)**
    - Thread of 5–7 tweets:
-     1. Hook: "I sent 1,300 job applications last fall. Then I built a tool that does it for me. Free + open source. Here's what it looks like." + the GIF
-     2. The MCP angle: install in Claude Desktop in one click, talk to it normally
-     3. The autonomous angle: also runs as a background loop while you sleep
+     1. Hook: "I sent 1,300 job applications last fall. Then I built a tool that does it for me while I sleep. Free + open source. Here's what it looks like." + the GIF
+     2. The setup-wizard angle: one command, detects your hardware, installs the right local LLM
+     3. The autonomous angle: runs as a background task, discovers + scores + drafts overnight, you review the queue with coffee
      4. The privacy angle: zero servers in the loop, your IP, your cookies, captcha walls don't fire
-     5. The cost angle: $0 forever, MIT, picks the right local Ollama model for your hardware
-     6. The link to GitHub + a "star if you've ever cried over Workday" CTA
-     7. Tag `@AnthropicAI` and `@simonw` — they amplify good MCP work
+     5. The cost angle: $0 forever, MIT, no signup, no telemetry
+     6. The link to GitHub + a "star if you've ever cried over Workday at 1am" CTA
+     7. Tag `@simonw` — he amplifies good local-first OSS
    - Pin the thread to your profile
 
 4. **LinkedIn (mid-afternoon, different audience)**
@@ -148,11 +153,6 @@ If any of those fail, fix before announcing. **The single biggest mistake is lau
 5. **Indie Hackers (next day, post-launch retro)**
    - Different angle: "I tried turning this into a paid SaaS. Then I gave it away. Here's what I learned."
    - Indie Hackers loves the OSS-pivot story arc
-
-6. **MCP-specific channels (parallel, low-effort)**
-   - Awesome MCP Servers PR (already submitted T−1)
-   - Anthropic's MCP Discord (#showcase channel) — single message with the GitHub link + screenshot
-   - Tag the official `@AnthropicAI` MCP team on Twitter/X
 
 ### Day 2–7: the long tail
 
@@ -173,7 +173,7 @@ If any of those fail, fix before announcing. **The single biggest mistake is lau
 
 - ❌ Don't post on multiple subreddits simultaneously. Mods see it instantly.
 - ❌ Don't ask friends to upvote on HN — moderators detect coordinated voting and kill the post.
-- ❌ Don't launch with a broken install link. Test from an incognito browser on a fresh machine if you can borrow one.
+- ❌ Don't launch with a broken install path. Test from an incognito browser on a fresh machine if you can borrow one.
 - ❌ Don't oversell. The README's "1,300 applications, free forever" framing is honest. Keep it that honest in every channel.
 - ❌ Don't ignore negative comments. Engage them like a maintainer who cares about getting it right. The thoughtful response to a "this is just a worse RecruitBot" comment is what wins skeptics.
 
@@ -181,6 +181,21 @@ If any of those fail, fix before announcing. **The single biggest mistake is lau
 
 ## A small note for after launch
 
-When the issues start coming in, the first thing people will hit is the demographic-default TODOs in `agent/backend/services/autofill.py` and the missing `data/profile.json` schema. The post-lift integration work I left for "later" is now the work for "this week". The setup wizard handles Ollama; the second piece is a **profile wizard** that asks the user 20 questions and writes a complete `profile.json` + `master-resume.json`. That's the next ship after launch.
+When the issues start coming in, the first thing people will hit is the
+fact that **`data/profile.json` doesn't exist yet** — they'll have to
+hand-author it from `backend/models/schemas.py`. That's the friction
+point that'll slow adoption the most. The setup wizard handles Ollama;
+the next thing to ship is a **profile wizard** that asks the user 20
+questions and writes a complete `profile.json` + `master-resume.json`.
+That's the next ship after launch.
+
+Other early-issue likely culprits:
+- The post-lift TODO defaults in `agent/backend/services/autofill.py`
+  (demographics, school name, etc.) — auto-fill nothing until profile
+  data is wired through. Users will report blank fields.
+- The Workday adapter is hardcoded as beta — anyone trying to apply to
+  a Workday-only company will get a polite "not yet" message.
+- macOS / Linux scheduler scripts don't exist yet — anyone not on
+  Windows will need the manual `crontab` snippet from QUICKSTART.md.
 
 Good luck. 💛
