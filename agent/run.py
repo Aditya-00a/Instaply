@@ -5655,6 +5655,13 @@ async def main():
     _acquire_lock()
     log.info("Lock acquired (PID %d)", os.getpid())
 
+    # Bootstrap the SQLite schema so a fresh-machine run doesn't crash
+    # when remaining_count() / status_summary() open their own connections
+    # before the backend services (which all eagerly init_db at import)
+    # have been pulled in. Idempotent on existing DBs.
+    from backend.db.database import init_db
+    init_db(ROOT / "data" / "jobs.db")
+
     profile = json.load(open(ROOT / "data" / "profile.json"))
     email = profile["contact"]["email"]
     log.info("Application email: %s", email)
