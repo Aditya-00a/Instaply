@@ -109,7 +109,7 @@ A typical day, end-to-end:
 sequenceDiagram
     autonumber
     participant Sched as Task Scheduler
-    participant Loop as Autonomous Loop
+    participant Agent as Autonomous Agent
     participant Disc as Discovery
     participant Engine as Scoring + Tailoring
     participant DB as ~/.instaply/data.db
@@ -117,20 +117,20 @@ sequenceDiagram
     participant ATS as Greenhouse / Lever / SmartRecruiters
     participant You
 
-    Sched->>Loop: wake up (every N minutes)
-    Loop->>Disc: scan ATS pools + JobSpy sources
-    Disc-->>Loop: 200 fresh postings
-    Loop->>Engine: score against profile (39 rules + LLM fallback)
-    Engine-->>Loop: 12 strong matches
-    Loop->>Engine: tailor resume + cover letter per match
-    Loop->>DB: queue 12 drafts as packet_generated
+    Sched->>Agent: wake up (every N minutes)
+    Agent->>Disc: scan ATS pools + JobSpy sources
+    Disc-->>Agent: 200 fresh postings
+    Agent->>Engine: score against profile (39 rules + LLM fallback)
+    Engine-->>Agent: 12 strong matches
+    Agent->>Engine: tailor resume + cover letter per match
+    Agent->>DB: queue 12 drafts as packet_generated
 
     Note over You,Browser: When you sit down later…
     You->>DB: review the queue
     You->>Browser: approve draft #3
     Browser->>ATS: open + autofill 23 fields
     Note over Browser,You: pauses at captcha + final Submit
-    You->>Browser: solve captcha → click Submit
+    You->>Browser: solve captcha and click Submit
     You->>DB: mark submitted ✓
 ```
 
