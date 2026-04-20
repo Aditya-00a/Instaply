@@ -8,7 +8,7 @@ Setup (ONE TIME):
   3. Set env vars:
         GMAIL_USER=[email]
         GMAIL_APP_PASSWORD=the-16-char-password
-     (or put them in C:\Ravendise\Instaply\.env — python-dotenv will pick them up)
+     (or put them in the repo `.env` file — python-dotenv will pick it up)
 
 Usage:
   python scripts/gmail_response_tracker.py              # run once, process new emails

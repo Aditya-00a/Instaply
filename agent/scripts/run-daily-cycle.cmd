@@ -6,15 +6,16 @@ setlocal EnableDelayedExpansion
 :: Runs the full pipeline: scout, generate packets, send alerts
 :: ============================================================
 
-set "REVIZE_ROOT=C:\Ravendise\Instaply"
-set "VENV_PYTHON=%REVIZE_ROOT%\.venv\Scripts\python.exe"
-set "VENV_ACTIVATE=%REVIZE_ROOT%\.venv\Scripts\activate.bat"
+set "AGENT_ROOT=%~dp0.."
+set "VENV_PYTHON=%AGENT_ROOT%\.venv\Scripts\python.exe"
+set "VENV_ACTIVATE=%AGENT_ROOT%\.venv\Scripts\activate.bat"
 set "API_HOST=127.0.0.1"
 set "API_PORT=8002"
 set "API_BASE=http://%API_HOST%:%API_PORT%"
 
 :: Set working directory
-cd /d "%REVIZE_ROOT%"
+for %%I in ("%AGENT_ROOT%") do set "AGENT_ROOT=%%~fI"
+cd /d "%AGENT_ROOT%"
 
 :: Create logs directory if needed
 if not exist "data\logs" mkdir "data\logs"
@@ -81,9 +82,9 @@ if %HEALTHY% equ 0 (
 :: Run the full cycle
 echo [%time%] Running full daily cycle (scout + packets + alerts)... >> "%LOGFILE%"
 if exist "%VENV_PYTHON%" (
-    "%VENV_PYTHON%" "%REVIZE_ROOT%\scripts\openclaw_revize.py" cycle >> "%LOGFILE%" 2>&1
+    "%VENV_PYTHON%" "%AGENT_ROOT%\scripts\openclaw_agent.py" cycle >> "%LOGFILE%" 2>&1
 ) else (
-    python "%REVIZE_ROOT%\scripts\openclaw_revize.py" cycle >> "%LOGFILE%" 2>&1
+    python "%AGENT_ROOT%\scripts\openclaw_agent.py" cycle >> "%LOGFILE%" 2>&1
 )
 set "CYCLE_EXIT=%ERRORLEVEL%"
 

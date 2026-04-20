@@ -19,10 +19,7 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-CAPSOLVER_API_KEY = os.getenv(
-    "CAPSOLVER_API_KEY",
-    "CAP-FE3471CF946A9D8B738BD7BEDFDC6DC96EFB6A3C9C5F05CADCECD43BF7CE0FB3",
-)
+CAPSOLVER_API_KEY = os.getenv("CAPSOLVER_API_KEY", "")
 CAPSOLVER_API = "https://api.capsolver.com"
 
 _MAX_POLL = 60  # seconds to wait for solution

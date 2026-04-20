@@ -4,8 +4,8 @@
 
 .DESCRIPTION
     Creates two scheduled tasks:
-      1. RevizeJobAgent-DailyCycle  - Runs the full pipeline daily at 7:00 AM
-      2. RevizeJobAgent-EveningAlerts - Sends email alerts for high-scoring jobs at 6:00 PM
+      1. InstaplyAgent-DailyCycle  - Runs the full pipeline daily at 7:00 AM
+      2. InstaplyAgent-EveningAlerts - Sends email alerts for high-scoring jobs at 6:00 PM
 
     Run this script as Administrator for "run whether logged in or not" support.
 
@@ -22,9 +22,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$RevizeRoot = "C:\Ravendise\Instaply"
-$TaskNameCycle = "RevizeJobAgent-DailyCycle"
-$TaskNameAlerts = "RevizeJobAgent-EveningAlerts"
+$AgentRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$TaskNameCycle = "InstaplyAgent-DailyCycle"
+$TaskNameAlerts = "InstaplyAgent-EveningAlerts"
 
 # ── Remove mode ──────────────────────────────────────────────
 if ($Remove) {
@@ -41,11 +41,11 @@ if ($Remove) {
 }
 
 # ── Validate prerequisites ───────────────────────────────────
-if (-not (Test-Path (Join-Path $RevizeRoot "run-daily-cycle.cmd"))) {
-    throw "run-daily-cycle.cmd not found in $RevizeRoot"
+if (-not (Test-Path (Join-Path $AgentRoot "run-daily-cycle.cmd"))) {
+    throw "run-daily-cycle.cmd not found in $AgentRoot"
 }
-if (-not (Test-Path (Join-Path $RevizeRoot ".venv\Scripts\python.exe"))) {
-    Write-Warning "Virtual environment not found at $RevizeRoot\.venv - tasks will use system Python."
+if (-not (Test-Path (Join-Path $AgentRoot ".venv\Scripts\python.exe"))) {
+    Write-Warning "Virtual environment not found at $AgentRoot\.venv - tasks will use system Python."
 }
 
 $CurrentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
@@ -61,11 +61,11 @@ Write-Host "  User:          $CurrentUser"
 Write-Host "  Admin:         $IsAdmin"
 Write-Host "  Morning cycle: $MorningTime"
 Write-Host "  Evening alerts: $EveningTime"
-Write-Host "  Working dir:   $RevizeRoot"
+Write-Host "  Working dir:   $AgentRoot"
 Write-Host ""
 
 # ── Helper: create or update a task ──────────────────────────
-function Register-RevizeTask {
+function Register-InstaplyTask {
     param(
         [string]$TaskName,
         [string]$Description,
@@ -126,20 +126,20 @@ function Register-RevizeTask {
 # ── Task 1: Full Daily Cycle (7:00 AM) ──────────────────────
 Write-Host "Setting up $TaskNameCycle..." -ForegroundColor Cyan
 
-Register-RevizeTask `
+Register-InstaplyTask `
     -TaskName $TaskNameCycle `
     -Description "Instaply Job Agent: full daily cycle - scout jobs, generate application packets, send alerts" `
     -Executable "cmd.exe" `
-    -Arguments "/c `"$RevizeRoot\run-daily-cycle.cmd`"" `
+    -Arguments "/c `"$AgentRoot\run-daily-cycle.cmd`"" `
     -TriggerTime $MorningTime `
-    -WorkingDir $RevizeRoot
+    -WorkingDir $AgentRoot
 
 # ── Task 2: Evening Alerts (6:00 PM) ────────────────────────
 Write-Host "Setting up $TaskNameAlerts..." -ForegroundColor Cyan
 
 # Build the command for evening alerts only
-$VenvPython = Join-Path $RevizeRoot ".venv\Scripts\python.exe"
-$AlertScript = Join-Path $RevizeRoot "scripts\openclaw_revize.py"
+$VenvPython = Join-Path $AgentRoot ".venv\Scripts\python.exe"
+$AlertScript = Join-Path $AgentRoot "scripts\openclaw_agent.py"
 
 if (Test-Path $VenvPython) {
     $AlertExe = $VenvPython
@@ -147,13 +147,13 @@ if (Test-Path $VenvPython) {
     $AlertExe = "python"
 }
 
-Register-RevizeTask `
+Register-InstaplyTask `
     -TaskName $TaskNameAlerts `
     -Description "Instaply Job Agent: evening email alerts for high-scoring jobs" `
     -Executable $AlertExe `
     -Arguments "`"$AlertScript`" alerts --limit 15" `
     -TriggerTime $EveningTime `
-    -WorkingDir $RevizeRoot
+    -WorkingDir $AgentRoot
 
 # ── Summary ──────────────────────────────────────────────────
 Write-Host ""
@@ -163,7 +163,7 @@ Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Scheduled tasks:"
 
-$tasks = Get-ScheduledTask -TaskName "RevizeJobAgent-*" -ErrorAction SilentlyContinue
+$tasks = Get-ScheduledTask -TaskName "InstaplyAgent-*" -ErrorAction SilentlyContinue
 foreach ($task in $tasks) {
     $info = $task | Get-ScheduledTaskInfo -ErrorAction SilentlyContinue
     $nextRun = if ($info.NextRunTime) { $info.NextRunTime.ToString("yyyy-MM-dd HH:mm") } else { "Not scheduled" }

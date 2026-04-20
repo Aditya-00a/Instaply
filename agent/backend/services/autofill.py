@@ -1477,7 +1477,7 @@ async def _fill_greenhouse(
 
     # --- Fill Greenhouse education dropdowns (school, degree, dates) ---
     _EDU_FIELD_MAP = {
-        "school": "[university]",
+        "school": "",
         "degree": "Master's Degree",
         "discipline": "Management and Analytics",
         "start-month": "August",
@@ -1713,24 +1713,24 @@ async def _fill_greenhouse(
             elif "major" in label_lower or "field of study" in label_lower or "discipline" in label_lower:
                 answer = "Management and Analytics"
             elif "school" in label_lower or "university" in label_lower or "college" in label_lower:
-                answer = "[university]"
+                answer = ""
             # Determine answer for this unfilled dropdown.
             elif "race" in label_lower or "ethnicit" in label_lower:
-                answer = "Asian"
+                answer = ""  # TODO(post-lift): profile.eeo.race
             elif "hispanic" in label_lower or "latino" in label_lower:
-                answer = "No"
+                answer = ""  # TODO(post-lift): profile.eeo.hispanic
             elif "veteran" in label_lower:
-                answer = "I am not a protected veteran"
+                answer = ""  # TODO(post-lift): profile.eeo.veteran_status
             elif "disability" in label_lower:
-                answer = "No"
+                answer = ""  # TODO(post-lift): profile.eeo.disability
             elif "transgender" in label_lower:
-                answer = "No"
+                answer = ""  # TODO(post-lift): profile.eeo.transgender
             elif "first.generation" in re.sub(r"\s+", ".", label_lower) or "first-generation" in label_lower or "first generation" in label_lower:
-                answer = "Yes"
+                answer = ""  # TODO(post-lift): profile.eeo.first_generation
             elif "sexual orientation" in label_lower:
-                answer = "Heterosexual"
+                answer = ""  # TODO(post-lift): profile.eeo.sexual_orientation
             elif "gender" in label_lower or "sex" in label_lower:
-                answer = "Male"
+                answer = ""  # TODO(post-lift): profile.eeo.gender
             else:
                 # Try rule-based answer first.
                 rule_ans = _rule_based_answer(label_text) if label_text else None
@@ -3151,7 +3151,7 @@ async def _wd_fill_identity(page: Page, profile: dict[str, Any], filled: list[st
             "[data-automation-id='addressSection_addressLine1'] input",
             "input[data-automation-id='addressSection_addressLine1']",
         ]),
-        ("city", "Brooklyn", [
+        ("city", "", [  # TODO(post-lift): profile.address.city
             "input[name='city']",
             "[data-automation-id='addressSection_city'] input",
             "input[data-automation-id='addressSection_city']",
@@ -4575,7 +4575,7 @@ async def _wd_fill_experience(page: Page, files: dict[str, str | None], filled: 
                             return false;
                         }""")
 
-                    for search_text in ["New York", "[university]", "[university]", "york"]:
+                    for search_text in ["New York", "", "", "york"]:
                         await school_inp.click()
                         await page.wait_for_timeout(300)
                         await school_inp.fill("")
@@ -4798,7 +4798,7 @@ async def _wd_fill_experience(page: Page, files: dict[str, str | None], filled: 
 
             # Strategy 1: Fallback — use _fill_labeled_field but verify pill
             if not school_filled:
-                await _fill_labeled_field("school", "[university]", is_typeahead=True)
+                await _fill_labeled_field("school", "", is_typeahead=True)
                 # Check if it actually worked
                 try:
                     school_filled = await page.evaluate("""() => {
@@ -5045,7 +5045,7 @@ async def _wd_fill_experience(page: Page, files: dict[str, str | None], filled: 
                     const all = label + ' ' + placeholder + ' ' + name + ' ' + fieldLabel;
                     if (all.includes('linkedin') && !inp.value) {
                         const nativeSet = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
-                        nativeSet.call(inp, 'https://www.linkedin.com/in/[user]');
+                        nativeSet.call(inp, '');
                         inp.dispatchEvent(new Event('input', {bubbles: true}));
                         inp.dispatchEvent(new Event('change', {bubbles: true}));
                         filled++;
@@ -5227,7 +5227,7 @@ async def _wd_fill_questions(page: Page, profile: dict[str, Any], filled: list[s
         ("security clearance", "No"),
         ("clearance", "No"),
         # LinkedIn
-        ("linkedin", "https://www.linkedin.com/in/[user]"),
+        ("linkedin", ""),
         # Github/portfolio
         ("github", ""),
         ("portfolio", ""),
@@ -5989,11 +5989,13 @@ async def _wd_fill_voluntary(page: Page, filled: list[str]) -> None:
     Handles both data-automation-id based fields and label-based fields.
     """
     # Known automation IDs and their values
+    # TODO(post-lift): drive these from profile.eeo. Empty so we don't
+    # auto-pick demographic answers that don't belong to the active user.
     eeo_map = {
-        "gender": "Male",
-        "ethnicityDropdown": "Asian (Not Hispanic or Latino)",
-        "veteranStatus": "I am not a protected veteran",
-        "disabilityStatus": "No, I do not have a disability and have not had one in the past",
+        "gender": "",
+        "ethnicityDropdown": "",
+        "veteranStatus": "",
+        "disabilityStatus": "",
     }
     for auto_id, val in eeo_map.items():
         try:
@@ -6019,14 +6021,15 @@ async def _wd_fill_voluntary(page: Page, filled: list[str]) -> None:
             pass
 
     # Label-based fallback for EEO fields on pages that use different automation IDs
+    # TODO(post-lift): drive these from profile.eeo.
     _EEO_RULES = [
-        ("gender", "Male"),
-        ("ethnicity", "Asian"),
-        ("race", "Asian"),
-        ("hispanic", "No"),
-        ("latino", "No"),
-        ("veteran", "not a protected veteran"),
-        ("disability", "do not have a disability"),
+        ("gender", ""),
+        ("ethnicity", ""),
+        ("race", ""),
+        ("hispanic", ""),
+        ("latino", ""),
+        ("veteran", ""),
+        ("disability", ""),
         ("protected veteran", "not a protected veteran"),
     ]
 
@@ -6080,7 +6083,7 @@ async def _wd_fill_voluntary(page: Page, filled: list[str]) -> None:
     try:
         name_inp = page.locator("#selfIdentifiedDisabilityData--name, input[name*='DisabilityData'][name*='name']").first
         if await name_inp.count() > 0 and not (await name_inp.evaluate("el => el.value")):
-            await name_inp.fill("[user]")
+            await name_inp.fill("")
             filled.append("selfid_name")
             log.info("Workday Self-ID: filled name")
     except Exception:
@@ -7088,7 +7091,7 @@ _QUESTION_ANSWER_RULES: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"(?:work|worked|employed).*(?:government|u\.?s\.?\s*gov)|government.*(?:entity|agency|employer)", re.I), "No"),
     (re.compile(r"list.*government.*entity|name.*government.*entity|which.*government", re.I), "N/A"),
     # Address / location
-    (re.compile(r"city", re.I), "Brooklyn"),
+    (re.compile(r"city", re.I), ""),  # TODO(post-lift): profile.address.city
     (re.compile(r"(?:^|\b)state(?:\b|$)", re.I), "New York"),
     (re.compile(r"street|address line 1", re.I), "3405 Farragut Rd"),
     (re.compile(r"address line 2|apt|unit|suite", re.I), "2B"),
@@ -7110,19 +7113,19 @@ _QUESTION_ANSWER_RULES: list[tuple[re.Pattern[str], str]] = [
     # Currently employed
     (re.compile(r"currently employed|are you employed", re.I), "No"),
     # Legal name confirmation
-    (re.compile(r"legal name|full name", re.I), "[user]"),
-    (re.compile(r"legal\s*first\s*name", re.I), "[user]"),
-    (re.compile(r"legal\s*last\s*name", re.I), "[user]"),
+    (re.compile(r"legal name|full name", re.I), ""),
+    (re.compile(r"legal\s*first\s*name", re.I), ""),
+    (re.compile(r"legal\s*last\s*name", re.I), ""),
     # Preferred name
-    (re.compile(r"preferred\s*name|nickname", re.I), "[user]"),
+    (re.compile(r"preferred\s*name|nickname", re.I), ""),
     # EEO / demographic -- actual info (duplicates of earlier rules removed)
-    (re.compile(r"race|ethnicit", re.I), "Asian"),
-    (re.compile(r"gender(?! identity)", re.I), "Male"),
-    (re.compile(r"gender identity|pronouns", re.I), "He/Him"),
-    (re.compile(r"sexual orientation", re.I), "Heterosexual"),
-    (re.compile(r"disability", re.I), "No"),
-    (re.compile(r"transgender", re.I), "No"),
-    (re.compile(r"first.generation", re.I), "Yes"),
+    (re.compile(r"race|ethnicit", re.I), ""),  # TODO(post-lift): profile.eeo.race
+    (re.compile(r"gender(?! identity)", re.I), ""),  # TODO(post-lift): profile.eeo.gender
+    (re.compile(r"gender identity|pronouns", re.I), ""),  # TODO(post-lift): profile.pronouns,
+    (re.compile(r"sexual orientation", re.I), ""),  # TODO(post-lift): profile.eeo.sexual_orientation
+    (re.compile(r"disability", re.I), ""),  # TODO(post-lift): profile.eeo.disability
+    (re.compile(r"transgender", re.I), ""),  # TODO(post-lift): profile.eeo.transgender
+    (re.compile(r"first.generation", re.I), ""),  # TODO(post-lift): profile.eeo.first_generation
     # NOTE: location/office preference is handled dynamically in _rule_based_answer
     # to extract the city from the job description. See _LOCATION_QUESTION_RE below.
     (re.compile(r"citizen.*(?:cuba|iran|north korea|syria|crimea)|resident.*(?:cuba|iran|north korea|syria|crimea)", re.I), "No"),
@@ -7144,19 +7147,19 @@ _QUESTION_ANSWER_RULES: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"over\s*21|at least\s*21", re.I), "Yes"),
     (re.compile(r"NDA|non.?disclosure|confidential.*agree", re.I), "I agree"),
     # Contact / links
-    (re.compile(r"linkedin.*url|linkedin.*profile|your.*linkedin", re.I), "https://linkedin.com/in/[user]"),
-    (re.compile(r"github.*url|github.*profile|your.*github", re.I), "https://github.com/[user]-00a"),
-    (re.compile(r"portfolio.*url|portfolio.*link|personal.*website|your.*website", re.I), "https://[user]-portfolio-[portfolio-host]"),
+    (re.compile(r"linkedin.*url|linkedin.*profile|your.*linkedin", re.I), ""),
+    (re.compile(r"github.*url|github.*profile|your.*github", re.I), ""),
+    (re.compile(r"portfolio.*url|portfolio.*link|personal.*website|your.*website", re.I), ""),
     # Cover letter -- handled by LLM with JD context (see _llm_answer_question)
     # Phone
-    (re.compile(r"phone.*number|contact.*number|mobile.*number", re.I), "+[phone]"),
+    (re.compile(r"phone.*number|contact.*number|mobile.*number", re.I), ""),
     # Hourly rate acknowledgment
     (re.compile(r"hourly rate.*\$|rate.*for this role", re.I), "I acknowledge and agree"),
     # Certification / attest
     (re.compile(r"certif.*true|certif.*accurate|attest|swear|affirm.*true|information.*correct", re.I), "I certify"),
     # Education details
     (re.compile(r"gpa|grade.*point|cumulative.*gpa", re.I), ""),  # TODO(post-lift): profile.education[0].gpa
-    (re.compile(r"school.*name|university.*name|college.*name|institution", re.I), "[university]"),
+    (re.compile(r"school.*name|university.*name|college.*name|institution", re.I), ""),
     (re.compile(r"degree.*type|degree.*level|level.*education|highest.*degree", re.I), "Master's Degree"),
     (re.compile(r"major|field.*study|area.*study|concentration|specialization", re.I), ""),
     (re.compile(r"minor", re.I), "N/A"),
@@ -7212,7 +7215,6 @@ _US_CITIES = [
     "Charlotte", "Salt Lake City", "Pittsburgh", "Detroit", "Columbus",
     "Indianapolis", "Bellevue", "Palo Alto", "Mountain View", "Sunnyvale",
     "Menlo Park", "Cupertino", "Santa Clara", "Redmond", "Irvine",
-    "Brooklyn", "Manhattan",
 ]
 
 
@@ -9375,7 +9377,7 @@ async def autofill_and_submit(
                             elif "referr" in lt and ("name" in lt or "list" in lt):
                                 answer = "N/A"
                             elif "confirm" in lt and "email" in lt:
-                                answer = profile.get("contact", {}).get("email", "[email]")
+                                answer = profile.get("contact", {}).get("email", "")
                             elif "end date" in lt and "year" in lt:
                                 answer = "2026"
                             elif "end date" in lt and "month" in lt:

@@ -18,7 +18,7 @@
     "signature_before_pt": 16.0
   },
   "line_spacing": {
-    "body": [phone]
+    "body": 1.0833333333
   },
   "salutation": "Dear Hiring Team,",
   "closing": "Sincerely,"

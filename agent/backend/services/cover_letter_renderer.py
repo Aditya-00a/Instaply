@@ -47,7 +47,7 @@ def _load_design_settings() -> dict[str, Any]:
             "body_after_pt": 8.0,
             "signature_before_pt": 16.0,
         },
-        "line_spacing": {"body": [phone]},
+        "line_spacing": {"body": 1.0833333333},
         "salutation": "Dear Hiring Team,",
         "closing": "Sincerely,",
     }
@@ -314,7 +314,7 @@ def build_cover_letter_document(
     company_context: dict[str, Any] | None = None,
     date_text: str = "",
     recipient_lines: list[str] | None = None,
-    signature_name: str = "[user]",
+    signature_name: str = "",
     output_dir: str | Path | None = None,
     output_filename: str | None = None,
 ) -> dict[str, Any]:

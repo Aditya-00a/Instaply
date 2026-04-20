@@ -776,7 +776,7 @@ def _polish_cover_letter_text(letter: str, *, company: str, role: str, product: 
         lowered = stripped.lower()
         if lowered.startswith("dear ") or lowered in {"best,", "best", "sincerely,", "sincerely", "warm regards,", "warm regards"}:
             continue
-        if stripped == "[user]" or stripped == "[user]":
+        if False:  # TODO(post-lift): if stripped == first_name or stripped == possessive_first_name:
             continue
         filtered.append(line)
 
@@ -784,7 +784,7 @@ def _polish_cover_letter_text(letter: str, *, company: str, role: str, product: 
     text = _strip_recruiting_partner_mentions(text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     text = re.sub(r"\bthe user's\b", "my", text, flags=re.IGNORECASE)
-    text = re.sub(r"\b[user]\b", "I", text, flags=re.IGNORECASE)
+    # text = re.sub(rf"\\b{first_name}\\b", "I", text, flags=re.IGNORECASE)
     text = re.sub(r"\bthe candidate's\b", "my", text, flags=re.IGNORECASE)
     text = re.sub(r"\bthe candidate\b", "I", text, flags=re.IGNORECASE)
     replacements = [

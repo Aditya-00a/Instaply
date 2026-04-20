@@ -97,7 +97,7 @@ IRRELEVANT_FUNCTION_TITLE_TERMS = {
     "security engineer",
     "application security",
     "infrastructure engineer",
-    # REMOVED (core fit for [user]): "ml infrastructure", "machine learning systems engineer",
+    # REMOVED (core fit — author-specific): "ml infrastructure", "machine learning systems engineer",
     # "research engineer", "scientist", "data scientist" — these are his target roles
     "software engineer",
     "executive assistant",
@@ -852,7 +852,7 @@ def _extract_min_years_required(text: str) -> int | None:
 
 
 # Domain-mismatch patterns: the title may look generic (e.g. "Analyst") but
-# the JD reveals a niche domain [user] has no background in.  When the JD
+# the JD reveals a niche domain the profile has no background in.  When the JD
 # text is available, penalise heavily so we don't burn applications on roles
 # that will ATS-reject.
 _DOMAIN_MISMATCH_JD_SIGNALS = re.compile(
@@ -1142,11 +1142,11 @@ def match_job(
         except Exception:
             pass
 
-    # Niche-but-relevant role boosts — specific titles [user] should catch
+    # Niche-but-relevant role boosts — specific titles to catch
     # These are modern AI-industry roles that don't always match generic patterns
-    # but strongly fit his [university] Risk Analytics + AI projects + published research profile.
+    # but tend to fit a Risk Analytics + AI background. TODO(post-lift): profile-driven.
     NICHE_ROLE_BOOSTS = (
-        # AI Safety / Trust & Safety (he has [university] Trust & Safety Lab experience)
+        # AI Safety / Trust & Safety
         "trust and safety", "trust & safety", "safeguards analyst",
         "ai safety", "ai policy", "responsible ai", "ai governance",
         "model policy", "ai evaluator", "red team", "content policy",
@@ -1162,7 +1162,7 @@ def match_job(
         # AI Strategy / Product (his Fulcrum work)
         "ai strategy", "ai product", "ai operations",
         "genai strategy", "genai product", "llm strategy",
-        # Risk Analytics specifics (his [university] concentration)
+        # Risk Analytics specifics
         "model risk", "model validation", "quantitative risk",
         "financial risk analyst", "enterprise risk",
         "operational risk", "systemic risk",
@@ -1208,11 +1208,11 @@ def match_job(
         "data analyst", "analytics analyst", "bi analyst",
         "business intelligence analyst", "product analyst", "insights analyst",
         "growth analyst", "marketing analyst", "strategy analyst",
-        # Risk family ([university] Risk Analytics concentration)
+        # Risk family
         "risk analyst", "risk analytics", "model risk", "model validation",
         "quantitative risk", "market risk", "credit risk",
         "operational risk", "financial risk analyst", "enterprise risk analyst",
-        # Trust & Safety / AI Policy (his [university] T&S Lab experience)
+        # Trust & Safety / AI Policy
         "trust and safety", "trust & safety", "safeguards analyst",
         "integrity analyst", "ai policy", "policy analyst",
         "content policy", "platform integrity",
@@ -1267,7 +1267,7 @@ def match_job(
     elif tier == -1:
         score -= 0.60   # Too technical — hard reject
     elif title_lower:   # Has a title but not in any tier
-        score -= 0.50   # Not what [user] wants
+        score -= 0.50   # Hard-no role; profile-driven post-lift
 
     # Additional guards
     # Generic "Business Analyst" (no AI prefix) = not wanted unless AI-heavy JD

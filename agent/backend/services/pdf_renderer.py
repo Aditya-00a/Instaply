@@ -339,7 +339,7 @@ def _write_docx_resume(docx_path: Path, tailored_resume: dict[str, Any], attempt
     normal_style.font.name = FONT_NAME
     normal_style.font.size = Pt(attempt.font_size_pt)
 
-    name = tailored_resume.get("name", "[user]")
+    name = tailored_resume.get("name", "")
     _add_text_line(
         document,
         str(name).upper(),
@@ -646,7 +646,7 @@ def _write_fallback_pdf(pdf_path: Path, tailored_resume: dict[str, Any], attempt
     )
 
     story: list[Any] = []
-    story.append(Paragraph(str(tailored_resume.get("name", "[user]")).upper(), header_style))
+    story.append(Paragraph(str(tailored_resume.get("name", "")).upper(), header_style))
     contact_line = _build_contact_line(tailored_resume.get("contact", {}))
     if contact_line:
         story.append(Paragraph(contact_line, contact_style))

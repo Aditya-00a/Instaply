@@ -229,7 +229,7 @@ def generate_cover_letter_with_learning(
         company_context=company_context,
         date_text=date_text,
         recipient_lines=recipient_lines,
-        signature_name=str(master_resume.get("name", "[user]")).strip() or "[user]",
+        signature_name=str(master_resume.get("name", "")).strip() or "",
         output_filename=output_filename,
         output_dir=output_dir,
     )

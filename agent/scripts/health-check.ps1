@@ -19,9 +19,9 @@ param(
 
 $ErrorActionPreference = "Continue"
 
-$RevizeRoot = "C:\Ravendise\Instaply"
-$ConfigPath = Join-Path $RevizeRoot "config\openclaw.yaml"
-$DbPath = Join-Path $RevizeRoot "data\jobs.db"
+$AgentRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$ConfigPath = Join-Path $AgentRoot "config\openclaw.yaml"
+$DbPath = Join-Path $AgentRoot "data\jobs.db"
 
 # ── Parse config ─────────────────────────────────────────────
 $ApiBase = "http://127.0.0.1:8002"
@@ -123,7 +123,7 @@ if (-not (Test-Path $DbPath)) {
     $dbSizeMB = [math]::Round((Get-Item $DbPath).Length / 1MB, 2)
     Write-Check "Database file" $true "${dbSizeMB} MB"
 
-    $VenvPython = Join-Path $RevizeRoot ".venv\Scripts\python.exe"
+    $VenvPython = Join-Path $AgentRoot ".venv\Scripts\python.exe"
     $PythonExe = if (Test-Path $VenvPython) { $VenvPython } else { "python" }
 
     $dbQuery = @"
@@ -223,7 +223,7 @@ Write-Host ""
 
 # ── 4. Scheduler Status ─────────────────────────────────────
 Write-Host "Scheduled Tasks" -ForegroundColor Yellow
-$taskNames = @("RevizeJobAgent-DailyCycle", "RevizeJobAgent-EveningAlerts")
+$taskNames = @("InstaplyAgent-DailyCycle", "InstaplyAgent-EveningAlerts")
 foreach ($tn in $taskNames) {
     $task = Get-ScheduledTask -TaskName $tn -ErrorAction SilentlyContinue
     if ($task) {

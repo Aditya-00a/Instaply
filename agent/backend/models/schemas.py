@@ -88,7 +88,7 @@ class BuildCoverLetterDocumentRequest(BaseModel):
     company_context: dict[str, Any] = Field(default_factory=dict)
     date_text: str = ""
     recipient_lines: list[str] = Field(default_factory=list)
-    signature_name: str = "[user]"
+    signature_name: str = ""
     output_filename: str = "cover_letter"
     output_dir: str | None = None
 

@@ -50,7 +50,7 @@ def _is_company_on_cooldown(company: str) -> bool:
     return False
 
 
-# Jobs requiring US security clearance are non-starters for [user] (international
+# Jobs requiring US security clearance — non-starter for international
 # student, no clearance possible). Exclude by title keywords and JD text.
 # Companies whose external Greenhouse/Lever board is a decoy — they reject
 # external applications and require re-applying via an internal employee portal.
