@@ -1,7 +1,7 @@
-[project]
+﻿[project]
 name = "instaply-mcp"
-version = "0.4.2"
-description = "Instaply MCP server — local-first agentic job applications inside Claude Desktop / Claude Code / Codex and other local MCP clients. Runs Playwright on your residential IP so captcha and rate-limit walls disappear."
+version = "0.4.3"
+description = "Instaply MCP server â€” local-first agentic job applications inside Claude Desktop / Claude Code / Codex and other local MCP clients. Runs Playwright on your residential IP so captcha and rate-limit walls disappear."
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "Ravendise", email = "support@asion.ai" }]
@@ -33,7 +33,7 @@ dependencies = [
 [project.optional-dependencies]
 # `pip install 'instaply-mcp[worker]'` adds Playwright (the local
 # Chrome driver). After install, run `python -m playwright install
-# chromium` once — it pulls ~150 MB of browser binaries cached on disk
+# chromium` once â€” it pulls ~150 MB of browser binaries cached on disk
 # and reused forever.
 worker = [
     "playwright>=1.45.0",
