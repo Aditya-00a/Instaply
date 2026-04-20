@@ -7,11 +7,11 @@
 
 import "./cosmic.css";
 
-const REPO_URL = "https://github.com/instaply/instaply";
+const REPO_URL = "https://github.com/Aditya-00a/Instaply";
 const README_URL = `${REPO_URL}#%EF%B8%8F-get-running-in-5-commands`;
 const QUICKSTART_URL = `${REPO_URL}/blob/main/QUICKSTART.md`;
 const INSTALL_CMD =
-  "git clone https://github.com/instaply/instaply && cd Instaply/agent && python setup.py";
+  "git clone https://github.com/Aditya-00a/Instaply && cd Instaply/agent && python setup.py";
 
 export default function Home() {
   return (

@@ -9,7 +9,7 @@ A pragmatic step-by-step for shipping this to the world. Two parts:
 
 ## Part 1 — GitHub setup (do this first, in one sitting)
 
-### Repo settings (https://github.com/instaply/instaply/settings)
+### Repo settings (https://github.com/Aditya-00a/Instaply/settings)
 
 - [ ] **About** (top-right of the repo page → gear icon):
   - **Description:** `Free, open-source job-application agent that runs on your laptop while you sleep. Discovers, scores, and drafts applications across Greenhouse / Lever / SmartRecruiters. Pauses for you to solve captcha and click submit.`
@@ -70,7 +70,7 @@ A pragmatic step-by-step for shipping this to the world. Two parts:
 
 ```bash
 # 1. Fresh clone works on a clean machine (try a friend's laptop or a VM)
-git clone https://github.com/instaply/instaply
+git clone https://github.com/Aditya-00a/Instaply
 cd Instaply/agent
 
 # 2. Setup wizard runs
@@ -83,7 +83,7 @@ python -c "import sys; sys.path.insert(0,'.'); import importlib.util; \
   print('run.py imports clean')"
 
 # 4. The README renders cleanly on the public repo page
-# Open https://github.com/instaply/instaply in an incognito window —
+# Open https://github.com/Aditya-00a/Instaply in an incognito window —
 # the install block, architecture SVG, demo SVG, comparison table,
 # and star history chart should all load.
 ```
@@ -113,7 +113,7 @@ never come back.
 1. **Hacker News (first, biggest leverage)**
    - URL: https://news.ycombinator.com/submit
    - Title: **`Show HN: Instaply – open-source job-application agent that runs locally`**
-   - URL field: `https://github.com/instaply/instaply` (not the marketing site — HN trusts repos more)
+   - URL field: `https://github.com/Aditya-00a/Instaply` (not the marketing site — HN trusts repos more)
    - First comment (post immediately yourself, anchors the discussion):
      > I built this after sending 1,300+ applications during my own job search. The thing that broke me wasn't the rejections — it was the 30 minutes per application typing the same answers, then doing it 1,300 times. Existing automation tools want $30–80/mo for what is fundamentally a form-filling problem, and they do it from a datacenter IP that gets bot-detected within seconds.
      >
