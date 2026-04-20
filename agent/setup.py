@@ -17,6 +17,14 @@ user's own machine.
 """
 from __future__ import annotations
 
+import sys as _sys
+if _sys.platform == "win32":
+    try:
+        _sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        _sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, OSError):
+        pass
+
 import argparse
 import json
 import os
@@ -414,6 +422,17 @@ def print_recommendation(rec: Optional[ModelRec]) -> None:
 
 
 def main() -> int:
+    # Subcommand dispatch — keep the LLM/hardware wizard as the default,
+    # delegate `profile` to profile_wizard.py and `doctor` to doctor.py.
+    if len(sys.argv) > 1 and sys.argv[1] == "profile":
+        sys.path.insert(0, str(ROOT))
+        from profile_wizard import main as profile_main
+        return profile_main(sys.argv[2:])
+    if len(sys.argv) > 1 and sys.argv[1] == "doctor":
+        sys.path.insert(0, str(ROOT))
+        from doctor import main as doctor_main
+        return doctor_main(sys.argv[2:])
+
     ap = argparse.ArgumentParser(description="Instaply Agent setup wizard.")
     ap.add_argument("--yes", "-y", action="store_true",
                     help="Skip every confirmation prompt (CI / scripted use).")
@@ -457,10 +476,13 @@ def main() -> int:
     print(dim("  Open it to add SMTP / portal credentials before running the agent."))
 
     print(bold(cyan("\nNext steps:")))
-    print(f"  1. Create your profile at {bold('agent/data/profile.json')}")
-    print(f"     (an example schema lives in backend/models/schemas.py)")
-    print(f"  2. Drop your master resume at {bold('agent/data/master-resume.json')}")
-    print(f"  3. Start the agent: {bold('python run.py')}")
+    print(f"  1. Run the profile wizard: {bold('python setup.py profile')}")
+    print(f"     (Optional: pass {dim('--resume ~/Desktop/your-cv.pdf')} to autopopulate fields)")
+    print(f"  2. Sanity-check the install: {bold('python setup.py doctor')}")
+    print(f"  3. Start the agent in foreground: {bold('python run.py')}")
+    print(f"     Or install as a scheduled task:")
+    print(f"       Windows: {bold('powershell -ExecutionPolicy Bypass -File scripts/setup-scheduler.ps1')}")
+    print(f"       Mac/Linux: {bold('bash scripts/setup-scheduler.sh')}")
     print()
     return 0
 
