@@ -1,16 +1,57 @@
 [project]
 name = "instaply-mcp"
-version = "0.1.0"
-description = "Instaply MCP server — agentic job applications inside Claude Desktop"
+version = "0.4.2"
+description = "Instaply MCP server — local-first agentic job applications inside Claude Desktop / Claude Code / Codex and other local MCP clients. Runs Playwright on your residential IP so captcha and rate-limit walls disappear."
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "Ravendise", email = "support@asion.ai" }]
-license = { text = "Proprietary" }
+license = { text = "MIT" }
+keywords = ["mcp", "claude", "job-search", "automation", "ats"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+# Base install is small + fast. The autofill worker (Playwright +
+# adapters) is an optional extra so users who only want the answer-vault
+# / profile / queue tools don't pay the Chromium download.
 dependencies = [
     "mcp>=1.2.0",
-    "httpx>=0.27.0",
-    "pydantic>=2.8.0",
+    "pydantic>=2.8.0",       # used by the vendored worker models
+    "beautifulsoup4>=4.12.0", # used by the ATS adapters' form parsers
+    "lxml>=5.2.0",
+    "httpx>=0.28.0",
+    "PyPDF2>=3.0.0",
 ]
+
+[project.optional-dependencies]
+# `pip install 'instaply-mcp[worker]'` adds Playwright (the local
+# Chrome driver). After install, run `python -m playwright install
+# chromium` once — it pulls ~150 MB of browser binaries cached on disk
+# and reused forever.
+worker = [
+    "playwright>=1.45.0",
+    "openai>=1.30.0",
+    "tenacity>=8.2.0",
+]
+# `pip install 'instaply-mcp[search]'` adds JobSpy for the
+# `search_jobs` tool (lands later in v0.3.x). Kept separate because
+# JobSpy pulls a chunky transitive set.
+search = [
+    "python-jobspy>=1.1.50",
+]
+
+[project.urls]
+Homepage = "https://instaply.asion.ai"
+Repository = "https://github.com/Aditya-00a/Instaply"
+Issues = "https://github.com/Aditya-00a/Instaply/issues"
+Documentation = "https://github.com/Aditya-00a/Instaply/tree/main/mcp"
 
 [project.scripts]
 instaply-mcp = "instaply_mcp.server:main"

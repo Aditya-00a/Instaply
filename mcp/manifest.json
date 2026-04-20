@@ -1,0 +1,105 @@
+{
+  "$schema": "https://raw.githubusercontent.com/anthropics/dxt/main/dist/dxt-manifest.schema.json",
+  "dxt_version": "0.1",
+  "name": "instaply",
+  "display_name": "Instaply",
+  "version": "0.4.2",
+  "description": "Agentic job applications inside Claude. Fills employer forms in your own browser. Captcha-safe.",
+  "long_description": "Instaply lets you import a resume, find matching jobs, and apply from inside Claude. Tell Claude to import your resume, then ask it to find jobs based on that resume. When you want to apply, Instaply opens a real browser on your computer, fills the form from your saved profile and answers, and pauses for you to solve any captcha and click Submit. Everything stays on your machine.",
+  "author": {
+    "name": "Ravendise",
+    "email": "support@asion.ai",
+    "url": "https://instaply.asion.ai"
+  },
+  "homepage": "https://instaply.asion.ai",
+  "documentation": "https://github.com/Aditya-00a/Instaply/tree/main/mcp",
+  "support": "https://instaply.asion.ai",
+  "icon": "icon.png",
+  "license": "MIT",
+  "keywords": [
+    "jobs",
+    "job-search",
+    "automation",
+    "ats",
+    "greenhouse",
+    "lever",
+    "playwright"
+  ],
+  "server": {
+    "type": "python",
+    "entry_point": "instaply_mcp/server.py",
+    "mcp_config": {
+      "command": "python",
+      "args": [
+        "-m",
+        "instaply_mcp"
+      ],
+      "env": {
+        "PYTHONPATH": "${__dirname}/lib"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "import_resume",
+      "description": "Import a resume from a local file path or raw text, then extract grounded profile, skills, and role targets for job search."
+    },
+    {
+      "name": "apply_chat_update",
+      "description": "Apply a natural-language Instaply update from chat, such as profile edits, saved answers, or marking an application submitted."
+    },
+    {
+      "name": "update_profile",
+      "description": "Save or update identity fields (name, email, phone, LinkedIn, location, work auth, EEO answers). Stored locally, never sent anywhere."
+    },
+    {
+      "name": "get_profile",
+      "description": "Read the current local profile."
+    },
+    {
+      "name": "search_jobs",
+      "description": "Search public job sources locally. If query is omitted, derive likely role targets from the imported resume/profile."
+    },
+    {
+      "name": "save_answer",
+      "description": "Teach the agent an answer to a screening question once; it reuses the value on future applications."
+    },
+    {
+      "name": "list_answers",
+      "description": "Audit what answers the agent has remembered."
+    },
+    {
+      "name": "delete_answer",
+      "description": "Forget a saved answer."
+    },
+    {
+      "name": "list_applications",
+      "description": "Local audit trail of jobs the agent has acted on."
+    },
+    {
+      "name": "get_status",
+      "description": "Quick counts: applications by status, jobs cached, answers saved, free-trial usage."
+    },
+    {
+      "name": "apply_to_job",
+      "description": "Open the apply URL in your local Chrome, fill the form via the Instaply rules engine + saved answers, and pause for you to solve any captcha and submit."
+    },
+    {
+      "name": "mark_complete",
+      "description": "Mark an application as submitted after you click Submit on the employer page."
+    }
+  ],
+  "tools_generated": false,
+  "compatibility": {
+    "claude_desktop": ">=0.10.0",
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
+    "runtimes": {
+      "python": ">=3.10 <4"
+    }
+  },
+  "user_config": {}
+}
