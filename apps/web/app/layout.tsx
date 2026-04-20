@@ -1,6 +1,6 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Instrument_Serif, Inter, JetBrains_Mono } from "next/font/google";
 import { CookieBanner } from "./components/cookie-banner";
 
 const geistSans = Geist({
@@ -13,14 +13,32 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono"
 });
 
+const instrumentSerif = Instrument_Serif({
+  subsets: ["latin"],
+  weight: "400",
+  style: ["normal", "italic"],
+  variable: "--font-instrument-serif"
+});
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter"
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-mono"
+});
+
 const SITE_URL = "https://instaply.asion.ai";
+const TITLE = "Instaply — apply to jobs from inside Claude";
 const DESCRIPTION =
-  "Instaply is an agentic job-application platform. We submit applications to Greenhouse, Lever, SmartRecruiters, and Workday on your behalf. $1 per confirmed application. No subscriptions.";
+  "A free, local-first MCP server that fills employer forms in your own browser. Open source. MIT licensed.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Instaply — $1 per confirmed job application",
+    default: TITLE,
     template: "%s | Instaply"
   },
   description: DESCRIPTION,
@@ -28,13 +46,13 @@ export const metadata: Metadata = {
     type: "website",
     url: SITE_URL,
     siteName: "Instaply",
-    title: "Instaply — $1 per confirmed job application",
+    title: TITLE,
     description: DESCRIPTION,
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Instaply — $1 per confirmed job application",
+    title: TITLE,
     description: DESCRIPTION,
   },
   robots: {
@@ -42,14 +60,17 @@ export const metadata: Metadata = {
     follow: true,
   },
   applicationName: "Instaply",
-  authors: [{ name: "Ravendise", url: SITE_URL }],
-  creator: "Ravendise",
-  publisher: "Ravendise",
+  authors: [{ name: "Aditya Sanjay Sakhale", url: SITE_URL }],
+  creator: "Aditya Sanjay Sakhale",
+  publisher: "Aditya Sanjay Sakhale",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} ${inter.variable} ${jetbrainsMono.variable}`}
+    >
       <body className="app-body">
         {children}
         <CookieBanner />
