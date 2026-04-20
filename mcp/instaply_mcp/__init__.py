@@ -1,2 +1,3 @@
-"""Instaply MCP server — Claude Desktop integration."""
-__version__ = "0.1.0"
+"""Instaply MCP server - local-first job applications via MCP."""
+
+__version__ = "0.4.2"
