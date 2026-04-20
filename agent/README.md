@@ -66,10 +66,28 @@ TODO inline.
 
 ## Running it (local, manual)
 
+### Easiest: run the setup wizard
+
 ```bash
 cd agent
-cp config/.env.example .env
-# fill in API keys + email creds in .env
+python setup.py
+```
+
+That detects your OS / RAM / GPU, offers to install Ollama if it's
+missing, recommends the right local model for your machine, optionally
+pulls it, and writes `config/.env` for you. Cross-platform (macOS,
+Windows, Linux). Pass `--yes` to skip every confirmation prompt.
+
+`python setup.py --detect-only` prints the detection + recommendation
+as JSON and exits without making any changes — useful for CI or just
+seeing what it would do.
+
+### Manual
+
+```bash
+cd agent
+cp config/.env.example config/.env
+# fill in API keys + email creds in config/.env
 pip install -r ../mcp/requirements.txt   # or whatever the merged deps file is
 python run.py
 ```
