@@ -37,23 +37,32 @@ $root = Split-Path -Parent $PSScriptRoot   # …\mcp
 Push-Location $root
 
 try {
+    # PowerShell 5's `Set-Content -Encoding utf8` writes a BOM (EF BB BF),
+    # which Python's TOML parser rejects with "Invalid statement at line 1
+    # column 1". Use [System.IO.File]::WriteAllText with a no-BOM UTF-8
+    # encoder so the published wheel actually builds.
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    function Write-NoBom([string]$path, [string]$content) {
+        [System.IO.File]::WriteAllText((Resolve-Path $path), $content, $utf8NoBom)
+    }
+
     # 1. pyproject.toml
     $pp = Get-Content 'pyproject.toml' -Raw
     $pp = $pp -replace '(?m)^(version\s*=\s*)"[^"]+"', "`$1`"$Version`""
-    Set-Content 'pyproject.toml' $pp -NoNewline -Encoding utf8
+    Write-NoBom 'pyproject.toml' $pp
     Write-Host "  pyproject.toml -> $Version" -ForegroundColor Green
 
     # 2. instaply_mcp/__init__.py
     $init = Get-Content 'instaply_mcp/__init__.py' -Raw
     $init = $init -replace '(?m)^(__version__\s*=\s*)"[^"]+"', "`$1`"$Version`""
-    Set-Content 'instaply_mcp/__init__.py' $init -NoNewline -Encoding utf8
+    Write-NoBom 'instaply_mcp/__init__.py' $init
     Write-Host "  __init__.py    -> $Version" -ForegroundColor Green
 
     # 3. manifest.json
     $mfPath = 'manifest.json'
     $mf = Get-Content $mfPath -Raw | ConvertFrom-Json
     $mf.version = $Version
-    ($mf | ConvertTo-Json -Depth 100) | Set-Content $mfPath -Encoding utf8
+    Write-NoBom $mfPath ($mf | ConvertTo-Json -Depth 100)
     Write-Host "  manifest.json  -> $Version" -ForegroundColor Green
 
     # 4. Commit + tag

@@ -1,4 +1,4 @@
-﻿[project]
+[project]
 name = "instaply-mcp"
 version = "0.4.3"
 description = "Instaply MCP server â€” local-first agentic job applications inside Claude Desktop / Claude Code / Codex and other local MCP clients. Runs Playwright on your residential IP so captcha and rate-limit walls disappear."
