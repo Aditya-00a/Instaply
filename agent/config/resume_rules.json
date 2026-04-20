@@ -1,0 +1,121 @@
+{
+  "_note": "Per-role tailoring rules. Keep `hard_constraints` as-is; the `role_rules` arrays were stripped of the original author's specific company/project names. Re-populate `include_experience_companies`, `exclude_experience_companies`, and `prefer_project_names` from the active profile (data/master-resume.json) before running tailoring.",
+  "hard_constraints": {
+    "target_one_page": true,
+    "ats_single_column": true,
+    "font_family": "Times New Roman",
+    "cannot_create_new_jobs": true,
+    "cannot_change_titles": true,
+    "cannot_change_companies": true,
+    "cannot_change_dates": true,
+    "cannot_add_unverified_claims": true
+  },
+  "role_rules": {
+    "consulting": {
+      "include_experience_companies": [],
+      "exclude_experience_companies": [],
+      "prefer_project_names": [],
+      "tone": "formal",
+      "summary_variant": "consulting",
+      "emphasize": ["client work", "stakeholder management", "strategy", "business analysis"],
+      "section_priority": {
+        "experience": 10,
+        "skills": 8,
+        "leadership": 5,
+        "projects": 6,
+        "publications": 2
+      }
+    },
+    "operator_startup": {
+      "include_experience_companies": [],
+      "exclude_experience_companies": [],
+      "prefer_project_names": [],
+      "tone": "direct",
+      "summary_variant": "operator",
+      "emphasize": ["scaling", "revenue", "hiring", "execution", "ownership"],
+      "section_priority": {
+        "experience": 10,
+        "skills": 7,
+        "leadership": 6,
+        "projects": 5,
+        "publications": 1
+      }
+    },
+    "technical": {
+      "include_experience_companies": [],
+      "exclude_experience_companies": [],
+      "prefer_project_names": [],
+      "hide_leadership": true,
+      "tone": "technical",
+      "summary_variant": "ai_product",
+      "emphasize": ["systems built", "metrics", "tech stack", "evaluation", "infrastructure"],
+      "section_priority": {
+        "experience": 10,
+        "skills": 8,
+        "projects": 7,
+        "publications": 6,
+        "leadership": 3
+      }
+    },
+    "corporate": {
+      "include_experience_companies": [],
+      "exclude_experience_companies": [],
+      "prefer_project_names": [],
+      "tone": "formal",
+      "summary_variant": "consulting",
+      "emphasize": ["Fortune 500 clients", "compliance", "stakeholder management", "structured decision making"],
+      "section_priority": {
+        "experience": 10,
+        "skills": 8,
+        "leadership": 5,
+        "projects": 4,
+        "publications": 2
+      }
+    },
+    "risk_analytics": {
+      "include_experience_companies": [],
+      "exclude_experience_companies": [],
+      "prefer_project_names": [],
+      "tone": "formal",
+      "summary_variant": "risk_analytics",
+      "emphasize": ["risk", "compliance", "model validation", "explainability"],
+      "section_priority": {
+        "experience": 10,
+        "skills": 8,
+        "projects": 7,
+        "publications": 7,
+        "leadership": 3
+      }
+    },
+    "ai_product": {
+      "include_experience_companies": [],
+      "exclude_experience_companies": [],
+      "prefer_project_names": [],
+      "tone": "balanced",
+      "summary_variant": "ai_product",
+      "emphasize": ["product analytics", "AI systems", "experimentation", "stakeholder management"],
+      "section_priority": {
+        "experience": 10,
+        "skills": 8,
+        "projects": 5,
+        "leadership": 4,
+        "publications": 2
+      }
+    },
+    "research": {
+      "include_experience_companies": [],
+      "exclude_experience_companies": [],
+      "prefer_project_names": [],
+      "tone": "technical",
+      "summary_variant": "risk_analytics",
+      "emphasize": ["research", "evaluation", "peer-reviewed", "methodology"],
+      "section_priority": {
+        "experience": 9,
+        "publications": 9,
+        "projects": 7,
+        "skills": 7,
+        "leadership": 2
+      }
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "font_name": "Times New Roman",
+  "body_font_size_pt": 11.0,
+  "name_font_size_pt": 13.0,
+  "contact_font_size_pt": 10.0,
+  "margins_inches": {
+    "top": 0.85,
+    "bottom": 0.85,
+    "left": 0.9,
+    "right": 0.9
+  },
+  "spacing": {
+    "header_after_pt": 10.0,
+    "date_after_pt": 8.0,
+    "recipient_after_pt": 8.0,
+    "salutation_after_pt": 8.0,
+    "body_after_pt": 8.0,
+    "signature_before_pt": 16.0
+  },
+  "line_spacing": {
+    "body": [phone]
+  },
+  "salutation": "Dear Hiring Team,",
+  "closing": "Sincerely,"
+}

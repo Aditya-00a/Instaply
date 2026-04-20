@@ -1,0 +1,15 @@
+project_name: instaply-agent
+timezone: America/New_York
+job_scout:
+  refresh_mode: "hourly"
+  refresh_interval_hours: 1
+  career_site_recrawl_days: 3
+  aggregate_source_refresh_hours: 1
+backend:
+  base_url: http://127.0.0.1:8000
+  health_endpoint: /health
+ollama:
+  host: http://localhost:11434
+  model: qwen3-coder:30b
+limits:
+  linkedin_pages_per_day: 30

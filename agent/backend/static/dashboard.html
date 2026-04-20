@@ -1,0 +1,2161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Revize — Job Application Dashboard</title>
+  <style>
+    :root {
+      --bg: #f5f1e8;
+      --surface: #fffaf2;
+      --surface-2: #f0e7d7;
+      --surface-3: #e8dfcf;
+      --ink: #202020;
+      --ink-2: #3a3632;
+      --muted: #6b645b;
+      --accent: #1c6b58;
+      --accent-light: #e6f2ee;
+      --accent-hover: #155446;
+      --accent-2: #af4f2d;
+      --accent-2-light: #f5ebe6;
+      --line: #d8ccb7;
+      --line-light: #e8dfd0;
+      --shadow: 0 2px 8px rgba(43, 36, 28, 0.06);
+      --shadow-md: 0 4px 16px rgba(43, 36, 28, 0.08);
+      --shadow-lg: 0 8px 32px rgba(43, 36, 28, 0.1);
+      --radius: 10px;
+      --radius-lg: 14px;
+      --radius-sm: 6px;
+      --green: #1c6b58;
+      --green-bg: #e6f2ee;
+      --yellow: #b8860b;
+      --yellow-bg: #faf3e0;
+      --red: #c0392b;
+      --red-bg: #fdecea;
+      --blue: #2968a8;
+      --blue-bg: #e8f0f8;
+      --purple: #7b5ea7;
+      --purple-bg: #f0ebf5;
+      --transition: 150ms ease;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* ── Layout ── */
+    .app { display: flex; flex-direction: column; min-height: 100vh; }
+
+    .topbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .topbar-left { display: flex; align-items: center; gap: 20px; }
+
+    .logo {
+      font-family: Georgia, serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.02em;
+    }
+
+    .agent-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .agent-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background var(--transition);
+    }
+    .agent-dot.running { background: var(--green); animation: pulse 2s infinite; }
+    .agent-dot.stopped { background: var(--red); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .topbar-actions { display: flex; align-items: center; gap: 8px; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+      font-family: inherit;
+      white-space: nowrap;
+    }
+    .btn:hover { background: var(--surface-2); border-color: var(--muted); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .btn-primary:hover { background: var(--accent-hover); }
+
+    .btn-danger {
+      background: var(--red);
+      color: #fff;
+      border-color: var(--red);
+    }
+    .btn-danger:hover { background: #a93226; }
+
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+
+    .btn-ghost {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+    }
+    .btn-ghost:hover { color: var(--ink); background: var(--surface-2); }
+
+    /* ── Stats Bar ── */
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      padding: 16px 24px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .stat-card {
+      padding: 12px 16px;
+      background: var(--bg);
+      border-radius: var(--radius);
+      border: 1px solid var(--line-light);
+    }
+
+    .stat-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--ink);
+      line-height: 1.2;
+    }
+
+    .stat-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* ── Tab Navigation ── */
+    .tab-bar {
+      display: flex;
+      gap: 0;
+      padding: 0 24px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+      overflow-x: auto;
+    }
+
+    .tab-btn {
+      padding: 10px 18px;
+      border: none;
+      background: none;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all var(--transition);
+      font-family: inherit;
+      white-space: nowrap;
+    }
+    .tab-btn:hover { color: var(--ink); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ── Main Content ── */
+    .main { flex: 1; padding: 20px 24px; overflow-y: auto; }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Pipeline / Kanban ── */
+    .pipeline {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(220px, 1fr));
+      gap: 12px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+      min-height: calc(100vh - 260px);
+    }
+
+    .pipeline-col {
+      background: var(--surface);
+      border: 1px solid var(--line-light);
+      border-radius: var(--radius-lg);
+      display: flex;
+      flex-direction: column;
+      min-height: 200px;
+    }
+
+    .col-header {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .col-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+    }
+
+    .col-count {
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--surface-2);
+      color: var(--muted);
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    .col-body {
+      padding: 8px;
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .col-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      color: var(--muted);
+      font-size: 13px;
+      font-style: italic;
+      padding: 20px;
+      text-align: center;
+    }
+
+    /* ── Job Cards ── */
+    .job-card {
+      background: var(--bg);
+      border: 1px solid var(--line-light);
+      border-radius: var(--radius);
+      padding: 12px;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .job-card:hover {
+      border-color: var(--accent);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-1px);
+    }
+    .job-card.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-light);
+    }
+
+    .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
+    .card-title { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.3; }
+    .card-company { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+    .card-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .card-location { font-size: 11px; color: var(--muted); }
+    .card-date { font-size: 11px; color: var(--muted); }
+
+    /* ── Score Badge ── */
+    .score-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      line-height: 1.4;
+    }
+    .score-green { background: var(--green-bg); color: var(--green); }
+    .score-yellow { background: var(--yellow-bg); color: var(--yellow); }
+    .score-red { background: var(--red-bg); color: var(--red); }
+
+    /* ── Status Pills ── */
+    .status-pill {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+      text-transform: capitalize;
+    }
+    .pill-new { background: var(--blue-bg); color: var(--blue); }
+    .pill-packet_generated, .pill-ready { background: var(--green-bg); color: var(--green); }
+    .pill-reviewed { background: var(--yellow-bg); color: var(--yellow); }
+    .pill-applied { background: var(--purple-bg); color: var(--purple); }
+    .pill-interviewing { background: #fff3e0; color: #e65100; }
+    .pill-offer { background: var(--green-bg); color: var(--green); }
+    .pill-rejected { background: var(--red-bg); color: var(--red); }
+
+    /* ── Detail Panel (overlay) ── */
+    .detail-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(32, 32, 32, 0.3);
+      backdrop-filter: blur(2px);
+    }
+    .detail-overlay.open { display: flex; justify-content: flex-end; }
+
+    .detail-panel {
+      width: min(560px, 90vw);
+      height: 100vh;
+      background: var(--surface);
+      border-left: 1px solid var(--line);
+      box-shadow: var(--shadow-lg);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      animation: slideIn 200ms ease;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(40px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .detail-header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--line-light);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-shrink: 0;
+    }
+
+    .detail-close {
+      width: 32px; height: 32px;
+      border: none;
+      background: var(--surface-2);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      color: var(--muted);
+      flex-shrink: 0;
+      font-family: inherit;
+    }
+    .detail-close:hover { background: var(--surface-3); color: var(--ink); }
+
+    .detail-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .detail-company { font-size: 14px; color: var(--muted); }
+
+    .detail-body { padding: 20px 24px; flex: 1; }
+
+    .detail-section {
+      margin-bottom: 24px;
+    }
+    .detail-section:last-child { margin-bottom: 0; }
+
+    .detail-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      font-size: 13px;
+      border-bottom: 1px solid var(--line-light);
+    }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-row-label { color: var(--muted); }
+    .detail-row-value { font-weight: 500; text-align: right; max-width: 60%; word-break: break-word; }
+
+    .detail-row-value a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .detail-row-value a:hover { text-decoration: underline; }
+
+    .detail-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 16px 24px;
+      border-top: 1px solid var(--line-light);
+      background: var(--bg);
+      flex-shrink: 0;
+    }
+
+    .detail-actions .btn { flex: 1; justify-content: center; }
+
+    /* Score breakdown */
+    .score-breakdown {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .score-reason {
+      font-size: 12px;
+      color: var(--ink-2);
+      padding: 6px 10px;
+      background: var(--bg);
+      border-radius: var(--radius-sm);
+      border-left: 3px solid var(--accent);
+    }
+
+    /* Materials links */
+    .material-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--bg);
+      border: 1px solid var(--line-light);
+      border-radius: var(--radius-sm);
+      margin-bottom: 6px;
+      text-decoration: none;
+      color: var(--ink);
+      font-size: 13px;
+      transition: all var(--transition);
+    }
+    .material-link:hover { border-color: var(--accent); background: var(--accent-light); }
+    .material-icon { font-size: 16px; }
+
+    /* Notes field */
+    .notes-field {
+      width: 100%;
+      min-height: 80px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--ink);
+      background: var(--bg);
+      resize: vertical;
+      transition: border-color var(--transition);
+    }
+    .notes-field:focus { outline: none; border-color: var(--accent); }
+
+    /* ── Review Queue ── */
+    .review-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .review-table { width: 100%; }
+
+    .data-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      background: var(--surface);
+      border: 1px solid var(--line-light);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .data-table th {
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .data-table td {
+      padding: 10px 14px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--line-light);
+      vertical-align: middle;
+    }
+
+    .data-table tr:last-child td { border-bottom: none; }
+
+    .data-table tbody tr {
+      transition: background var(--transition);
+    }
+    .data-table tbody tr:hover { background: var(--bg); }
+
+    .table-check { width: 36px; }
+    .table-check input { cursor: pointer; }
+
+    .table-actions { display: flex; gap: 6px; }
+
+    .row-overdue { background: #fdf2f0 !important; }
+    .overdue-text { color: var(--red); font-weight: 600; }
+
+    /* ── Stats Tab ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 16px;
+    }
+
+    .stats-card {
+      background: var(--surface);
+      border: 1px solid var(--line-light);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+    }
+
+    .stats-card-title {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    /* Funnel */
+    .funnel { display: flex; flex-direction: column; gap: 6px; }
+    .funnel-row { display: flex; align-items: center; gap: 12px; }
+    .funnel-label { font-size: 13px; width: 90px; flex-shrink: 0; color: var(--muted); }
+    .funnel-bar-bg {
+      flex: 1;
+      height: 28px;
+      background: var(--surface-2);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+    .funnel-bar {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 500ms ease;
+      display: flex;
+      align-items: center;
+      padding-left: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+      min-width: fit-content;
+    }
+    .funnel-bar.f-applied { background: var(--accent); }
+    .funnel-bar.f-response { background: var(--blue); }
+    .funnel-bar.f-interview { background: var(--yellow); }
+    .funnel-bar.f-offer { background: var(--accent-2); }
+
+    /* Bar chart */
+    .bar-chart { display: flex; flex-direction: column; gap: 8px; }
+    .bar-row { display: flex; align-items: center; gap: 10px; }
+    .bar-label { font-size: 12px; width: 80px; flex-shrink: 0; color: var(--muted); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bar-track { flex: 1; height: 22px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+    .bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      padding-left: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #fff;
+      transition: width 500ms ease;
+    }
+    .bar-fill.alt { background: var(--accent-2); }
+    .bar-fill.blue { background: var(--blue); }
+
+    /* ── Loading / Empty States ── */
+    .loading-spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid var(--line);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 600ms linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+    }
+    .empty-state-icon { font-size: 32px; margin-bottom: 8px; }
+    .empty-state-text { font-size: 14px; }
+
+    /* ── Toast ── */
+    .toast-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 300;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .toast {
+      padding: 10px 16px;
+      background: var(--ink);
+      color: #fff;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      box-shadow: var(--shadow-lg);
+      animation: toastIn 200ms ease;
+      max-width: 360px;
+    }
+    .toast.toast-error { background: var(--red); }
+    .toast.toast-success { background: var(--green); }
+
+    @keyframes toastIn {
+      from { transform: translateY(10px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 1100px) {
+      .pipeline { grid-template-columns: repeat(3, minmax(200px, 1fr)); }
+    }
+    @media (max-width: 768px) {
+      .pipeline { grid-template-columns: repeat(2, minmax(180px, 1fr)); }
+      .stats-bar { grid-template-columns: repeat(2, 1fr); }
+      .stats-grid { grid-template-columns: 1fr; }
+      .topbar { padding: 0 12px; }
+      .main { padding: 12px; }
+    }
+    @media (max-width: 480px) {
+      .pipeline { grid-template-columns: 1fr; }
+      .stats-bar { grid-template-columns: 1fr; }
+    }
+
+    /* scrollbar */
+    .col-body::-webkit-scrollbar, .detail-panel::-webkit-scrollbar { width: 4px; }
+    .col-body::-webkit-scrollbar-thumb, .detail-panel::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
+
+    /* ── Live Feed ── */
+    .feed-layout {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 16px;
+      min-height: calc(100vh - 260px);
+    }
+
+    @media (max-width: 1000px) {
+      .feed-layout { grid-template-columns: 1fr; }
+    }
+
+    .log-viewer {
+      background: #1a1a2e;
+      border-radius: var(--radius-lg);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid #2a2a40;
+    }
+
+    .log-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: #16162a;
+      border-bottom: 1px solid #2a2a40;
+    }
+
+    .log-header-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #8888aa;
+    }
+
+    .log-header-actions { display: flex; gap: 6px; align-items: center; }
+
+    .log-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s infinite;
+    }
+    .log-dot.paused { background: var(--yellow); animation: none; }
+
+    .log-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px;
+      font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      color: #c8c8e0;
+      max-height: calc(100vh - 320px);
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .log-body::-webkit-scrollbar { width: 6px; }
+    .log-body::-webkit-scrollbar-thumb { background: #3a3a55; border-radius: 3px; }
+
+    .log-line { padding: 1px 0; }
+    .log-line.log-info { color: #7ec8e3; }
+    .log-line.log-warn { color: #f0c674; }
+    .log-line.log-error { color: #e06c75; }
+    .log-line.log-success { color: #98c379; }
+    .log-line.log-http { color: #6a6a88; }
+    .log-line.log-highlight { color: #c678dd; }
+
+    .log-filter-bar {
+      display: flex;
+      gap: 4px;
+      padding: 8px 16px;
+      background: #16162a;
+      border-top: 1px solid #2a2a40;
+    }
+
+    .log-filter-btn {
+      padding: 3px 10px;
+      border: 1px solid #3a3a55;
+      border-radius: 4px;
+      background: transparent;
+      color: #8888aa;
+      font-size: 11px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 150ms;
+    }
+    .log-filter-btn:hover { border-color: #5a5a75; color: #c8c8e0; }
+    .log-filter-btn.active { background: #2a2a50; border-color: #5a5aaa; color: #c8c8e0; }
+
+    .activity-feed {
+      background: var(--surface);
+      border: 1px solid var(--line-light);
+      border-radius: var(--radius-lg);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .activity-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line-light);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .activity-body {
+      flex: 1;
+      overflow-y: auto;
+      max-height: calc(100vh - 320px);
+    }
+
+    .activity-item {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--line-light);
+      transition: background 150ms;
+    }
+    .activity-item:hover { background: var(--bg); }
+    .activity-item:last-child { border-bottom: none; }
+
+    .activity-row1 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 3px;
+    }
+
+    .activity-icon {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+    .activity-icon.a-new { background: var(--blue-bg); color: var(--blue); }
+    .activity-icon.a-packet { background: var(--green-bg); color: var(--green); }
+    .activity-icon.a-applied { background: var(--purple-bg); color: var(--purple); }
+    .activity-icon.a-rejected { background: var(--red-bg); color: var(--red); }
+    .activity-icon.a-reviewed { background: var(--yellow-bg); color: var(--yellow); }
+    .activity-icon.a-default { background: var(--surface-2); color: var(--muted); }
+
+    .activity-text {
+      font-size: 13px;
+      color: var(--ink);
+      flex: 1;
+      min-width: 0;
+    }
+    .activity-text strong { font-weight: 600; }
+
+    .activity-time {
+      font-size: 11px;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    .activity-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-left: 32px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Top Bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="logo">Revize</div>
+        <div class="agent-status">
+          <span class="agent-dot" id="agentDot"></span>
+          <span id="agentLabel">Checking...</span>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn btn-primary btn-sm" id="btnRunNow" style="background:var(--accent-2);font-weight:600">Run Now</button>
+        <button class="btn btn-primary btn-sm" id="btnStart">Start Agent</button>
+        <button class="btn btn-sm" id="btnStop">Stop Agent</button>
+        <span style="font-size:11px;color:var(--muted);margin-left:4px" id="lastRefresh"></span>
+      </div>
+    </header>
+
+    <!-- Stats Bar -->
+    <div class="stats-bar" id="statsBar">
+      <div class="stat-card">
+        <div class="stat-label">Jobs Found</div>
+        <div class="stat-value" id="statFound">--</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Packets Ready</div>
+        <div class="stat-value" id="statPackets">--</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Applied</div>
+        <div class="stat-value" id="statApplied">--</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Response Rate</div>
+        <div class="stat-value" id="statResponse">--</div>
+        <div class="stat-sub" id="statResponseSub"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Interviews</div>
+        <div class="stat-value" id="statInterviews">--</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Follow-ups Due</div>
+        <div class="stat-value" id="statFollowups">--</div>
+        <div class="stat-sub" id="statFollowupsSub"></div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <nav class="tab-bar">
+      <button class="tab-btn active" data-tab="pipeline">Pipeline</button>
+      <button class="tab-btn" data-tab="review">Review Queue</button>
+      <button class="tab-btn" data-tab="tracker">Application Tracker</button>
+      <button class="tab-btn" data-tab="feed">Live Feed</button>
+      <button class="tab-btn" data-tab="stats">Stats</button>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main">
+      <!-- Pipeline Tab -->
+      <div class="tab-panel active" id="panel-pipeline">
+        <div class="pipeline" id="pipelineGrid"></div>
+      </div>
+
+      <!-- Review Queue Tab -->
+      <div class="tab-panel" id="panel-review">
+        <div class="review-controls">
+          <button class="btn btn-primary btn-sm" id="btnBulkApprove" disabled>Approve Selected</button>
+          <button class="btn btn-danger btn-sm" id="btnBulkReject" disabled>Reject Selected</button>
+          <button class="btn btn-sm" id="btnRefreshReview">Refresh</button>
+          <span style="flex:1"></span>
+          <span style="font-size:12px;color:var(--muted)" id="reviewCount">0 items</span>
+        </div>
+        <div id="reviewTableWrap"></div>
+      </div>
+
+      <!-- Application Tracker Tab -->
+      <div class="tab-panel" id="panel-tracker">
+        <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center">
+          <button class="btn btn-sm" id="btnRefreshTracker">Refresh</button>
+          <span style="flex:1"></span>
+          <span style="font-size:12px;color:var(--muted)" id="trackerCount">0 applications</span>
+        </div>
+        <div id="trackerTableWrap"></div>
+      </div>
+
+      <!-- Live Feed Tab -->
+      <div class="tab-panel" id="panel-feed">
+        <div class="feed-layout">
+          <!-- Log Viewer -->
+          <div class="log-viewer">
+            <div class="log-header">
+              <span class="log-header-title">Agent Console</span>
+              <div class="log-header-actions">
+                <span class="log-dot" id="logDot"></span>
+                <button class="log-filter-btn" id="btnLogPause">Pause</button>
+                <button class="log-filter-btn" id="btnLogClear">Clear</button>
+              </div>
+            </div>
+            <div class="log-body" id="logBody"></div>
+            <div class="log-filter-bar">
+              <button class="log-filter-btn active" data-filter="all">All</button>
+              <button class="log-filter-btn" data-filter="info">Info</button>
+              <button class="log-filter-btn" data-filter="warn">Warnings</button>
+              <button class="log-filter-btn" data-filter="error">Errors</button>
+              <button class="log-filter-btn" data-filter="apply">Apply</button>
+              <button class="log-filter-btn" data-filter="scout">Scout</button>
+            </div>
+          </div>
+
+          <!-- Activity Feed -->
+          <div class="activity-feed">
+            <div class="activity-header">
+              <span>Activity</span>
+              <span id="activityCount" style="font-weight:400;text-transform:none;letter-spacing:0">--</span>
+            </div>
+            <div class="activity-body" id="activityBody"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Tab -->
+      <div class="tab-panel" id="panel-stats">
+        <div class="stats-grid" id="statsGrid">
+          <div class="stats-card">
+            <div class="stats-card-title">Application Funnel</div>
+            <div class="funnel" id="funnelChart"></div>
+          </div>
+          <div class="stats-card">
+            <div class="stats-card-title">Score Distribution</div>
+            <div class="bar-chart" id="scoreChart"></div>
+          </div>
+          <div class="stats-card">
+            <div class="stats-card-title">Jobs by Source</div>
+            <div class="bar-chart" id="sourceChart"></div>
+          </div>
+          <div class="stats-card">
+            <div class="stats-card-title">Top Companies by Match Score</div>
+            <div class="bar-chart" id="companyChart"></div>
+          </div>
+          <div class="stats-card" style="grid-column: 1 / -1;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+              <div class="stats-card-title" style="margin-bottom:0">Rejection Analytics</div>
+              <button class="btn btn-sm" id="btnScanRejections">Scan Email for Rejections</button>
+            </div>
+            <div id="rejectionAnalytics">
+              <div class="empty-state"><div class="loading-spinner"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail Overlay -->
+  <div class="detail-overlay" id="detailOverlay">
+    <div class="detail-panel" id="detailPanel">
+      <div class="detail-header">
+        <div>
+          <div class="detail-title" id="detailTitle">--</div>
+          <div class="detail-company" id="detailCompany">--</div>
+        </div>
+        <button class="detail-close" id="detailClose" title="Close">&times;</button>
+      </div>
+      <div class="detail-body">
+        <!-- Info section -->
+        <div class="detail-section">
+          <div class="detail-section-title">Job Information</div>
+          <div id="detailInfo"></div>
+        </div>
+
+        <!-- Score section -->
+        <div class="detail-section">
+          <div class="detail-section-title">Match Score</div>
+          <div id="detailScore"></div>
+        </div>
+
+        <!-- Materials section -->
+        <div class="detail-section">
+          <div class="detail-section-title">Generated Materials</div>
+          <div id="detailMaterials"></div>
+        </div>
+
+        <!-- Tracking section -->
+        <div class="detail-section">
+          <div class="detail-section-title">Application Tracking</div>
+          <div id="detailTracking"></div>
+        </div>
+
+        <!-- Notes section -->
+        <div class="detail-section">
+          <div class="detail-section-title">Notes</div>
+          <textarea class="notes-field" id="detailNotes" placeholder="Add notes about this opportunity..."></textarea>
+        </div>
+      </div>
+      <div class="detail-actions">
+        <button class="btn btn-primary" id="detailApprove">Approve &amp; Apply</button>
+        <button class="btn btn-danger" id="detailReject">Reject</button>
+        <button class="btn" id="detailRegen">Regenerate Materials</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toasts -->
+  <div class="toast-container" id="toasts"></div>
+
+  <script>
+    /* ================================================================
+       Revize Dashboard — vanilla JS application controller
+       ================================================================ */
+
+    // ── Helpers ──
+    function $(id) { return document.getElementById(id); }
+    function $$(sel, root) { return Array.from((root || document).querySelectorAll(sel)); }
+
+    async function api(path, opts = {}) {
+      try {
+        const res = await fetch(path, {
+          headers: { 'Content-Type': 'application/json' },
+          ...opts,
+        });
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(txt || `HTTP ${res.status}`);
+        }
+        const ct = res.headers.get('content-type') || '';
+        return ct.includes('json') ? res.json() : res.text();
+      } catch (err) {
+        console.error(`API ${path}:`, err);
+        throw err;
+      }
+    }
+
+    function toast(msg, type = '') {
+      const el = document.createElement('div');
+      el.className = 'toast' + (type ? ` toast-${type}` : '');
+      el.textContent = msg;
+      $('toasts').appendChild(el);
+      setTimeout(() => el.remove(), 4000);
+    }
+
+    function formatDate(d) {
+      if (!d) return '--';
+      const dt = new Date(d);
+      if (isNaN(dt)) return d;
+      return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function formatDateShort(d) {
+      if (!d) return '--';
+      const dt = new Date(d);
+      if (isNaN(dt)) return d;
+      return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    function relativeTime(d) {
+      if (!d) return '';
+      const now = new Date();
+      const dt = new Date(d);
+      const diff = Math.floor((now - dt) / 86400000);
+      if (diff === 0) return 'today';
+      if (diff === 1) return 'yesterday';
+      if (diff < 7) return diff + 'd ago';
+      if (diff < 30) return Math.floor(diff / 7) + 'w ago';
+      return formatDateShort(d);
+    }
+
+    function scoreClass(s) {
+      if (s >= 0.85) return 'score-green';
+      if (s >= 0.72) return 'score-yellow';
+      return 'score-red';
+    }
+
+    function pillClass(status) {
+      const s = (status || '').toLowerCase().replace(/\s+/g, '_');
+      return 'status-pill pill-' + s;
+    }
+
+    function escHtml(str) {
+      if (!str) return '';
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    function truncate(str, n) {
+      if (!str) return '';
+      return str.length > n ? str.slice(0, n) + '...' : str;
+    }
+
+    // ── State ──
+    const state = {
+      activeTab: 'pipeline',
+      allJobs: [],
+      selectedJob: null,
+      reviewSelection: new Set(),
+      agentStatus: 'unknown',
+      stats: {},
+    };
+
+    // Pipeline column definitions
+    const COLUMNS = [
+      { key: 'new', label: 'New', statuses: ['new'] },
+      { key: 'packets_ready', label: 'Packets Ready', statuses: ['packet_generated'] },
+      { key: 'under_review', label: 'Under Review', statuses: ['reviewed'] },
+      { key: 'applied', label: 'Applied', statuses: ['applied'] },
+      { key: 'interviewing', label: 'Interviewing', statuses: ['interviewing'] },
+      { key: 'final', label: 'Offer / Rejected', statuses: ['offer', 'rejected', 'accepted', 'declined'] },
+    ];
+
+    // ── Tab Navigation ──
+    $$('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        state.activeTab = tab;
+        $$('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+        $$('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + tab));
+        if (tab === 'review') loadReviewQueue();
+        if (tab === 'tracker') loadTracker();
+        if (tab === 'feed') startFeedPolling();
+        else stopFeedPolling();
+        if (tab === 'stats') loadStatsTab();
+      });
+    });
+
+    // ── Agent Control ──
+    $('btnRunNow').addEventListener('click', async () => {
+      $('btnRunNow').disabled = true;
+      $('btnRunNow').textContent = 'Running...';
+      toast('Full cycle started — scout, generate, cleanup, alerts. This may take a few minutes.', 'success');
+      try {
+        await api('/agent/run-now', { method: 'POST', body: '{}' });
+        // Poll for completion
+        const poll = setInterval(async () => {
+          try {
+            const rt = await api('/agent/runtime');
+            updateAgentUI(rt);
+            if (rt.last_status === 'completed' || rt.last_status === 'error') {
+              clearInterval(poll);
+              $('btnRunNow').disabled = false;
+              $('btnRunNow').textContent = 'Run Now';
+              if (rt.last_status === 'completed') {
+                toast('Cycle complete! ' + (rt.last_summary || ''), 'success');
+              } else {
+                toast('Cycle error: ' + (rt.last_error || 'unknown'), 'error');
+              }
+              refreshAll();
+            }
+          } catch (_) {}
+        }, 5000);
+        // Safety timeout — stop polling after 10 minutes
+        setTimeout(() => {
+          $('btnRunNow').disabled = false;
+          $('btnRunNow').textContent = 'Run Now';
+        }, 600000);
+      } catch (e) {
+        toast('Failed: ' + e.message, 'error');
+        $('btnRunNow').disabled = false;
+        $('btnRunNow').textContent = 'Run Now';
+      }
+    });
+
+    $('btnStart').addEventListener('click', async () => {
+      $('btnStart').disabled = true;
+      try {
+        const r = await api('/agent/start', { method: 'POST', body: '{}' });
+        toast('Agent started', 'success');
+        updateAgentUI(r);
+      } catch (e) {
+        toast('Failed to start: ' + e.message, 'error');
+      } finally {
+        $('btnStart').disabled = false;
+      }
+    });
+
+    $('btnStop').addEventListener('click', async () => {
+      $('btnStop').disabled = true;
+      try {
+        const r = await api('/agent/stop', { method: 'POST', body: '{}' });
+        toast('Agent stopped', 'success');
+        updateAgentUI(r);
+      } catch (e) {
+        toast('Failed to stop: ' + e.message, 'error');
+      } finally {
+        $('btnStop').disabled = false;
+      }
+    });
+
+    function updateAgentUI(runtime) {
+      if (!runtime) return;
+      const s = (runtime.status || 'unknown').toLowerCase();
+      state.agentStatus = s;
+      const dot = $('agentDot');
+      dot.className = 'agent-dot';
+      if (s === 'running') dot.classList.add('running');
+      else if (s === 'stopped' || s === 'idle') dot.classList.add('stopped');
+
+      let label = s.charAt(0).toUpperCase() + s.slice(1);
+      if (runtime.last_cycle_at) label += ' — last cycle ' + relativeTime(runtime.last_cycle_at);
+      $('agentLabel').textContent = label;
+    }
+
+    async function refreshAgentStatus() {
+      try {
+        const r = await api('/agent/runtime');
+        updateAgentUI(r);
+      } catch (_) {
+        $('agentLabel').textContent = 'Unreachable';
+        $('agentDot').className = 'agent-dot stopped';
+      }
+    }
+
+    // ── Data Loading ──
+    async function loadAllJobs() {
+      try {
+        const data = await api('/review/inbox', {
+          method: 'POST',
+          body: JSON.stringify({ limit: 500, statuses: ['new', 'packet_generated', 'reviewed', 'applied', 'interviewing', 'offer', 'rejected', 'accepted', 'declined'] }),
+        });
+        const raw = Array.isArray(data) ? data : (data.jobs || data.items || []);
+        // Flatten nested {job: {...}, ...} items so title/company/score are top-level
+        state.allJobs = raw.map(item => {
+          if (item.job && typeof item.job === 'object') {
+            return { ...item, ...item.job };
+          }
+          return item;
+        });
+      } catch (_) {
+        state.allJobs = [];
+      }
+    }
+
+    async function loadStats() {
+      try {
+        const data = await api('/tracking/stats');
+        state.stats = data || {};
+      } catch (_) {
+        state.stats = {};
+      }
+    }
+
+    async function loadFollowups() {
+      try {
+        const data = await api('/tracking/followups');
+        return Array.isArray(data) ? data : (data.followups || data.items || []);
+      } catch (_) {
+        return [];
+      }
+    }
+
+    // ── Render Stats Bar ──
+    function renderStatsBar() {
+      const jobs = state.allJobs;
+      const s = state.stats;
+
+      const total = s.total_found || jobs.length || 0;
+      const packets = s.packets_generated || jobs.filter(j => j.status === 'packet_generated').length;
+      const applied = s.applied || jobs.filter(j => ['applied', 'interviewing', 'offer', 'accepted'].includes(j.status)).length;
+      const interviews = s.interviewing || jobs.filter(j => j.status === 'interviewing').length;
+      const responses = s.responses || 0;
+      const rate = applied > 0 ? Math.round((responses / applied) * 100) : 0;
+      const followups = s.followups_due || 0;
+      const overdue = s.followups_overdue || 0;
+
+      $('statFound').textContent = total;
+      $('statPackets').textContent = packets;
+      $('statApplied').textContent = applied;
+      $('statResponse').textContent = applied > 0 ? rate + '%' : '--';
+      $('statResponseSub').textContent = applied > 0 ? `${responses} of ${applied}` : '';
+      $('statInterviews').textContent = interviews;
+      $('statFollowups').textContent = followups;
+      $('statFollowupsSub').textContent = overdue > 0 ? overdue + ' overdue' : '';
+      if (overdue > 0) $('statFollowups').style.color = 'var(--red)';
+      else $('statFollowups').style.color = '';
+    }
+
+    // ── Render Pipeline ──
+    function renderPipeline() {
+      const grid = $('pipelineGrid');
+      grid.innerHTML = '';
+
+      COLUMNS.forEach(col => {
+        const colJobs = state.allJobs.filter(j => col.statuses.includes((j.status || 'new').toLowerCase()));
+
+        const colEl = document.createElement('div');
+        colEl.className = 'pipeline-col';
+        colEl.innerHTML = `
+          <div class="col-header">
+            <span class="col-title">${col.label}</span>
+            <span class="col-count">${colJobs.length}</span>
+          </div>
+          <div class="col-body" data-col="${col.key}"></div>
+        `;
+
+        const body = colEl.querySelector('.col-body');
+
+        if (colJobs.length === 0) {
+          body.innerHTML = '<div class="col-empty">No jobs</div>';
+        } else {
+          colJobs.forEach(job => {
+            const score = job.match_score ?? job.score ?? null;
+            const card = document.createElement('div');
+            card.className = 'job-card';
+            card.dataset.jobId = job.id || job.job_id || '';
+            card.innerHTML = `
+              <div class="card-top">
+                <div class="card-title">${escHtml(truncate(job.title || job.job_title || 'Untitled', 50))}</div>
+                ${score !== null ? `<span class="score-badge ${scoreClass(score)}">${(score * 100).toFixed(0)}</span>` : ''}
+              </div>
+              <div class="card-company">${escHtml(job.company || job.company_name || '--')}</div>
+              <div class="card-meta">
+                ${job.location ? `<span class="card-location">${escHtml(truncate(job.location, 30))}</span>` : ''}
+                ${job.found_at || job.created_at ? `<span class="card-date">${relativeTime(job.found_at || job.created_at)}</span>` : ''}
+              </div>
+            `;
+            card.addEventListener('click', () => openDetail(job));
+            body.appendChild(card);
+          });
+        }
+
+        grid.appendChild(colEl);
+      });
+    }
+
+    // ── Detail Panel ──
+    function openDetail(job) {
+      state.selectedJob = job;
+
+      $('detailTitle').textContent = job.title || job.job_title || 'Untitled';
+      $('detailCompany').textContent = job.company || job.company_name || '--';
+
+      // Info rows
+      const infoRows = [
+        ['Location', job.location || '--'],
+        ['Source', job.source || job.board || '--'],
+        ['Status', job.status || 'new'],
+        ['Found', formatDate(job.found_at || job.created_at)],
+      ];
+      if (job.url || job.job_url || job.apply_url) {
+        const url = job.url || job.job_url || job.apply_url;
+        infoRows.push(['URL', `<a href="${escHtml(url)}" target="_blank" rel="noopener">${escHtml(truncate(url, 50))}</a>`]);
+      }
+      $('detailInfo').innerHTML = infoRows.map(([l, v]) =>
+        `<div class="detail-row"><span class="detail-row-label">${l}</span><span class="detail-row-value">${v.startsWith('<') ? v : escHtml(v)}</span></div>`
+      ).join('');
+
+      // Score
+      const score = job.match_score ?? job.score ?? null;
+      let scoreHtml = '';
+      if (score !== null) {
+        scoreHtml += `<div style="margin-bottom:10px"><span class="score-badge ${scoreClass(score)}" style="font-size:16px;padding:4px 12px">${(score * 100).toFixed(0)}%</span></div>`;
+        const reasons = job.match_reasons || job.score_reasons || job.reasons || [];
+        if (reasons.length) {
+          scoreHtml += '<div class="score-breakdown">';
+          reasons.forEach(r => {
+            const text = typeof r === 'string' ? r : (r.reason || r.text || JSON.stringify(r));
+            scoreHtml += `<div class="score-reason">${escHtml(text)}</div>`;
+          });
+          scoreHtml += '</div>';
+        }
+      } else {
+        scoreHtml = '<span style="color:var(--muted);font-size:13px">No score available</span>';
+      }
+      $('detailScore').innerHTML = scoreHtml;
+
+      // Materials
+      const jobId = job.id || job.job_id || '';
+      let matsHtml = '';
+      if (job.resume_path || jobId) {
+        const resumePath = job.resume_path || `/artifacts/${jobId}/resume.pdf`;
+        matsHtml += `<a class="material-link" href="${escHtml(resumePath)}" target="_blank"><span class="material-icon">&#128196;</span>Resume PDF</a>`;
+      }
+      if (job.cover_letter_path || jobId) {
+        const clPath = job.cover_letter_path || `/artifacts/${jobId}/cover_letter.pdf`;
+        matsHtml += `<a class="material-link" href="${escHtml(clPath)}" target="_blank"><span class="material-icon">&#128221;</span>Cover Letter PDF</a>`;
+      }
+      if (!matsHtml) matsHtml = '<span style="color:var(--muted);font-size:13px">No materials generated yet</span>';
+      $('detailMaterials').innerHTML = matsHtml;
+
+      // Tracking
+      const trackRows = [
+        ['Status', job.status || 'new'],
+        ['Applied Date', formatDate(job.applied_at || job.applied_date)],
+        ['Follow-up Due', formatDate(job.followup_due || job.followup_date)],
+        ['Last Updated', formatDate(job.updated_at)],
+      ];
+      $('detailTracking').innerHTML = trackRows.map(([l, v]) => {
+        const isOverdue = l === 'Follow-up Due' && v !== '--' && new Date(job.followup_due || job.followup_date) < new Date();
+        return `<div class="detail-row"><span class="detail-row-label">${l}</span><span class="detail-row-value${isOverdue ? ' overdue-text' : ''}">${escHtml(v)}</span></div>`;
+      }).join('');
+
+      // Notes
+      $('detailNotes').value = job.notes || '';
+
+      // Update action button states
+      const status = (job.status || '').toLowerCase();
+      $('detailApprove').style.display = ['new', 'packet_generated', 'reviewed'].includes(status) ? '' : 'none';
+      $('detailReject').style.display = ['new', 'packet_generated', 'reviewed'].includes(status) ? '' : 'none';
+      $('detailRegen').style.display = ['packet_generated', 'reviewed', 'applied'].includes(status) ? '' : 'none';
+
+      $('detailOverlay').classList.add('open');
+    }
+
+    function closeDetail() {
+      $('detailOverlay').classList.remove('open');
+      state.selectedJob = null;
+    }
+
+    $('detailClose').addEventListener('click', closeDetail);
+    $('detailOverlay').addEventListener('click', (e) => {
+      if (e.target === $('detailOverlay')) closeDetail();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeDetail();
+    });
+
+    // Detail actions
+    $('detailApprove').addEventListener('click', async () => {
+      const job = state.selectedJob;
+      if (!job) return;
+      const id = job.id || job.job_id;
+      try {
+        await api('/review/inbox/action', {
+          method: 'POST',
+          body: JSON.stringify({ job_id: id, action: 'approve' }),
+        });
+        toast('Job approved', 'success');
+        job.status = 'applied';
+        closeDetail();
+        await refreshAll();
+      } catch (e) {
+        toast('Approve failed: ' + e.message, 'error');
+      }
+    });
+
+    $('detailReject').addEventListener('click', async () => {
+      const job = state.selectedJob;
+      if (!job) return;
+      const id = job.id || job.job_id;
+      try {
+        await api('/review/inbox/action', {
+          method: 'POST',
+          body: JSON.stringify({ job_id: id, action: 'reject' }),
+        });
+        toast('Job rejected', 'success');
+        job.status = 'rejected';
+        closeDetail();
+        await refreshAll();
+      } catch (e) {
+        toast('Reject failed: ' + e.message, 'error');
+      }
+    });
+
+    $('detailRegen').addEventListener('click', async () => {
+      const job = state.selectedJob;
+      if (!job) return;
+      const id = job.id || job.job_id;
+      try {
+        await api('/review/inbox/action', {
+          method: 'POST',
+          body: JSON.stringify({ job_id: id, action: 'regenerate' }),
+        });
+        toast('Regenerating materials...', 'success');
+      } catch (e) {
+        toast('Regenerate failed: ' + e.message, 'error');
+      }
+    });
+
+    // ── Review Queue ──
+    async function loadReviewQueue() {
+      const wrap = $('reviewTableWrap');
+      wrap.innerHTML = '<div class="empty-state"><div class="loading-spinner"></div></div>';
+      state.reviewSelection.clear();
+      updateBulkButtons();
+
+      try {
+        const data = await api('/review/inbox', {
+          method: 'POST',
+          body: JSON.stringify({ limit: 100, statuses: ['new', 'packet_generated', 'reviewed'] }),
+        });
+        const raw = Array.isArray(data) ? data : (data.jobs || data.items || []);
+        const jobs = raw.map(item => item.job && typeof item.job === 'object' ? { ...item, ...item.job } : item);
+        $('reviewCount').textContent = jobs.length + ' items';
+
+        if (jobs.length === 0) {
+          wrap.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#10003;</div><div class="empty-state-text">Review queue is empty</div></div>';
+          return;
+        }
+
+        let html = `<table class="data-table">
+          <thead><tr>
+            <th class="table-check"><input type="checkbox" id="reviewSelectAll"></th>
+            <th>Job</th>
+            <th>Score</th>
+            <th>Status</th>
+            <th>Source</th>
+            <th>Found</th>
+            <th>Actions</th>
+          </tr></thead><tbody>`;
+
+        jobs.forEach(job => {
+          const id = job.id || job.job_id || '';
+          const score = job.match_score ?? job.score ?? null;
+          html += `<tr data-job-id="${escHtml(id)}">
+            <td class="table-check"><input type="checkbox" class="review-check" value="${escHtml(id)}"></td>
+            <td>
+              <div style="font-weight:600;font-size:13px;cursor:pointer" class="review-job-link">${escHtml(truncate(job.title || job.job_title || 'Untitled', 45))}</div>
+              <div style="font-size:12px;color:var(--muted)">${escHtml(job.company || job.company_name || '')}</div>
+            </td>
+            <td>${score !== null ? `<span class="score-badge ${scoreClass(score)}">${(score * 100).toFixed(0)}</span>` : '--'}</td>
+            <td><span class="${pillClass(job.status)}">${escHtml(job.status || 'new')}</span></td>
+            <td style="font-size:12px;color:var(--muted)">${escHtml(job.source || job.board || '--')}</td>
+            <td style="font-size:12px;color:var(--muted)">${relativeTime(job.found_at || job.created_at)}</td>
+            <td class="table-actions">
+              <button class="btn btn-sm btn-primary review-approve-btn" data-id="${escHtml(id)}">Approve</button>
+              <button class="btn btn-sm review-reject-btn" data-id="${escHtml(id)}" style="color:var(--red)">Reject</button>
+            </td>
+          </tr>`;
+        });
+
+        html += '</tbody></table>';
+        wrap.innerHTML = html;
+
+        // Bind events
+        $('reviewSelectAll').addEventListener('change', (e) => {
+          const checked = e.target.checked;
+          $$('.review-check', wrap).forEach(cb => {
+            cb.checked = checked;
+            if (checked) state.reviewSelection.add(cb.value);
+            else state.reviewSelection.delete(cb.value);
+          });
+          updateBulkButtons();
+        });
+
+        $$('.review-check', wrap).forEach(cb => {
+          cb.addEventListener('change', () => {
+            if (cb.checked) state.reviewSelection.add(cb.value);
+            else state.reviewSelection.delete(cb.value);
+            updateBulkButtons();
+          });
+        });
+
+        $$('.review-job-link', wrap).forEach(link => {
+          link.addEventListener('click', () => {
+            const tr = link.closest('tr');
+            const jid = tr.dataset.jobId;
+            const job = jobs.find(j => (j.id || j.job_id) == jid);
+            if (job) openDetail(job);
+          });
+        });
+
+        $$('.review-approve-btn', wrap).forEach(btn => {
+          btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            try {
+              await api('/review/inbox/action', {
+                method: 'POST',
+                body: JSON.stringify({ job_id: btn.dataset.id, action: 'approve' }),
+              });
+              toast('Approved', 'success');
+              loadReviewQueue();
+              loadAllJobs().then(renderPipeline);
+            } catch (e) { toast('Failed: ' + e.message, 'error'); }
+          });
+        });
+
+        $$('.review-reject-btn', wrap).forEach(btn => {
+          btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            try {
+              await api('/review/inbox/action', {
+                method: 'POST',
+                body: JSON.stringify({ job_id: btn.dataset.id, action: 'reject' }),
+              });
+              toast('Rejected', 'success');
+              loadReviewQueue();
+              loadAllJobs().then(renderPipeline);
+            } catch (e) { toast('Failed: ' + e.message, 'error'); }
+          });
+        });
+
+      } catch (e) {
+        wrap.innerHTML = `<div class="empty-state"><div class="empty-state-text">Failed to load review queue</div></div>`;
+      }
+    }
+
+    function updateBulkButtons() {
+      const n = state.reviewSelection.size;
+      $('btnBulkApprove').disabled = n === 0;
+      $('btnBulkReject').disabled = n === 0;
+      $('btnBulkApprove').textContent = n > 0 ? `Approve Selected (${n})` : 'Approve Selected';
+      $('btnBulkReject').textContent = n > 0 ? `Reject Selected (${n})` : 'Reject Selected';
+    }
+
+    async function bulkAction(action) {
+      const ids = Array.from(state.reviewSelection);
+      if (ids.length === 0) return;
+      const btn = action === 'approve' ? $('btnBulkApprove') : $('btnBulkReject');
+      btn.disabled = true;
+
+      let success = 0;
+      for (const id of ids) {
+        try {
+          await api('/review/inbox/action', {
+            method: 'POST',
+            body: JSON.stringify({ job_id: id, action }),
+          });
+          success++;
+        } catch (_) {}
+      }
+
+      toast(`${success} job(s) ${action}d`, 'success');
+      state.reviewSelection.clear();
+      loadReviewQueue();
+      refreshAll();
+    }
+
+    $('btnBulkApprove').addEventListener('click', () => bulkAction('approve'));
+    $('btnBulkReject').addEventListener('click', () => bulkAction('reject'));
+    $('btnRefreshReview').addEventListener('click', loadReviewQueue);
+
+    // ── Application Tracker ──
+    async function loadTracker() {
+      const wrap = $('trackerTableWrap');
+      wrap.innerHTML = '<div class="empty-state"><div class="loading-spinner"></div></div>';
+
+      try {
+        const [listData, followups] = await Promise.all([
+          api('/tracking/list', { method: 'POST', body: JSON.stringify({ limit: 200 }) }).catch(() => []),
+          loadFollowups(),
+        ]);
+
+        const apps = Array.isArray(listData) ? listData : (listData.applications || listData.items || []);
+        const followupMap = {};
+        followups.forEach(f => {
+          const id = f.job_id || f.id;
+          if (id) followupMap[id] = f;
+        });
+
+        $('trackerCount').textContent = apps.length + ' applications';
+
+        if (apps.length === 0) {
+          wrap.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#128203;</div><div class="empty-state-text">No applications tracked yet</div></div>';
+          return;
+        }
+
+        let html = `<table class="data-table">
+          <thead><tr>
+            <th>Company</th>
+            <th>Role</th>
+            <th>Applied</th>
+            <th>Status</th>
+            <th>Follow-up Due</th>
+            <th>Actions</th>
+          </tr></thead><tbody>`;
+
+        apps.forEach(app => {
+          const id = app.id || app.job_id || '';
+          const fuDue = app.followup_due || app.followup_date || (followupMap[id] && (followupMap[id].due_date || followupMap[id].followup_due)) || null;
+          const isOverdue = fuDue && new Date(fuDue) < new Date();
+          const rowClass = isOverdue ? 'row-overdue' : '';
+
+          html += `<tr class="${rowClass}">
+            <td style="font-weight:600;font-size:13px">${escHtml(app.company || app.company_name || '--')}</td>
+            <td>
+              <div style="font-size:13px;cursor:pointer" class="tracker-job-link" data-id="${escHtml(id)}">${escHtml(truncate(app.title || app.job_title || 'Untitled', 40))}</div>
+            </td>
+            <td style="font-size:12px;color:var(--muted)">${formatDateShort(app.applied_at || app.applied_date)}</td>
+            <td><span class="${pillClass(app.status)}">${escHtml(app.status || '--')}</span></td>
+            <td>
+              ${fuDue ? `<span class="${isOverdue ? 'overdue-text' : ''}">${formatDateShort(fuDue)}${isOverdue ? ' (overdue)' : ''}</span>` : '<span style="color:var(--muted)">--</span>'}
+            </td>
+            <td class="table-actions">
+              <button class="btn btn-sm btn-ghost tracker-view-btn" data-id="${escHtml(id)}">View</button>
+            </td>
+          </tr>`;
+        });
+
+        html += '</tbody></table>';
+        wrap.innerHTML = html;
+
+        // Bind
+        $$('.tracker-job-link, .tracker-view-btn', wrap).forEach(el => {
+          el.addEventListener('click', () => {
+            const id = el.dataset.id;
+            const job = apps.find(j => (j.id || j.job_id) == id) || state.allJobs.find(j => (j.id || j.job_id) == id);
+            if (job) openDetail(job);
+          });
+        });
+
+      } catch (e) {
+        wrap.innerHTML = `<div class="empty-state"><div class="empty-state-text">Failed to load applications</div></div>`;
+      }
+    }
+
+    $('btnRefreshTracker').addEventListener('click', loadTracker);
+
+    // ── Stats Tab ──
+    async function loadStatsTab() {
+      await loadStats();
+      const s = state.stats;
+
+      // Funnel
+      const funnelData = [
+        { label: 'Applied', value: s.applied || 0, cls: 'f-applied' },
+        { label: 'Response', value: s.responses || 0, cls: 'f-response' },
+        { label: 'Interview', value: s.interviews || s.interviewing || 0, cls: 'f-interview' },
+        { label: 'Offer', value: s.offers || 0, cls: 'f-offer' },
+      ];
+      const maxFunnel = Math.max(1, ...funnelData.map(d => d.value));
+      $('funnelChart').innerHTML = funnelData.map(d => {
+        const pct = Math.max(2, (d.value / maxFunnel) * 100);
+        return `<div class="funnel-row">
+          <span class="funnel-label">${d.label}</span>
+          <div class="funnel-bar-bg"><div class="funnel-bar ${d.cls}" style="width:${pct}%">${d.value}</div></div>
+        </div>`;
+      }).join('');
+
+      // Score distribution
+      const scoreDist = s.score_distribution || computeScoreDistribution();
+      const scoreBuckets = [
+        { label: '90-100', key: '90_100', color: '' },
+        { label: '80-89', key: '80_89', color: '' },
+        { label: '72-79', key: '72_79', color: 'alt' },
+        { label: '60-71', key: '60_71', color: 'alt' },
+        { label: '<60', key: 'below_60', color: 'blue' },
+      ];
+      const maxScore = Math.max(1, ...scoreBuckets.map(b => scoreDist[b.key] || 0));
+      $('scoreChart').innerHTML = scoreBuckets.map(b => {
+        const v = scoreDist[b.key] || 0;
+        const pct = Math.max(2, (v / maxScore) * 100);
+        return `<div class="bar-row">
+          <span class="bar-label">${b.label}</span>
+          <div class="bar-track"><div class="bar-fill ${b.color}" style="width:${pct}%">${v}</div></div>
+        </div>`;
+      }).join('');
+
+      // Sources
+      const sources = s.by_source || computeSourceCounts();
+      const srcEntries = Object.entries(sources).sort((a, b) => b[1] - a[1]).slice(0, 8);
+      const maxSrc = Math.max(1, ...srcEntries.map(e => e[1]));
+      $('sourceChart').innerHTML = srcEntries.length ? srcEntries.map(([label, v]) => {
+        const pct = Math.max(2, (v / maxSrc) * 100);
+        return `<div class="bar-row">
+          <span class="bar-label" title="${escHtml(label)}">${escHtml(truncate(label, 12))}</span>
+          <div class="bar-track"><div class="bar-fill" style="width:${pct}%">${v}</div></div>
+        </div>`;
+      }).join('') : '<div class="empty-state"><div class="empty-state-text">No source data</div></div>';
+
+      // Top companies
+      const companies = s.top_companies || computeTopCompanies();
+      const compEntries = Object.entries(companies).sort((a, b) => b[1] - a[1]).slice(0, 8);
+      const maxComp = Math.max(1, ...compEntries.map(e => e[1]));
+      $('companyChart').innerHTML = compEntries.length ? compEntries.map(([label, v]) => {
+        const pct = Math.max(2, (v / maxComp) * 100);
+        const displayScore = typeof v === 'number' && v <= 1 ? (v * 100).toFixed(0) + '%' : v;
+        return `<div class="bar-row">
+          <span class="bar-label" title="${escHtml(label)}">${escHtml(truncate(label, 12))}</span>
+          <div class="bar-track"><div class="bar-fill alt" style="width:${pct}%">${displayScore}</div></div>
+        </div>`;
+      }).join('') : '<div class="empty-state"><div class="empty-state-text">No company data</div></div>';
+
+      // Load rejection analytics
+      loadRejectionAnalytics();
+    }
+
+    function computeScoreDistribution() {
+      const dist = { '90_100': 0, '80_89': 0, '72_79': 0, '60_71': 0, 'below_60': 0 };
+      state.allJobs.forEach(j => {
+        const s = (j.match_score ?? j.score ?? null);
+        if (s === null) return;
+        const pct = s * 100;
+        if (pct >= 90) dist['90_100']++;
+        else if (pct >= 80) dist['80_89']++;
+        else if (pct >= 72) dist['72_79']++;
+        else if (pct >= 60) dist['60_71']++;
+        else dist['below_60']++;
+      });
+      return dist;
+    }
+
+    function computeSourceCounts() {
+      const m = {};
+      state.allJobs.forEach(j => {
+        const src = j.source || j.board || 'Unknown';
+        m[src] = (m[src] || 0) + 1;
+      });
+      return m;
+    }
+
+    function computeTopCompanies() {
+      const m = {};
+      const counts = {};
+      state.allJobs.forEach(j => {
+        const c = j.company || j.company_name;
+        const s = j.match_score ?? j.score ?? null;
+        if (!c || s === null) return;
+        m[c] = (m[c] || 0) + s;
+        counts[c] = (counts[c] || 0) + 1;
+      });
+      const avg = {};
+      Object.keys(m).forEach(c => { avg[c] = m[c] / counts[c]; });
+      return avg;
+    }
+
+    // ── Live Feed ──
+    const feed = {
+      paused: false,
+      filter: 'all',
+      lastLineCount: 0,
+      logInterval: null,
+      activityInterval: null,
+    };
+
+    function classifyLogLine(line) {
+      const l = line.toLowerCase();
+      if (l.includes('error') || l.includes('traceback') || l.includes('exception')) return 'log-error';
+      if (l.includes('warning') || l.includes('warn')) return 'log-warn';
+      if (l.includes('success') || l.includes('confirmed') || l.includes('submitted') || l.includes('thanks for applying')) return 'log-success';
+      if (l.includes('http request') || l.includes('http/1.1')) return 'log-http';
+      if (l.includes('auto-apply') || l.includes('autofill') || l.includes('applying to')) return 'log-highlight';
+      if (l.includes('info')) return 'log-info';
+      return '';
+    }
+
+    function matchesFilter(line, cls) {
+      if (feed.filter === 'all') return true;
+      if (feed.filter === 'info') return cls === 'log-info' || cls === 'log-highlight' || cls === 'log-success';
+      if (feed.filter === 'warn') return cls === 'log-warn';
+      if (feed.filter === 'error') return cls === 'log-error';
+      if (feed.filter === 'apply') return line.toLowerCase().includes('auto-apply') || line.toLowerCase().includes('autofill') || line.toLowerCase().includes('applying') || line.toLowerCase().includes('submitted');
+      if (feed.filter === 'scout') return line.toLowerCase().includes('scout') || line.toLowerCase().includes('fetched') || line.toLowerCase().includes('inserted') || line.toLowerCase().includes('http request');
+      return true;
+    }
+
+    async function loadLogs() {
+      if (feed.paused) return;
+      try {
+        const data = await api('/agent/logs?lines=200');
+        const lines = data.lines || [];
+        const body = $('logBody');
+        if (!body) return;
+
+        // Only update if new content
+        if (lines.length === feed.lastLineCount) return;
+        feed.lastLineCount = lines.length;
+
+        const wasAtBottom = body.scrollTop + body.clientHeight >= body.scrollHeight - 30;
+
+        body.innerHTML = '';
+        lines.forEach(line => {
+          const cls = classifyLogLine(line);
+          if (!matchesFilter(line, cls)) return;
+          const div = document.createElement('div');
+          div.className = 'log-line ' + cls;
+          div.textContent = line;
+          body.appendChild(div);
+        });
+
+        if (wasAtBottom) {
+          body.scrollTop = body.scrollHeight;
+        }
+      } catch (_) {}
+    }
+
+    function activityIcon(toStatus) {
+      const s = (toStatus || '').toLowerCase();
+      if (s === 'new') return ['&#x2B;', 'a-new'];
+      if (s === 'packet_generated') return ['&#x1F4E6;', 'a-packet'];
+      if (s === 'applied') return ['&#x2713;', 'a-applied'];
+      if (s === 'rejected') return ['&#x2717;', 'a-rejected'];
+      if (s === 'reviewed') return ['&#x1F441;', 'a-reviewed'];
+      return ['&#x25CF;', 'a-default'];
+    }
+
+    function activityVerb(fromStatus, toStatus) {
+      const t = (toStatus || '').toLowerCase();
+      if (t === 'new') return 'discovered';
+      if (t === 'packet_generated') return 'packet generated for';
+      if (t === 'applied') return 'applied to';
+      if (t === 'rejected') return 'rejected';
+      if (t === 'reviewed') return 'marked for review';
+      if (t === 'interviewing') return 'interviewing at';
+      if (t === 'offer') return 'received offer from';
+      return 'updated';
+    }
+
+    function activityTime(ts) {
+      if (!ts) return '';
+      const dt = new Date(ts);
+      const now = new Date();
+      const diffMs = now - dt;
+      const diffMin = Math.floor(diffMs / 60000);
+      if (diffMin < 1) return 'just now';
+      if (diffMin < 60) return diffMin + 'm ago';
+      const diffHr = Math.floor(diffMin / 60);
+      if (diffHr < 24) return diffHr + 'h ago';
+      return formatDateShort(ts);
+    }
+
+    async function loadActivity() {
+      try {
+        const data = await api('/agent/activity?limit=60');
+        const events = data.events || [];
+        const body = $('activityBody');
+        if (!body) return;
+
+        $('activityCount').textContent = events.length + ' events';
+
+        if (events.length === 0) {
+          body.innerHTML = '<div class="empty-state"><div class="empty-state-text">No activity yet</div></div>';
+          return;
+        }
+
+        body.innerHTML = events.map(ev => {
+          const [icon, iconCls] = activityIcon(ev.to_status);
+          const verb = activityVerb(ev.from_status, ev.to_status);
+          const title = ev.title || 'Unknown';
+          const company = ev.company || '';
+          const score = ev.match_score != null ? `<span class="score-badge ${scoreClass(ev.match_score)}" style="font-size:10px;padding:1px 5px;margin-left:4px">${(ev.match_score * 100).toFixed(0)}</span>` : '';
+
+          return `<div class="activity-item">
+            <div class="activity-row1">
+              <div class="activity-icon ${iconCls}">${icon}</div>
+              <div class="activity-text"><strong>${escHtml(verb)}</strong> ${escHtml(truncate(title, 35))}${company ? ' at ' + escHtml(company) : ''}${score}</div>
+              <span class="activity-time">${activityTime(ev.created_at)}</span>
+            </div>
+            ${ev.reason ? `<div class="activity-sub">${escHtml(truncate(ev.reason, 60))}</div>` : ''}
+          </div>`;
+        }).join('');
+      } catch (_) {}
+    }
+
+    // Log filter buttons
+    $$('.log-filter-bar .log-filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!btn.dataset.filter) return;
+        feed.filter = btn.dataset.filter;
+        $$('.log-filter-bar .log-filter-btn').forEach(b => b.classList.toggle('active', b === btn));
+        feed.lastLineCount = 0; // force re-render
+        loadLogs();
+      });
+    });
+
+    // Pause / Clear
+    $('btnLogPause').addEventListener('click', () => {
+      feed.paused = !feed.paused;
+      $('btnLogPause').textContent = feed.paused ? 'Resume' : 'Pause';
+      $('logDot').classList.toggle('paused', feed.paused);
+    });
+
+    $('btnLogClear').addEventListener('click', () => {
+      $('logBody').innerHTML = '';
+      feed.lastLineCount = 0;
+    });
+
+    // ── Rejection Analytics ──
+    async function loadRejectionAnalytics() {
+      const wrap = $('rejectionAnalytics');
+      if (!wrap) return;
+      try {
+        const data = await api('/agent/rejection-analytics');
+        const s = data.summary || {};
+        const rejections = data.rejections || [];
+        const suspects = s.ats_suspect_companies || [];
+
+        let html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px">';
+
+        const cards = [
+          ['Total Rejections', s.total_rejections || 0, ''],
+          ['ATS Auto (<24h)', s.ats_auto_likely || 0, s.ats_auto_likely > 0 ? 'color:var(--red);font-weight:700' : ''],
+          ['Fast (<72h)', s.fast_reject_under_72h || 0, ''],
+          ['Slow (>72h)', s.slow_reject_over_72h || 0, 'color:var(--green)'],
+          ['Avg Hours', s.avg_hours_to_rejection || '--', ''],
+          ['Median Hours', s.median_hours_to_rejection || '--', ''],
+          ['Scorer Rejected', s.scorer_rejected || 0, 'color:var(--muted)'],
+        ];
+
+        cards.forEach(([label, value, style]) => {
+          html += '<div class="stat-card">';
+          html += '<div class="stat-label">' + label + '</div>';
+          html += '<div class="stat-value" style="font-size:20px;' + style + '">' + value + '</div>';
+          html += '</div>';
+        });
+        html += '</div>';
+
+        // ATS Suspect Companies
+        if (suspects.length > 0) {
+          html += '<div style="margin-bottom:16px">';
+          html += '<div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--red)">ATS Suspect Companies (high rejection rate)</div>';
+          html += '<table class="data-table"><thead><tr><th>Company</th><th>Applied</th><th>Rejected</th><th>Rate</th></tr></thead><tbody>';
+          suspects.forEach(c => {
+            const pct = Math.round(c.rate * 100);
+            const color = pct >= 80 ? 'var(--red)' : pct >= 50 ? 'var(--yellow)' : '';
+            html += '<tr>';
+            html += '<td style="font-weight:600">' + escHtml(c.company) + '</td>';
+            html += '<td>' + c.applied + '</td>';
+            html += '<td>' + c.rejected + '</td>';
+            html += '<td style="font-weight:700;color:' + color + '">' + pct + '%</td>';
+            html += '</tr>';
+          });
+          html += '</tbody></table></div>';
+        }
+
+        // Recent rejections timeline
+        if (rejections.length > 0) {
+          html += '<div style="font-size:13px;font-weight:700;margin-bottom:8px">Recent Rejections</div>';
+          html += '<table class="data-table"><thead><tr><th>Company</th><th>Role</th><th>Applied</th><th>Rejected</th><th>Time</th><th>Type</th></tr></thead><tbody>';
+          rejections.slice(0, 15).forEach(r => {
+            const hrs = r.hours_to_rejection;
+            let timeStr = '--';
+            let timeStyle = '';
+            if (hrs != null) {
+              if (hrs < 1) { timeStr = Math.round(hrs * 60) + 'm'; timeStyle = 'color:var(--red);font-weight:700'; }
+              else if (hrs < 24) { timeStr = Math.round(hrs) + 'h'; timeStyle = 'color:var(--red);font-weight:700'; }
+              else if (hrs < 72) { timeStr = Math.round(hrs) + 'h'; timeStyle = 'color:var(--yellow)'; }
+              else { timeStr = Math.round(hrs / 24) + 'd'; timeStyle = 'color:var(--green)'; }
+            }
+            const src = r.rejection_source || '--';
+            const srcPill = src === 'ats_auto' ? 'pill-rejected' : src === 'email' ? 'pill-applied' : 'pill-new';
+            html += '<tr>';
+            html += '<td style="font-weight:600">' + escHtml(r.company || '--') + '</td>';
+            html += '<td>' + escHtml(truncate(r.title || '--', 35)) + '</td>';
+            html += '<td style="font-size:12px;color:var(--muted)">' + formatDateShort(r.applied_at) + '</td>';
+            html += '<td style="font-size:12px;color:var(--muted)">' + formatDateShort(r.rejected_at) + '</td>';
+            html += '<td style="' + timeStyle + '">' + timeStr + '</td>';
+            html += '<td><span class="status-pill ' + srcPill + '" style="font-size:10px">' + escHtml(src) + '</span></td>';
+            html += '</tr>';
+          });
+          html += '</tbody></table>';
+        } else {
+          html += '<div class="empty-state"><div class="empty-state-text">No tracked rejections yet. Click "Scan Email" to detect rejection emails.</div></div>';
+        }
+
+        wrap.innerHTML = html;
+      } catch (e) {
+        wrap.innerHTML = '<div class="empty-state"><div class="empty-state-text">Failed to load rejection analytics</div></div>';
+      }
+    }
+
+    $('btnScanRejections').addEventListener('click', async () => {
+      const btn = $('btnScanRejections');
+      btn.disabled = true;
+      btn.textContent = 'Scanning...';
+      try {
+        const data = await api('/agent/scan-rejection-emails', { method: 'POST', body: '{}' });
+        const updated = data.updated || [];
+        if (updated.length > 0) {
+          toast(updated.length + ' rejection(s) found and recorded!', 'success');
+          updated.forEach(u => {
+            const hrs = u.hours_to_rejection ? Math.round(u.hours_to_rejection) + 'h' : '?';
+            toast(u.company + ' - ' + u.title + ' (' + hrs + ')', u.hours_to_rejection < 24 ? 'error' : '');
+          });
+        } else {
+          toast('Scanned ' + (data.scanned || 0) + ' emails. ' + (data.rejections_found || 0) + ' rejections found, none matched tracked jobs.', '');
+        }
+        if (data.errors && data.errors.length > 0) {
+          data.errors.forEach(e => toast('Error: ' + e, 'error'));
+        }
+        loadRejectionAnalytics();
+        refreshAll();
+      } catch (e) {
+        toast('Scan failed: ' + e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Scan Email for Rejections';
+      }
+    });
+
+    function startFeedPolling() {
+      if (feed.logInterval) return;
+      loadLogs();
+      loadActivity();
+      feed.logInterval = setInterval(loadLogs, 3000);
+      feed.activityInterval = setInterval(loadActivity, 8000);
+    }
+
+    function stopFeedPolling() {
+      clearInterval(feed.logInterval);
+      clearInterval(feed.activityInterval);
+      feed.logInterval = null;
+      feed.activityInterval = null;
+    }
+
+    // ── Refresh cycle ──
+    async function refreshAll() {
+      const ts = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      $('lastRefresh').textContent = 'Updated ' + ts;
+
+      await Promise.all([
+        refreshAgentStatus(),
+        loadAllJobs(),
+        loadStats(),
+      ]);
+
+      renderStatsBar();
+      renderPipeline();
+    }
+
+    // ── Init ──
+    (async function init() {
+      await refreshAll();
+      setInterval(refreshAll, 10000);
+    })();
+  </script>
+</body>
+</html>
