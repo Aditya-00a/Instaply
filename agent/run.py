@@ -5592,9 +5592,11 @@ async def run_discovery() -> int:
         glassdoor_kw = _next_glassdoor_keywords()
 
         # Companies discovered via LinkedIn (couldn't apply via LI URL).
-        # Run full career-site discovery: web search → crawl careers page → find ATS links.
+        # Optional: run full career-site discovery (web search → crawl careers
+        # page → find ATS links). Off by default — most queries return 404/429
+        # and the agent already ships with 16k+ curated slugs.
         li_companies = get_and_clear_linkedin_companies()
-        if li_companies:
+        if li_companies and settings.career_discovery_enabled:
             log.info("Searching career sites for %d LinkedIn-discovered companies: %s",
                      len(li_companies), list(li_companies))
             for ats_source in ("greenhouse", "lever"):
@@ -5612,6 +5614,9 @@ async def run_discovery() -> int:
                 except Exception as exc:
                     log.warning("Career discovery for LinkedIn companies failed (%s): %s",
                                 ats_source, exc)
+        elif li_companies:
+            log.info("Skipping career-site discovery for %d LinkedIn-found companies "
+                     "(set CAREER_DISCOVERY_ENABLED=true to enable)", len(li_companies))
 
         log.info("Running discovery cycle...")
         log.info("  Greenhouse batch (%d): %s ...", len(gh_batch), ", ".join(gh_batch[:8]))
@@ -5843,13 +5848,18 @@ async def main():
         log.info("No new jobs found (idle cycle %d/%d)", idle_cycles, MAX_IDLE_CYCLES)
 
         if idle_cycles >= MAX_IDLE_CYCLES:
-            # Auto-expand: search the web for new companies before sleeping
-            log.info("Max idle cycles reached — auto-expanding company pool...")
-            new_added = await _auto_expand_companies()
-            if new_added > 0:
-                log.info("Added %d new companies — running discovery immediately", new_added)
-                idle_cycles = 0
-                continue  # Try discovery again with new companies
+            # Auto-expand: web-search for new companies before sleeping.
+            # Gated behind CAREER_DISCOVERY_ENABLED — slow, mostly returns 404s.
+            if settings.career_discovery_enabled:
+                log.info("Max idle cycles reached — auto-expanding company pool...")
+                new_added = await _auto_expand_companies()
+                if new_added > 0:
+                    log.info("Added %d new companies — running discovery immediately", new_added)
+                    idle_cycles = 0
+                    continue  # Try discovery again with new companies
+            else:
+                log.info("Max idle cycles reached. Auto-expansion disabled "
+                         "(set CAREER_DISCOVERY_ENABLED=true to enable web-search).")
 
             log.info("No new companies found. Short cooldown then continuing...")
             idle_cycles = 0  # Reset so we keep going

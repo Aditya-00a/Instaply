@@ -41,6 +41,11 @@ class Settings:
     openclaw_gateway_cmd: str = os.getenv("OPENCLAW_GATEWAY_CMD", str(Path.home() / ".openclaw" / "gateway.cmd"))
     openclaw_upload_dir: str = os.getenv("OPENCLAW_UPLOAD_DIR", r"C:\tmp\openclaw\uploads")
     auto_apply_enabled: bool = os.getenv("AUTO_APPLY_ENABLED", "false").strip().lower() in ("true", "1", "yes")
+    # Slow web-scraping paths used to discover new ATS slugs from corporate
+    # sites. Disabled by default since the agent ships with 16k+ pre-curated
+    # slugs across 7 ATS pools — the discovery is mostly redundant work + 404s.
+    # Set CAREER_DISCOVERY_ENABLED=true to opt back in.
+    career_discovery_enabled: bool = os.getenv("CAREER_DISCOVERY_ENABLED", "false").strip().lower() in ("true", "1", "yes")
     auto_apply_min_score: float = float(os.getenv("AUTO_APPLY_MIN_SCORE", "0.60"))
     auto_apply_max_per_cycle: int = int(os.getenv("AUTO_APPLY_MAX_PER_CYCLE", "25"))
 
