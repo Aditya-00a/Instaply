@@ -22,7 +22,6 @@ A match returns a ConfirmationHit with the message id + snippet for audit.
 """
 from __future__ import annotations
 
-import base64
 import logging
 import re
 from dataclasses import dataclass

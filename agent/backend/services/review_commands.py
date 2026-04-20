@@ -211,7 +211,7 @@ def apply_review_command(
 ) -> dict[str, Any]:
     raw = str(command or "").strip()
     lowered = raw.lower().strip()
-    normalized_role = normalize_role_bucket(role_bucket) if role_bucket else ""
+    normalize_role_bucket(role_bucket) if role_bucket else ""
 
     if re.fullmatch(r"approve\s+cover\s*letter", lowered):
         if not generation_id:
@@ -426,7 +426,7 @@ def apply_review_command(
                 "preference_ids": [preference_id],
             },
         }
-    
+
     section_match = re.fullmatch(r"(prioritize|deprioritize)\s+(.+?)\s+for\s+([a-zA-Z _-]+)", raw, flags=re.IGNORECASE)
     if section_match:
         direction = 2 if section_match.group(1).strip().lower() == "prioritize" else -2

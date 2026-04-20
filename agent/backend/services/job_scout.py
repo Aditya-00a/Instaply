@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -31,6 +32,8 @@ from backend.services.job_sources import (
     fetch_workday_jobs,
 )
 from backend.services.matcher import match_job
+
+log = logging.getLogger(__name__)
 
 
 WORKDAY_DISCOVERY_MAP = {

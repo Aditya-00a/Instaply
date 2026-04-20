@@ -12,7 +12,6 @@ construction time via env-var manipulation, and we verify:
 """
 from __future__ import annotations
 
-import os
 
 import pytest
 

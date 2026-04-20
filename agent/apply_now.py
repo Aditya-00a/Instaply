@@ -20,7 +20,6 @@ from backend.services.application_packet import generate_application_packet
 from backend.services.application_pipeline import (
     _company_background_from_job,
     _company_context_from_job,
-    _recipient_lines_from_job,
 )
 from backend.services.auto_apply import auto_apply_batch
 from backend.services.config import settings

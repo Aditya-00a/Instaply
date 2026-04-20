@@ -16,10 +16,9 @@ from __future__ import annotations
 import hashlib
 import hmac
 import logging
-from typing import Any
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from .audit import audit
 from .auth import current_user_id

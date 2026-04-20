@@ -480,7 +480,7 @@ def main() -> int:
     print(f"     (Optional: pass {dim('--resume ~/Desktop/your-cv.pdf')} to autopopulate fields)")
     print(f"  2. Sanity-check the install: {bold('python setup.py doctor')}")
     print(f"  3. Start the agent in foreground: {bold('python run.py')}")
-    print(f"     Or install as a scheduled task:")
+    print("     Or install as a scheduled task:")
     print(f"       Windows: {bold('powershell -ExecutionPolicy Bypass -File scripts/setup-scheduler.ps1')}")
     print(f"       Mac/Linux: {bold('bash scripts/setup-scheduler.sh')}")
     print()

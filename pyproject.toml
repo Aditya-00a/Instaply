@@ -59,8 +59,8 @@ ui = [
 [project.urls]
 Homepage      = "https://instaply.asion.ai"
 Documentation = "https://instaply.asion.ai"
-Issues        = "https://github.com/instaply/instaply/issues"
-Source        = "https://github.com/instaply/instaply"
+Issues        = "https://github.com/Aditya-00a/Instaply/issues"
+Source        = "https://github.com/Aditya-00a/Instaply"
 
 [project.scripts]
 instaply = "instaply.cli:main"
@@ -71,6 +71,45 @@ packages = ["instaply"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+extend-exclude = [
+  "agent/artifacts",
+  "agent/data",
+  "agent/backend/static",
+  "node_modules",
+  ".venv",
+  "build",
+  "dist",
+]
+
+[tool.ruff.lint]
+# Stay close to flake8's default useful subset. The full ruff ruleset is
+# noisy on a research-y codebase like this; we'll tighten over time.
+select = ["E", "F", "W"]
+ignore = [
+  "E701",  # multiple statements on one line — used in tiny one-line helpers (bold/green/red)
+  "E702",  # statement separated by colons — same
+  "E501",  # line too long — handled by formatter, not worth blocking PRs on
+  "F841",  # unused local variable — useful but mostly captures intentional debug bindings
+]
+
+[tool.ruff.lint.per-file-ignores]
+# These entry-point scripts deliberately munge sys.path before importing
+# from `backend.*`, which trips E402.
+"agent/run.py"           = ["E402"]
+"agent/apply_now.py"     = ["E402"]
+"agent/find_wd_job.py"   = ["E402"]
+"agent/jobspy_search.py" = ["E402"]
+"agent/setup.py"         = ["E402"]
+"agent/profile_wizard.py" = ["E402"]
+"agent/doctor.py"        = ["E402"]
+"agent/resume_parser.py" = ["E402"]
+# Other entry points that munge sys.path
+"api/app/main.py"        = ["E402"]
+"agent/backend/services/review_commands.py" = ["E402"]
+# Tests sometimes import fixtures or assert against module imports.
+"tests/**/*.py"          = ["F401", "F811", "E402"]
+"worker/tests/**/*.py"   = ["F401", "F811", "E402"]
+"api/tests/**/*.py"      = ["F401", "F811", "E402"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

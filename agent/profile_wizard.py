@@ -24,7 +24,6 @@ if _sys.platform == "win32":
 import argparse
 import json
 import os
-import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path

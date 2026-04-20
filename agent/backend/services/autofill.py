@@ -7,11 +7,11 @@ questions are stored for later review or answered via LLM.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import re
 import uuid
 from datetime import datetime, timezone
+import time
 from pathlib import Path
 from typing import Any
 
@@ -711,15 +711,6 @@ async def _collect_unknown_questions(
 
             # Skip if inside a cookie/consent container.
             try:
-                ancestor_sel = (
-                    "el.evaluate('e => { "
-                    "let p = e; while (p) { "
-                    "const id = (p.id || \"\").toLowerCase(); "
-                    "const cls = (p.className || \"\").toString().toLowerCase(); "
-                    "if (id.includes(\"cookie\") || id.includes(\"consent\") || id.includes(\"onetrust\") "
-                    "|| cls.includes(\"cookie\") || cls.includes(\"consent\") || cls.includes(\"onetrust\")) "
-                    "return true; p = p.parentElement; } return false; }')"
-                )
                 in_consent = await el.evaluate(
                     """e => {
                         let p = e;
@@ -1217,7 +1208,6 @@ async def _fill_greenhouse(
                 #      "Man" -> type "Man"
                 #      "Asian" -> type "Asian"
                 _SEARCH_KEYS = {
-                    "i am not a protected veteran": "not a protected",
                     "i am not a protected veteran": "not a protected",
                     "no, i am not a protected veteran": "not a protected",
                     "i don't wish to answer": "don't wish",
@@ -2843,7 +2833,7 @@ async def _workday_login_or_create(
             await page.goto(verify_link, wait_until="domcontentloaded", timeout=30_000)
             await page.wait_for_timeout(5000)
             # After verification, may need to sign in again
-            post_verify = (await page.text_content("body") or "").lower()
+            (await page.text_content("body") or "").lower()
             if await page.locator("input[type='password']:visible").count() > 0:
                 log.info("Workday: post-verification sign-in required")
                 await _wd_fill_and_submit_signin(page, _WD_EMAIL, _WD_PASS)
@@ -2884,7 +2874,7 @@ async def _workday_login_or_create(
             await page.wait_for_timeout(5000)
             # After verification, navigate back to job and try sign-in again
             # The verify link often redirects to the apply page automatically.
-            post_verify_text = (await page.text_content("body") or "").lower()
+            (await page.text_content("body") or "").lower()
             has_pwd = await page.locator("input[type='password']:visible").count() > 0
             if has_pwd:
                 log.info("Workday: post-verification sign-in required")
@@ -2935,7 +2925,7 @@ async def _wd_click_next(page: Page) -> bool:
             log.info("Workday: found Submit button — final step, stopping navigation.")
             return False
 
-    body_before = (await page.text_content("body") or "")[:300].lower()
+    (await page.text_content("body") or "")[:300].lower()
 
     # Primary: JS click on click_filter overlay (Workday's actual click target)
     clicked = await page.evaluate("""() => {
@@ -4723,7 +4713,7 @@ async def _wd_fill_experience(page: Page, files: dict[str, str | None], filled: 
                             "li[role='treeitem']:visible"
                         )
                         for oi in range(min(await opt_loc.count(), 10)):
-                            ot = (await opt_loc.nth(oi).text_content() or "").lower()
+                            (await opt_loc.nth(oi).text_content() or "").lower()
                             # TODO(post-lift): replace with profile.school_name match.
                             # Disabled here so we don't auto-pick the wrong school.
                             if False:
@@ -6254,7 +6244,7 @@ async def _fill_workday(
                 # Extract job title from URL (last segment before the ID)
                 import re as _re
                 title_match = _re.search(r'/job/[^/]+/([^/]+)_', job_url)
-                search_term = title_match.group(1).replace('-', ' ')[:50] if title_match else role
+                search_term = title_match.group(1).replace('-', ' ')[:50] if title_match else ""
                 log.info("Workday: searching for '%s' on job search page", search_term)
                 await search_input.fill(search_term)
                 await page.keyboard.press("Enter")
@@ -6961,7 +6951,6 @@ async def autofill_application(
         status, screenshot_path, filled_fields, needs_review,
         platform_detected.
     """
-    is_prod = settings.app_env == "production"
     platform = detect_platform(job_url)
     filled: list[str] = []
     needs_review: list[dict[str, str]] = []
@@ -8007,7 +7996,6 @@ async def _handle_greenhouse_security_code(page: Page) -> bool:
         # page Scout is sitting on when it thinks "no OTP here". This helps us
         # diagnose when Greenhouse introduces new UI we don't pattern-match.
         try:
-            from pathlib import Path as _P
             ts_ = datetime.now().strftime("%Y%m%d_%H%M%S")
             ss_path = SCREENSHOTS_DIR / f"greenhouse_post_submit_no_otp_{ts_}.png"
             await page.screenshot(path=str(ss_path), full_page=True)
@@ -8306,7 +8294,6 @@ async def _handle_greenhouse_security_code(page: Page) -> bool:
                         log.info("PRE_CLICK button state: %s", btn_state)
                     except Exception:
                         pass
-                    url_before = page.url
                     await btn.click(timeout=5_000)
                     log.info("Resubmitted with security code via %r (round %d)", sel, wait_round + 1)
                     submit_clicked = True
@@ -8438,7 +8425,7 @@ def _fetch_greenhouse_security_code_sync(max_wait_seconds: int = 90) -> str | No
                     _, data = mail.fetch(eid, "(BODY.PEEK[])")
                     msg = email_mod.message_from_bytes(data[0][1])
                     subj = msg["Subject"] or ""
-                    sender = (msg["From"] or "").lower()
+                    (msg["From"] or "").lower()
 
                     # Must be related to security code.
                     subj_lower = subj.lower()
@@ -8897,7 +8884,6 @@ async def autofill_and_submit(
         status, screenshot_path, post_submit_screenshot, filled_fields,
         needs_review, platform_detected, submitted, auto_answered.
     """
-    is_prod = settings.app_env == "production"
     # Visible browsers so user can watch applications in progress.
     headless = False
     platform = detect_platform(job_url)

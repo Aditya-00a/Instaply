@@ -10,7 +10,6 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 
-import pytest
 
 from worker.orchestrator import SUBMITTER_KIND, _write_status
 

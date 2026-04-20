@@ -10,7 +10,7 @@ from worker.adapters import adapter_for_html, adapter_for_url
 from worker.adapters.base import AtsKind
 from worker.autofill import resolve_field
 from worker.autofill.cache import MemoryAnswerCache
-from worker.autofill.models import DecisionSource, FieldType, UserProfile
+from worker.autofill.models import DecisionSource, UserProfile
 
 FIXTURE = Path(__file__).resolve().parents[1] / "worker" / "tests" / "fixtures" / "lever_sample.html"
 

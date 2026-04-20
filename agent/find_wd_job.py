@@ -1,5 +1,6 @@
 """Find an active Workday job URL from a tenant endpoint."""
-import asyncio, httpx, json
+import asyncio
+import httpx
 
 TENANTS = [
     ("Autodesk", "https://autodesk.wd1.myworkdayjobs.com/wday/cxs/autodesk/Ext/jobs",

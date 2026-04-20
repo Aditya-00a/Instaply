@@ -13,7 +13,6 @@ from __future__ import annotations
 import asyncio
 from typing import Optional
 
-import pytest
 
 from worker.actions import (
     DEFAULT_SUBMIT_SELECTORS,

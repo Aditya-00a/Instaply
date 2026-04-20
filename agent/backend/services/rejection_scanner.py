@@ -154,7 +154,7 @@ async def scan_and_update_rejections(db_path: Path) -> dict:
         imap.select("INBOX", readonly=True)
 
         # Search for recent emails (last 14 days) with rejection-like subjects
-        since_date = datetime.now(timezone.utc).strftime("%d-%b-%Y")
+        datetime.now(timezone.utc).strftime("%d-%b-%Y")
         # Search broadly — we'll filter with patterns
         _, msg_ids = imap.search(None, "(SINCE 25-Mar-2026)")
         if not msg_ids or not msg_ids[0]:

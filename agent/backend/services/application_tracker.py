@@ -10,7 +10,7 @@ import sqlite3
 from datetime import datetime, timedelta
 from uuid import uuid4
 
-from backend.db.database import DEFAULT_DB_PATH, get_connection
+from backend.db.database import get_connection
 
 TERMINAL_STATUSES = {"offer", "rejected", "ghosted", "withdrawn"}
 VALID_STATUSES = {"ready", "applied", "response_received", "interviewing"} | TERMINAL_STATUSES

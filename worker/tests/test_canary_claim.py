@@ -8,10 +8,8 @@ Two surfaces:
 from __future__ import annotations
 
 import re
-import time
 from pathlib import Path
 
-import pytest
 
 from worker import orchestrator as orch
 

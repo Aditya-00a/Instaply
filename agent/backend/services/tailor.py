@@ -10,7 +10,7 @@ import httpx
 
 from backend.services.config import settings
 from backend.services.jd_parser import parse_job_description
-from backend.services.matcher import extract_keywords, extract_required_keywords, infer_role_bucket
+from backend.services.matcher import extract_keywords, infer_role_bucket
 from backend.services.resume_guardrails import (
     apply_one_page_limits,
     build_guardrail_report,

@@ -1,7 +1,7 @@
 """Auth verification — JWT signature, MCP-token RPC lookup."""
 from __future__ import annotations
 
-from .conftest import make_jwt, FakeQuery
+from .conftest import make_jwt
 
 
 def test_valid_jwt_allows_request(client, fake_db, jwt_secret):

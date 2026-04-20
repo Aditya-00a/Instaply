@@ -7,10 +7,8 @@ from __future__ import annotations
 import asyncio
 from typing import Optional
 
-import pytest
 
 from worker.actions import (
-    ExecutionReport,
     _detect_confirmation,
     execute_decisions,
 )

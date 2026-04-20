@@ -144,10 +144,9 @@ def _extract_salary(text: str) -> dict[str, Any]:
         "period": "annual",
     }
 
-    lower = text.lower()
+    text.lower()
 
     # Detect period from context
-    is_hourly = False
     # Range pattern:  $80,000 - $120,000  or  $80K-120K  or  80k to 120k
     range_pat = re.compile(
         r"\$?\s*(\d[\d,]*\.?\d*)\s*[kK]?\s*(?:[-–—]|to)\s*\$?\s*(\d[\d,]*\.?\d*)\s*[kK]?"

@@ -163,7 +163,7 @@ def _trim_resume_for_attempt(tailored_resume: dict[str, Any], attempt: LayoutAtt
     trimmed: dict[str, Any] = {
         key: value for key, value in tailored_resume.items()
     }
-    role_bucket = str(tailored_resume.get("role_bucket", "")).strip()
+    str(tailored_resume.get("role_bucket", "")).strip()
     priority_weights = tailored_resume.get("priority_engine", {}).get("weights", {})
     experience_items = tailored_resume.get("experience", [])[: attempt.max_experience_items]
     trimmed["experience"] = []

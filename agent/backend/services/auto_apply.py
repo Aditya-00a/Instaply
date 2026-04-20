@@ -119,7 +119,7 @@ def _get_apply_candidates(
     """
     # Build SQL NOT LIKE clauses for title-level clearance filter.
     title_not_like = " AND ".join(
-        f"LOWER(j.title) NOT LIKE '%' || ? || '%'" for _ in CLEARANCE_TITLE_KEYWORDS
+        "LOWER(j.title) NOT LIKE '%' || ? || '%'" for _ in CLEARANCE_TITLE_KEYWORDS
     )
     params: list[Any] = [min_score]
     params.extend(CLEARANCE_TITLE_KEYWORDS)

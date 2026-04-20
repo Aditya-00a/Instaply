@@ -21,8 +21,6 @@ if _sys.platform == "win32":
 import argparse
 import json
 import os
-import platform
-import shutil
 import sqlite3
 import subprocess
 import sys
