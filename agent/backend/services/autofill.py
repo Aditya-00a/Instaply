@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import re
 import uuid
 from datetime import datetime, timezone
@@ -9490,7 +9491,40 @@ async def autofill_and_submit(
             log.exception("Autofill+submit failed for %s", job_url)
             status = f"error: {exc}"
         finally:
-            await context.close()
+            # When human review is needed (captcha to solve, final Submit
+            # to click, or a verification challenge), KEEP THE BROWSER OPEN
+            # until the user signals they're done. Without this, the README
+            # promise of "pauses for you to click submit" is a lie.
+            #
+            # Set INSTAPLY_AUTO_CLOSE=1 in the environment to skip the wait
+            # (useful for scheduled/unattended runs that should never block).
+            keep_open_statuses = (
+                "ready_for_review",
+                "captcha_required",
+                "verification_required",
+            )
+            auto_close = os.environ.get("INSTAPLY_AUTO_CLOSE", "").strip().lower() in ("1", "true", "yes")
+            if status in keep_open_statuses and not auto_close:
+                import sys as _sys
+                print("", file=_sys.stderr)
+                print("=" * 64, file=_sys.stderr)
+                print(">>> Browser is staying open for you.", file=_sys.stderr)
+                print(">>> Solve any captcha and click Submit on the page.", file=_sys.stderr)
+                print(">>> Press Enter in this terminal when done (Ctrl-C to abort).", file=_sys.stderr)
+                print("=" * 64, file=_sys.stderr)
+                print("", file=_sys.stderr)
+                try:
+                    # Non-blocking input read on the asyncio loop so we
+                    # don't freeze other tasks. Works on stdin TTYs only;
+                    # if stdin is a pipe (CI), fall through and close.
+                    loop = asyncio.get_event_loop()
+                    await loop.run_in_executor(None, input)
+                except (KeyboardInterrupt, EOFError):
+                    pass
+            try:
+                await context.close()
+            except Exception:
+                pass
 
     return {
         "status": status,

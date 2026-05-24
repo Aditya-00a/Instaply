@@ -267,7 +267,9 @@ When hCaptcha or reCAPTCHA Enterprise pops up, the agent pauses and waits for yo
 ### 👆
 **Click final Submit**
 
-The last button press is always your call. Always.
+The last button press is always your call. The browser stays open
+after autofill and waits for you. Press Enter in the terminal when
+done. Set `INSTAPLY_AUTO_CLOSE=1` to skip the wait for unattended runs.
 
 </td>
 <td width="33%" align="center">

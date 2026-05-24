@@ -148,11 +148,14 @@ python apply_now.py             # walks the queue interactively
 ```
 
 For each draft:
-1. Opens your real Chrome
+1. Opens your real Chrome (visible, not headless)
 2. Autofills the form (~80% from rules, ~20% from your local LLM)
-3. **Pauses** at the captcha (you solve it)
-4. **Pauses** at the final Submit button (you click it)
-5. Logs the result + a screenshot to `data/artifacts/<job-id>/`
+3. **Browser stays open** when human action is needed (captcha, final Submit, etc.)
+4. The terminal prints `>>> Browser staying open. Press Enter when done.`
+5. You solve the captcha, click Submit, then hit Enter in the terminal
+6. The browser closes and the result + screenshot land in `data/artifacts/<job-id>/`
+
+For unattended scheduled runs that should never block, set `INSTAPLY_AUTO_CLOSE=1` in `config/.env` — the browser then closes immediately after autofill and the draft stays in `ready_for_review` status for later manual completion.
 
 ---
 
