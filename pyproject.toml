@@ -84,7 +84,9 @@ extend-exclude = [
 [tool.ruff.lint]
 # Stay close to flake8's default useful subset. The full ruff ruleset is
 # noisy on a research-y codebase like this; we'll tighten over time.
-select = ["E", "F", "W"]
+# B = flake8-bugbear (real bug-likely patterns); B904 = re-raise without
+# losing the original exception, so users get useful tracebacks.
+select = ["E", "F", "W", "B904"]
 ignore = [
   "E701",  # multiple statements on one line — used in tiny one-line helpers (bold/green/red)
   "E702",  # statement separated by colons — same
@@ -106,6 +108,9 @@ ignore = [
 # Other entry points that munge sys.path
 "api/app/main.py"        = ["E402"]
 "agent/backend/services/review_commands.py" = ["E402"]
+# Legacy hosted-SaaS API (deprecated, kept for reference).
+# Not enforcing exception-chain hygiene on dead code we don't actively maintain.
+"api/app/*.py"           = ["B904"]
 # Tests sometimes import fixtures or assert against module imports.
 "tests/**/*.py"          = ["F401", "F811", "E402"]
 "worker/tests/**/*.py"   = ["F401", "F811", "E402"]
