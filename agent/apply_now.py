@@ -1,4 +1,4 @@
-"""Generate packet + apply immediately for each job, one at a time.
+"""Generate packet + prepare each job application for human review.
 
 Usage: python apply_now.py [--max N] [--source workday] [--min-score 0.70]
 """
@@ -114,7 +114,7 @@ async def main():
     args = parser.parse_args()
 
     log.info("=" * 60)
-    log.info("APPLY NOW — generate packet + apply immediately")
+    log.info("PREPARE APPLICATIONS — generate packet + fill for human review")
     log.info("  Source filter: %s", args.source or "all")
     log.info("  Min score: %.2f", args.min_score)
     log.info("  Max jobs: %d", args.max)
@@ -130,7 +130,8 @@ async def main():
     profile = load_profile()
     master_resume = load_master_resume()
 
-    applied = 0
+    prepared = 0
+    submitted_after_approval = 0
     failed = 0
 
     for i, row in enumerate(jobs_data, 1):
@@ -145,25 +146,41 @@ async def main():
         if not packet:
             failed += 1
             continue
-        log.info("  ✓ Packet ready — applying now...")
+        log.info("  ✓ Packet ready — preparing application for review...")
 
-        # Step 2: Apply immediately (batch of 1 — only this job is packet_generated)
+        # Step 2: Fill the form and create a review request.
         try:
             result = await auto_apply_batch(min_score=0.0, limit=1)
             batch_applied = result.get("applied_count", 0)
+            prepared_items = [
+                r for r in result.get("results", [])
+                if r.get("status") == "pending_approval"
+            ]
             if batch_applied > 0:
-                applied += 1
-                log.info("  ✓ APPLIED to %s at %s!", job.title, job.company)
+                submitted_after_approval += 1
+                log.info("  ✓ Submitted %s at %s after approval.", job.title, job.company)
+            elif prepared_items:
+                prepared += 1
+                log.info(
+                    "  ✓ Ready for approval: %s",
+                    prepared_items[0].get("screenshot", ""),
+                )
             else:
                 failed += 1
                 reasons = [r.get("reason", r.get("status", "?")) for r in result.get("results", [])]
-                log.warning("  ✗ Apply result: %s", reasons)
+                log.warning("  ✗ Review preparation result: %s", reasons)
         except Exception as e:
             failed += 1
-            log.error("  ✗ Apply failed: %s", e)
+            log.error("  ✗ Review preparation failed: %s", e)
 
     log.info("=" * 60)
-    log.info("DONE — Applied: %d, Failed: %d, Total: %d", applied, failed, len(jobs_data))
+    log.info(
+        "DONE — Prepared for approval: %d, Submitted after approval: %d, Failed: %d, Total: %d",
+        prepared,
+        submitted_after_approval,
+        failed,
+        len(jobs_data),
+    )
     log.info("=" * 60)
 
 

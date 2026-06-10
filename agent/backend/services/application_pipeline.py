@@ -16,6 +16,46 @@ FINAL_JOB_STATUSES = {"applied", "outreach_sent", "rejected"}
 PACKET_READY_STATUSES = {"packet_generated"}
 
 
+def _parked_retailor_jobs(db_path: Path) -> list[JobRecord]:
+    """Jobs the tailoring audit parked as `needs_resume_retailor`.
+
+    Nothing else in the pipeline reprocesses that status — jobs would
+    otherwise wait until the company-rotation wheel happened to re-fetch
+    the same posting (~28 cycles). Pull them straight from the DB so
+    every cycle gets a chance to regenerate their packets (which legally
+    transitions them back to packet_generated).
+    """
+    import sqlite3
+
+    try:
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT id, title, company, location, url, source, jd_text, "
+            "match_score, status, date_found "
+            "FROM jobs WHERE status = 'needs_resume_retailor' "
+            "ORDER BY match_score DESC LIMIT 25"
+        ).fetchall()
+        conn.close()
+    except sqlite3.Error:
+        return []
+    return [
+        JobRecord(
+            id=row["id"],
+            title=row["title"] or "",
+            company=row["company"] or "",
+            location=row["location"] or "",
+            url=row["url"] or "",
+            source=row["source"] or "",
+            jd_text=row["jd_text"] or "",
+            match_score=float(row["match_score"] or 0.0),
+            status=row["status"] or "needs_resume_retailor",
+            date_found=row["date_found"] or "",
+        )
+        for row in rows
+    ]
+
+
 def _job_sort_key(job: JobRecord) -> tuple[float, int, str]:
     """Sort jobs by match score (primary), visa sponsorship (secondary),
     and date_found (tertiary, newest first) so recent postings are prioritized."""
@@ -98,6 +138,15 @@ async def discover_rank_generate_packets(
         key=_job_sort_key,
         reverse=True,
     )
+
+    # Give parked needs_resume_retailor jobs first crack at the packet
+    # budget — regenerating their packet transitions them back to
+    # packet_generated. Duplicates with this cycle's scout results are
+    # harmless: after the first regeneration the status check below
+    # skips the second occurrence as packet-ready.
+    parked = _parked_retailor_jobs(Path(settings.database_path))
+    if parked:
+        jobs = parked + jobs
 
     review_queue: list[dict[str, Any]] = []
     generated_count = 0

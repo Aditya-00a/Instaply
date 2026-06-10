@@ -10,6 +10,20 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 load_dotenv(ROOT_DIR / "config" / ".env")
 
 
+def _resolve_db_path(raw: str) -> str:
+    """Resolve DATABASE_PATH against the agent root, not the process CWD.
+
+    A relative value like `data/jobs.db` previously meant "relative to
+    wherever you happened to launch run.py from" — launching from the
+    repo root instead of agent/ silently split the database in two
+    (discovery wrote one file, the apply phase read another).
+    """
+    p = Path(raw)
+    if not p.is_absolute():
+        p = ROOT_DIR / p
+    return str(p)
+
+
 @dataclass(frozen=True)
 class Settings:
     llm_provider: str = os.getenv("LLM_PROVIDER", "ollama")
@@ -19,7 +33,7 @@ class Settings:
     model_name: str = os.getenv("MODEL_NAME", "gemma4:e4b")
     autofill_model_name: str = os.getenv("AUTOFILL_MODEL_NAME", "")
     app_env: str = os.getenv("APP_ENV", "development")
-    database_path: str = os.getenv("DATABASE_PATH", str(ROOT_DIR / "data" / "jobs.db"))
+    database_path: str = _resolve_db_path(os.getenv("DATABASE_PATH", str(ROOT_DIR / "data" / "jobs.db")))
     smtp_host: str = os.getenv("SMTP_HOST", "")
     smtp_port: int = int(os.getenv("SMTP_PORT", "587"))
     smtp_username: str = os.getenv("SMTP_USERNAME", "")

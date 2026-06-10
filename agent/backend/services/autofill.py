@@ -8587,25 +8587,11 @@ async def _click_submit(page: Page, platform: str) -> bool:
             });
         }""")
 
-    # ── Solve reCAPTCHA via CapSolver before submitting ──
-    try:
-        from backend.services.capsolver import solve_recaptcha
-        captcha_token = await solve_recaptcha(page)
-        if captcha_token:
-            log.info("reCAPTCHA solved via CapSolver — proceeding to submit")
-            await page.wait_for_timeout(1000)
-        else:
-            log.debug("No reCAPTCHA to solve or CapSolver unavailable — submitting anyway")
-    except Exception as e:
-        log.debug("CapSolver integration error (non-fatal): %s", e)
-
     url_before = page.url
     page_text_before = (await page.text_content("body") or "").lower()
     selectors = _SUBMIT_SELECTORS.get(platform, _SUBMIT_SELECTORS["generic"])
 
-    # ── Pre-submit warmup: human-like behavior before clicking ──
-    # reCAPTCHA v3 scores behavioral signals — fast robotic clicks get low scores.
-    # Slow scroll, hover near button, pause like a human reading before submit.
+    # Give the user/browser a short review pause before clicking submit.
     import random as _rng
     try:
         # Scroll to bottom of form slowly
@@ -8871,12 +8857,14 @@ async def autofill_and_submit(
     prefer_docx: bool = True,
     company: str = "",
     role: str = "",
+    submit_approved: bool = False,
 ) -> dict[str, Any]:
-    """Autofill *and* submit the application form.
+    """Autofill an application form and optionally submit it after approval.
 
     Same as ``autofill_application`` but also:
     - Uses rules + LLM to answer custom application questions
-    - Clicks the submit button after filling all fields
+    - Captures a final review screenshot before submit
+    - Clicks the submit button only when ``submit_approved`` is True
 
     Takes a pre-submit screenshot and a post-submit screenshot so you
     can verify what happened.
@@ -8947,25 +8935,20 @@ async def autofill_and_submit(
                         "submitted": False,
                         "auto_answered": [f"Rate-limited ({block_type})"],
                     }
-                # For recaptcha blocks, try CapSolver immediately
                 if block_type == "recaptcha":
-                    try:
-                        from backend.services.capsolver import solve_recaptcha
-                        log.info("Attempting CapSolver for pre-form reCAPTCHA block on %s", job_url)
-                        captcha_token = await solve_recaptcha(page)
-                        if captcha_token:
-                            log.info("Pre-form reCAPTCHA solved via CapSolver — waiting for page to update")
-                            await page.wait_for_timeout(3000)
-                            # Check if form appeared after solving
-                            try:
-                                await page.wait_for_load_state("domcontentloaded", timeout=10_000)
-                            except Exception:
-                                pass
-                            await page.wait_for_timeout(2000)
-                        else:
-                            log.warning("CapSolver could not solve pre-form reCAPTCHA on %s", job_url)
-                    except Exception as e:
-                        log.debug("CapSolver pre-form attempt error: %s", e)
+                    ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+                    ss_path = SCREENSHOTS_DIR / f"autofill_{platform}_{ts}_captcha_required.png"
+                    await page.screenshot(path=str(ss_path), full_page=True)
+                    return {
+                        "status": "captcha_required",
+                        "screenshot_path": str(ss_path),
+                        "post_submit_screenshot": "",
+                        "filled_fields": [],
+                        "needs_review": [{"question": "CAPTCHA or bot challenge visible", "normalized_key": "captcha_required"}],
+                        "platform_detected": platform,
+                        "submitted": False,
+                        "auto_answered": ["Stopped for manual CAPTCHA review"],
+                    }
                 await human_delay(page, 2000, 4000)
 
             # --- Detect dead job postings (Greenhouse ?error=true redirect) ---
@@ -9440,10 +9423,18 @@ async def autofill_and_submit(
             except Exception as exc:
                 log.debug("Final text field sweep error: %s", exc)
 
-            # Always attempt submit -- many "unknown" fields are optional or
-            # already filled by the LLM/checkbox sweep.  Browser validation
-            # will block the submit if a truly required field is empty.
-            if True:  # was: len(needs_review) <= 8
+            review_ss_name = f"autofill_{platform}_{ts}_ready_for_approval.png"
+            review_ss_path = SCREENSHOTS_DIR / review_ss_name
+            await page.screenshot(path=str(review_ss_path), full_page=True)
+            screenshot_path = str(review_ss_path)
+
+            if not submit_approved:
+                status = "ready_for_approval"
+                log.info(
+                    "Application filled for review only. Approval required before submit. Screenshot: %s",
+                    screenshot_path,
+                )
+            else:
                 submitted = await _click_submit(page, platform)
                 if submitted:
                     try:
@@ -9486,7 +9477,7 @@ async def autofill_and_submit(
                     await page.screenshot(path=str(post_ss_path), full_page=True)
                     post_submit_screenshot = str(post_ss_path)
 
-            status = "submitted" if submitted else "ready_for_review"
+                status = "submitted" if submitted else "ready_for_review"
         except Exception as exc:
             log.exception("Autofill+submit failed for %s", job_url)
             status = f"error: {exc}"
@@ -9499,6 +9490,7 @@ async def autofill_and_submit(
             # Set INSTAPLY_AUTO_CLOSE=1 in the environment to skip the wait
             # (useful for scheduled/unattended runs that should never block).
             keep_open_statuses = (
+                "ready_for_approval",
                 "ready_for_review",
                 "captcha_required",
                 "verification_required",
@@ -9508,9 +9500,10 @@ async def autofill_and_submit(
                 import sys as _sys
                 print("", file=_sys.stderr)
                 print("=" * 64, file=_sys.stderr)
-                print(">>> Browser is staying open for you.", file=_sys.stderr)
-                print(">>> Solve any captcha and click Submit on the page.", file=_sys.stderr)
-                print(">>> Press Enter in this terminal when done (Ctrl-C to abort).", file=_sys.stderr)
+                print(">>> Browser is staying open for review.", file=_sys.stderr)
+                print(">>> Check the screenshot/browser, then record APPROVE or DENY.", file=_sys.stderr)
+                print(">>> Do not submit from the browser unless you are intentionally taking over manually.", file=_sys.stderr)
+                print(">>> Press Enter in this terminal when review is done (Ctrl-C to abort).", file=_sys.stderr)
                 print("=" * 64, file=_sys.stderr)
                 print("", file=_sys.stderr)
                 try:

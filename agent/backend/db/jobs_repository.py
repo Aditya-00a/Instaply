@@ -12,7 +12,8 @@ from backend.models.job_models import JobRecord
 ALLOWED_JOB_TRANSITIONS = {
     "new": {"scored", "packet_generated", "rejected"},
     "scored": {"packet_generated", "rejected"},
-    "packet_generated": {"reviewed", "applied", "rejected"},
+    "packet_generated": {"reviewed", "applied", "rejected", "needs_resume_retailor"},
+    "needs_resume_retailor": {"packet_generated", "rejected"},
     "reviewed": {"packet_generated", "applied", "rejected"},
     "applied": {"outreach_sent", "rejected"},
     "outreach_sent": {"rejected"},

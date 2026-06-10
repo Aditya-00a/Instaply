@@ -92,6 +92,32 @@ pip install -r ../mcp/requirements.txt   # or whatever the merged deps file is
 python run.py
 ```
 
+## Human approval flow
+
+The browser fill path is review-first. It fills a strong-fit application,
+captures a screenshot, creates an `application_review_requests` row, and
+does not click submit until a review request is explicitly approved.
+
+```bash
+cd agent
+python apply_now.py --max 1 --min-score 0.75
+python review_applications.py list
+python review_applications.py approve <review_id>
+python review_applications.py submit-approved <review_id>
+```
+
+Shortcut after checking the screenshot:
+
+```bash
+python review_applications.py approve <review_id> --submit
+```
+
+To deny and prevent the same role from being retried:
+
+```bash
+python review_applications.py deny <review_id>
+```
+
 ## Running it (Windows scheduler)
 
 ```powershell

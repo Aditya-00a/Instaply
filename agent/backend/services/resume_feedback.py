@@ -12,6 +12,7 @@ from backend.services.config import settings
 from backend.services.jd_parser import parse_job_description
 from backend.services.pdf_renderer import build_ats_resume_pdf
 from backend.services.review_commands import get_resume_preference_overrides
+from backend.services.resume_tailoring_audit import require_strong_tailoring
 from backend.services.tailor import tailor_resume
 
 DB_PATH = init_db(Path(settings.database_path))
@@ -239,6 +240,17 @@ def generate_resume_with_learning(
         company_background=company_background,
         learning_profile=learning_profile,
     )
+    tailoring_audit = require_strong_tailoring(
+        jd_text=jd_text,
+        tailored_resume=tailored_result["tailored_resume"],
+        master_resume=master_resume,
+        company_context=company_context,
+    )
+    tailored_result["tailoring_audit"] = tailoring_audit
+    tailored_result["selection_summary"] = {
+        **dict(tailored_result.get("selection_summary", {})),
+        "tailoring_audit": tailoring_audit,
+    }
     pdf_result = build_ats_resume_pdf(
         tailored_resume=tailored_result["tailored_resume"],
         output_filename=output_filename,

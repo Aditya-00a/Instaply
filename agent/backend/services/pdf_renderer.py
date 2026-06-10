@@ -385,7 +385,7 @@ def _write_docx_resume(docx_path: Path, tailored_resume: dict[str, Any], attempt
                     ]
                     if part
                 ),
-                _display_dates(str(edu.get("graduation", "")).strip()),
+                _display_dates(str(edu.get("graduation") or edu.get("dates") or "").strip()),
                 font_size_pt=attempt.font_size_pt,
                 margin_inches=attempt.margin_inches,
             )
@@ -700,7 +700,7 @@ def _write_fallback_pdf(pdf_path: Path, tailored_resume: dict[str, Any], attempt
                         ]
                         if part
                     ),
-                    _display_dates(str(edu.get("graduation", "")).strip()),
+                    _display_dates(str(edu.get("graduation") or edu.get("dates") or "").strip()),
                 )
             )
             awards = [str(award).strip() for award in edu.get("awards", []) if str(award).strip()]

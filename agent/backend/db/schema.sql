@@ -192,3 +192,22 @@ CREATE TABLE IF NOT EXISTS application_tracking (
 CREATE INDEX IF NOT EXISTS idx_application_tracking_job_id ON application_tracking(job_id);
 CREATE INDEX IF NOT EXISTS idx_application_tracking_status ON application_tracking(status);
 CREATE INDEX IF NOT EXISTS idx_application_tracking_followup ON application_tracking(followup_due_at, status);
+
+CREATE TABLE IF NOT EXISTS application_review_requests (
+  id TEXT PRIMARY KEY,
+  job_id TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending_approval',
+  screenshot_path TEXT,
+  post_submit_screenshot_path TEXT,
+  platform TEXT,
+  filled_fields_json TEXT,
+  needs_review_json TEXT,
+  decision TEXT,
+  decision_notes TEXT,
+  decided_at TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(job_id) REFERENCES jobs(id)
+);
+CREATE INDEX IF NOT EXISTS idx_application_review_requests_job_id ON application_review_requests(job_id);
+CREATE INDEX IF NOT EXISTS idx_application_review_requests_status ON application_review_requests(status);

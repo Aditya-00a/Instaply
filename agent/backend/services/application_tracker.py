@@ -31,14 +31,19 @@ def _date_plus_days(iso_date: str, days: int) -> str:
     return (dt + timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def track_application(job_id: str, applied_via: str = "", notes: str = "") -> dict:
+def track_application(
+    job_id: str,
+    applied_via: str = "",
+    notes: str = "",
+    db_path=None,
+) -> dict:
     """Create a tracking record when you apply to a job."""
     tracking_id = uuid4().hex
     now = _now_iso()
     applied_at = now
     followup_due_at = _date_plus_days(now, FOLLOWUP_INTERVAL_DAYS)
 
-    with get_connection() as conn:
+    with get_connection(db_path) as conn:
         # Verify job exists
         job = conn.execute("SELECT id, company, title FROM jobs WHERE id = ?", (job_id,)).fetchone()
         if not job:

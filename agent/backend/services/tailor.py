@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from copy import deepcopy
 from datetime import datetime
 import html
@@ -18,6 +19,8 @@ from backend.services.resume_guardrails import (
     make_ats_notes,
 )
 from backend.services.resume_rules import resolve_rule_set
+
+logger = logging.getLogger(__name__)
 
 
 STRONG_ACTION_VERBS = {
@@ -1102,6 +1105,25 @@ def _ats_optimize_bullets_llm(
             line = line[2:].strip()
         if line:
             new_bullets.append(line)
+
+    # INTEGRITY GATE: bullets are mapped back by a single running index
+    # across ALL roles. If the model returned a different number of lines
+    # than it was given, every bullet after the divergence lands under the
+    # WRONG employer — factual misattribution on a submitted resume. Local
+    # models drop/merge lines often enough that this must be all-or-nothing.
+    expected = 0
+    for exp in experience:
+        for bullet in exp.get("bullets", []):
+            text = bullet.get("text", "") if isinstance(bullet, dict) else str(bullet)
+            if text:
+                expected += 1
+    if len(new_bullets) != expected:
+        logger.warning(
+            "ATS bullet optimization returned %d lines for %d bullets — "
+            "discarding LLM output to protect bullet-to-employer integrity.",
+            len(new_bullets), expected,
+        )
+        return experience
 
     # Map optimized bullets back to experience entries
     idx = 0

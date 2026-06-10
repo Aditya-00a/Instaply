@@ -6,6 +6,7 @@ Playwright, and records tracking entries for successful submissions.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -15,10 +16,17 @@ import httpx
 
 from backend.db.database import get_connection
 from backend.db.jobs_repository import mark_job_applied
+from backend.services.application_review_gate import (
+    APPROVED,
+    create_or_update_review_request,
+    get_review_request,
+    mark_review_submitted,
+)
 from backend.services.application_tracker import track_application
 from backend.services.autofill import autofill_and_submit
 from backend.services.config import settings
 from backend.services.files import load_master_resume, load_profile
+from backend.services.resume_tailoring_audit import ResumeTailoringError, require_strong_tailoring
 
 log = logging.getLogger(__name__)
 
@@ -170,7 +178,12 @@ def _get_apply_candidates(
     return kept
 
 
-def _get_packet_files(resume_gen_id: str, cover_letter_gen_id: str) -> dict[str, str | None]:
+def _get_packet_files(
+    resume_gen_id: str,
+    cover_letter_gen_id: str,
+    *,
+    db_path: Path | None = None,
+) -> dict[str, str | None]:
     """Look up PDF and DOCX file paths from the generation tables."""
     result: dict[str, str | None] = {
         "resume_pdf": None,
@@ -178,7 +191,7 @@ def _get_packet_files(resume_gen_id: str, cover_letter_gen_id: str) -> dict[str,
         "cover_letter_pdf": None,
         "cover_letter_docx": None,
     }
-    with get_connection() as conn:
+    with get_connection(db_path) as conn:
         if resume_gen_id:
             row = conn.execute(
                 "SELECT pdf_path, docx_path FROM resume_generations WHERE id = ?",
@@ -198,18 +211,191 @@ def _get_packet_files(resume_gen_id: str, cover_letter_gen_id: str) -> dict[str,
     return result
 
 
+def _audit_existing_resume_packet(
+    job: dict[str, Any],
+    master_resume: dict[str, Any],
+    *,
+    db_path: Path | None = None,
+) -> dict[str, Any]:
+    """Re-audit an existing generated resume before browser fill starts."""
+    resume_gen_id = str(job.get("resume_version") or "").strip()
+    if not resume_gen_id:
+        raise ResumeTailoringError(
+            {
+                "passed": False,
+                "score": 0,
+                "blockers": ["missing resume generation id"],
+            }
+        )
+    with get_connection(db_path) as conn:
+        row = conn.execute(
+            """
+            SELECT jd_text, tailored_resume_json, company, role_title
+            FROM resume_generations
+            WHERE id = ?
+            """,
+            (resume_gen_id,),
+        ).fetchone()
+    if not row:
+        raise ResumeTailoringError(
+            {
+                "passed": False,
+                "score": 0,
+                "blockers": [f"resume generation not found: {resume_gen_id}"],
+            }
+        )
+    tailored_resume = json.loads(row["tailored_resume_json"] or "{}")
+    return require_strong_tailoring(
+        jd_text=str(row["jd_text"] or job.get("jd_text", "")),
+        tailored_resume=tailored_resume,
+        master_resume=master_resume,
+        company_context={
+            "company": row["company"] or job.get("company", ""),
+            "role": row["role_title"] or job.get("title", ""),
+        },
+    )
+
+
+def _build_autofill_profile(profile: dict[str, Any], master_resume: dict[str, Any]) -> dict[str, Any]:
+    """Merge contact data into the profile used for browser fill."""
+    contact = dict(master_resume.get("contact", {}))
+    full_name = master_resume.get("name", "")
+    if full_name:
+        name_parts = full_name.strip().split(None, 1)
+        contact.setdefault("first_name", name_parts[0] if name_parts else "")
+        contact.setdefault("last_name", name_parts[1] if len(name_parts) > 1 else "")
+    if settings.job_application_email:
+        contact["email"] = settings.job_application_email
+    return {**profile, "contact": contact}
+
+
+async def submit_approved_review(
+    review_id: str,
+    *,
+    db_path: Path | None = None,
+    autofill_func=autofill_and_submit,
+) -> dict[str, Any]:
+    """Submit one application only after its screenshot review is approved."""
+    review = get_review_request(review_id, db_path=db_path)
+    if not review:
+        return {"status": "error", "reason": "review_not_found", "review_id": review_id}
+    if str(review.get("status", "")).strip().lower() != APPROVED:
+        return {
+            "status": "skipped",
+            "reason": "review_not_approved",
+            "review_id": review_id,
+            "review_status": review.get("status", ""),
+        }
+
+    job_id = str(review.get("job_id") or "").strip()
+    with get_connection(db_path) as conn:
+        row = conn.execute(
+            """
+            SELECT
+                id, title, company, url, match_score, source, resume_version,
+                cover_letter_version, visa_sponsorship_likely, jd_text
+            FROM jobs
+            WHERE id = ?
+            """,
+            (job_id,),
+        ).fetchone()
+    if not row:
+        return {"status": "error", "reason": "job_not_found", "review_id": review_id, "job_id": job_id}
+    job = dict(row)
+
+    master_resume = load_master_resume()
+    try:
+        tailoring_audit = _audit_existing_resume_packet(job, master_resume, db_path=db_path)
+    except ResumeTailoringError as exc:
+        return {
+            "status": "skipped",
+            "reason": "tailoring_audit_failed",
+            "review_id": review_id,
+            "job_id": job_id,
+            "tailoring_audit": exc.audit,
+        }
+
+    files = _get_packet_files(
+        str(job.get("resume_version") or ""),
+        str(job.get("cover_letter_version") or ""),
+        db_path=db_path,
+    )
+    if not files["resume_pdf"] and not files["resume_docx"]:
+        return {
+            "status": "error",
+            "reason": "no_resume_file",
+            "review_id": review_id,
+            "job_id": job_id,
+        }
+
+    profile = _build_autofill_profile(load_profile(), master_resume)
+    autofill_result = await autofill_func(
+        job_url=job["url"],
+        profile=profile,
+        resume_pdf_path=files["resume_pdf"],
+        cover_letter_pdf_path=files["cover_letter_pdf"],
+        resume_docx_path=files["resume_docx"],
+        cover_letter_docx_path=files["cover_letter_docx"],
+        prefer_docx=True,
+        company=job.get("company", ""),
+        role=job.get("title", ""),
+        submit_approved=True,
+    )
+
+    if not autofill_result.get("submitted"):
+        return {
+            "status": "not_submitted",
+            "reason": autofill_result.get("status", "submit_failed"),
+            "review_id": review_id,
+            "job_id": job_id,
+            "screenshot": autofill_result.get("screenshot_path", ""),
+            "needs_review": autofill_result.get("needs_review", []),
+            "tailoring_audit": tailoring_audit,
+        }
+
+    mark_job_applied(job_id, db_path=db_path)
+    tracking = track_application(
+        job_id=job_id,
+        applied_via="approved_autofill",
+        notes=(
+            f"Submitted after explicit review approval {review_id}. "
+            f"Platform: {autofill_result.get('platform_detected', 'unknown')}. "
+            f"Filled: {', '.join(autofill_result.get('filled_fields', []))}"
+        ),
+        db_path=db_path,
+    )
+    submitted_review = mark_review_submitted(
+        review_id,
+        post_submit_screenshot_path=autofill_result.get("post_submit_screenshot", ""),
+        notes="Submitted after explicit approval.",
+        db_path=db_path,
+    )
+    return {
+        "status": "submitted",
+        "review_id": review_id,
+        "job_id": job_id,
+        "company": job.get("company", ""),
+        "title": job.get("title", ""),
+        "platform": autofill_result.get("platform_detected", ""),
+        "post_submit_screenshot": autofill_result.get("post_submit_screenshot", ""),
+        "tracking": tracking,
+        "review": submitted_review,
+        "tailoring_audit": tailoring_audit,
+    }
+
+
 async def auto_apply_batch(
     *,
     min_score: float | None = None,
     limit: int | None = None,
 ) -> dict[str, Any]:
-    """Run auto-apply on eligible jobs.
+    """Prepare eligible jobs for human-approved application submission.
 
     1. Finds ``packet_generated`` jobs above the score threshold.
     2. For each, looks up resume/cover-letter files.
-    3. Runs ``autofill_and_submit`` via Playwright.
-    4. On successful submission, marks the job as ``applied`` and creates
-       a tracking record.
+    3. Fills the form via Playwright.
+    4. Captures review screenshots and waits for explicit approval before
+       any submit path can be used.
 
     Returns a summary dict with counts and per-job results.
     """
@@ -315,6 +501,37 @@ async def auto_apply_batch(
 
         log.info("Auto-applying to %s at %s (%s) score=%.2f", title, company, job_url, job["match_score"])
 
+        try:
+            tailoring_audit = _audit_existing_resume_packet(job, master_resume)
+            log.info(
+                "Resume tailoring audit passed for %s at %s: score=%s coverage=%s",
+                title,
+                company,
+                tailoring_audit.get("score"),
+                tailoring_audit.get("keyword_coverage"),
+            )
+        except ResumeTailoringError as exc:
+            blockers = exc.audit.get("blockers", [])
+            log.warning("Skipping %s at %s — resume needs stronger tailoring: %s", title, company, blockers)
+            try:
+                transition_job_status(
+                    job_id,
+                    "needs_resume_retailor",
+                    reason=f"tailoring_audit_failed: {'; '.join(blockers)[:160]}",
+                )
+            except Exception as transition_exc:
+                log.warning("Could not mark %s for resume retailor: %s", job_id, transition_exc)
+            results.append({
+                "job_id": job_id,
+                "company": company,
+                "title": title,
+                "status": "skipped",
+                "reason": "tailoring_audit_failed",
+                "tailoring_audit": exc.audit,
+            })
+            skipped_count += 1
+            continue
+
         # Look up packet files.
         files = _get_packet_files(
             job.get("resume_version", ""),
@@ -348,6 +565,7 @@ async def auto_apply_batch(
                     prefer_docx=True,
                     company=company,
                     role=title,
+                    submit_approved=False,
                 )
                 break  # Success — exit retry loop.
             except Exception as exc:
@@ -381,7 +599,29 @@ async def auto_apply_batch(
         if autofill_result is None:
             continue
 
-        if autofill_result.get("submitted"):
+        if autofill_result.get("status") == "ready_for_approval":
+            review = create_or_update_review_request(
+                job_id=job_id,
+                screenshot_path=autofill_result.get("screenshot_path", ""),
+                post_submit_screenshot_path=autofill_result.get("post_submit_screenshot", ""),
+                platform=autofill_result.get("platform_detected", ""),
+                filled_fields=autofill_result.get("filled_fields", []),
+                needs_review=autofill_result.get("needs_review", []),
+            )
+            results.append({
+                "job_id": job_id,
+                "company": company,
+                "title": title,
+                "status": "pending_approval",
+                "review_id": review.get("id", ""),
+                "platform": autofill_result.get("platform_detected"),
+                "filled_fields": autofill_result.get("filled_fields", []),
+                "needs_review": autofill_result.get("needs_review", []),
+                "screenshot": autofill_result.get("screenshot_path", ""),
+            })
+            skipped_count += 1
+            log.info("Prepared %s at %s for approval review: %s", title, company, review.get("id", ""))
+        elif autofill_result.get("submitted"):
             # Mark job as applied in the jobs table.
             try:
                 mark_job_applied(job_id)
@@ -410,8 +650,19 @@ async def auto_apply_batch(
             applied_count += 1
             log.info("Successfully auto-applied to %s at %s", title, company)
         else:
-            # Form had unknown questions or submit button not found.
-            reason = "needs_review" if autofill_result.get("needs_review") else "submit_not_found"
+            # Classify the failure: structural problems with the form are
+            # permanent; captcha / verification walls and transient autofill
+            # errors are NOT — a 0.95-score job should never be killed
+            # because hCaptcha happened to fire once.
+            autofill_status = str(autofill_result.get("status") or "")
+            if autofill_status in ("captcha_required", "verification_required"):
+                reason = autofill_status
+            elif autofill_status.startswith("error"):
+                reason = "autofill_error"
+            elif autofill_result.get("needs_review"):
+                reason = "needs_review"
+            else:
+                reason = "submit_not_found"
             results.append({
                 "job_id": job_id,
                 "company": company,
@@ -424,24 +675,33 @@ async def auto_apply_batch(
             skipped_count += 1
             log.info("Skipped auto-apply for %s at %s: %s", title, company, reason)
 
-            # Mark failing jobs as rejected so they don't retry forever.
-            # Both submit_not_found and needs_review are non-recoverable —
-            # the form has fields we can't fill (mandatory checkboxes, custom dropdowns).
-            if reason in ("submit_not_found", "needs_review"):
-                try:
-                    from backend.db.jobs_repository import transition_job_status
+            try:
+                from backend.db.jobs_repository import transition_job_status
+                if reason in ("submit_not_found", "needs_review"):
+                    # Structural: the form has fields we can't fill
+                    # (mandatory checkboxes, custom dropdowns). Don't retry.
                     transition_job_status(job_id, "rejected",
                                           reason=f"auto_apply:{reason}")
                     log.info("Marked %s as rejected (%s)", title, reason)
-                except Exception as exc:
-                    log.warning("Could not mark %s as rejected: %s", title, exc)
+                else:
+                    # Recoverable: park for a human instead of rejecting.
+                    # `reviewed` keeps the packet alive and the job can move
+                    # to applied (manual finish) or back to packet_generated.
+                    transition_job_status(job_id, "reviewed",
+                                          reason=f"auto_apply:{reason}")
+                    log.info("Parked %s for human review (%s)", title, reason)
+            except Exception as exc:
+                log.warning("Could not transition %s after skip: %s", title, exc)
 
     return {
         "applied_count": applied_count,
         "skipped_count": skipped_count,
         "error_count": error_count,
         "results": results,
-        "message": f"Auto-applied to {applied_count} jobs, skipped {skipped_count}, errors {error_count}.",
+        "message": (
+            f"Prepared/submitted {applied_count} approved jobs, "
+            f"created or skipped {skipped_count} review items, errors {error_count}."
+        ),
     }
 
 

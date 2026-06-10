@@ -235,6 +235,7 @@ def generate_application_packet(
             "ats_notes": resume_result["ats_notes"],
             "guardrails": resume_result["guardrails"],
             "jd_parse": resume_result["jd_parse"],
+            "tailoring_audit": resume_result.get("tailoring_audit", {}),
             "pdf_result": resume_result["pdf_result"],
         },
         "cover_letter_result": {
