@@ -49,6 +49,18 @@ async def health_check() -> bool:
         return False
 
 
+# Model families that emit "thinking" preambles by default. For form
+# filling and short answers that latency is pure waste, so we ask Ollama
+# to disable it. "coder" variants are non-thinking despite the qwen3
+# prefix — excluded so we don't send an unsupported flag.
+_THINKING_FAMILIES = ("qwen3", "deepseek-r1", "magistral")
+
+
+def _supports_think_toggle(model: str) -> bool:
+    m = model.lower()
+    return any(fam in m for fam in _THINKING_FAMILIES) and "coder" not in m
+
+
 async def _generate_with_model(prompt: str, model: str, system: str | None = None) -> str:
     """Attempt generation with a specific model, retrying on transient errors."""
     payload: dict[str, Any] = {
@@ -58,6 +70,8 @@ async def _generate_with_model(prompt: str, model: str, system: str | None = Non
     }
     if system:
         payload["system"] = system
+    if _supports_think_toggle(model):
+        payload["think"] = False
 
     last_exc: Exception | None = None
     for attempt in range(_MAX_RETRIES):
@@ -68,6 +82,14 @@ async def _generate_with_model(prompt: str, model: str, system: str | None = Non
                 )
                 response.raise_for_status()
                 return response.json().get("response", "").strip()
+        except httpx.HTTPStatusError as exc:
+            # Older Ollama versions (or models that reject the toggle)
+            # 400 on the `think` key — drop it and retry immediately.
+            if "think" in payload and exc.response.status_code == 400:
+                logger.info("Model %s rejected think toggle; retrying without it.", model)
+                payload.pop("think", None)
+                continue
+            raise
         except (httpx.TimeoutException, httpx.TransportError) as exc:
             last_exc = exc
             if attempt < _MAX_RETRIES - 1:
@@ -108,8 +130,12 @@ async def generate(prompt: str, system: str | None = None, *, model: str | None 
 
 
 async def generate_fast(prompt: str, system: str | None = None) -> str:
-    """Generate using the configured model for simple yes/no and short answers.
+    """Generate short answers (yes/no, dropdown picks, field values).
 
-    Uses the same model as generate() — no downgrade to weaker models.
+    Uses AUTOFILL_MODEL_NAME when configured — a small model that fits
+    fully in VRAM keeps per-field latency low across the hundreds of
+    short calls an application session makes. Falls back to the main
+    MODEL_NAME when no fast model is configured.
     """
-    return await generate(prompt, system)
+    fast_model = str(settings.autofill_model_name or "").strip()
+    return await generate(prompt, system, model=fast_model or None)
