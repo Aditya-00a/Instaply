@@ -7,13 +7,16 @@ build/
 
 artifacts/
 agent/artifacts/
-agent/data/*.db
-agent/data/*.sqlite
-agent/data/*.sqlite3
-agent/data/profile.json
-agent/data/master-resume.json
-agent/data/company_scan_state.json
-agent/data/logs/
+
+# Personal data: ignore EVERYTHING under agent/data/ by default and
+# allowlist only the public, shippable bits. This is deny-by-default so
+# any NEW file the agent writes (state, caches, screenshots, drafts)
+# can never accidentally reach the public repo.
+agent/data/*
+!agent/data/company_pools/
+!agent/data/company_pools/**
+!agent/data/*.example.json
+
 instaply-dev.log
 
 .env
