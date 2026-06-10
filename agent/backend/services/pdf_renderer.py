@@ -342,7 +342,7 @@ def _write_docx_resume(docx_path: Path, tailored_resume: dict[str, Any], attempt
     name = tailored_resume.get("name", "")
     _add_text_line(
         document,
-        str(name).upper(),
+        str(name),
         font_size_pt=max(attempt.font_size_pt + 3.5, 13),
         bold=True,
         align=WD_ALIGN_PARAGRAPH.CENTER,
@@ -434,7 +434,7 @@ def _write_docx_resume(docx_path: Path, tailored_resume: dict[str, Any], attempt
     if projects:
         _add_section_heading(
             document,
-            _display_section_heading(tailored_resume, "projects", "Project"),
+            _display_section_heading(tailored_resume, "projects", "Projects"),
             attempt.font_size_pt,
         )
         for project in projects:
@@ -489,9 +489,15 @@ def _write_docx_resume(docx_path: Path, tailored_resume: dict[str, Any], attempt
             for category, items in skills.items():
                 values = [str(item).strip() for item in items if str(item).strip()]
                 if values:
+                    # Only title-case fully-lowercase keys; preserve authored
+                    # casing like "Applied AI" (title() would mangle it to
+                    # "Applied Ai").
+                    label = str(category).replace("_", " ")
+                    if label.islower():
+                        label = label.title()
                     _add_text_line(
                         document,
-                        f"{str(category).replace('_', ' ').title()}: {', '.join(values)}",
+                        f"{label}: {', '.join(values)}",
                         font_size_pt=max(attempt.font_size_pt - 0.25, 8.75),
                     )
         _add_section_end_space(document, 0.35)
@@ -646,7 +652,7 @@ def _write_fallback_pdf(pdf_path: Path, tailored_resume: dict[str, Any], attempt
     )
 
     story: list[Any] = []
-    story.append(Paragraph(str(tailored_resume.get("name", "")).upper(), header_style))
+    story.append(Paragraph(str(tailored_resume.get("name", "")), header_style))
     contact_line = _build_contact_line(tailored_resume.get("contact", {}))
     if contact_line:
         story.append(Paragraph(contact_line, contact_style))
@@ -722,7 +728,7 @@ def _write_fallback_pdf(pdf_path: Path, tailored_resume: dict[str, Any], attempt
 
     projects = tailored_resume.get("projects", [])
     if projects:
-        story.extend(section_header(_display_section_heading(tailored_resume, "projects", "Project").upper()))
+        story.extend(section_header(_display_section_heading(tailored_resume, "projects", "Projects").upper()))
         for project in projects:
             name = str(project.get("name", "")).strip()
             summary = str(project.get("display_summary", project.get("summary", project.get("description", "")))).strip()

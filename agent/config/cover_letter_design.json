@@ -4,10 +4,10 @@
   "name_font_size_pt": 13.0,
   "contact_font_size_pt": 10.0,
   "margins_inches": {
-    "top": 0.85,
-    "bottom": 0.85,
-    "left": 0.9,
-    "right": 0.9
+    "top": 0.75,
+    "bottom": 0.75,
+    "left": 0.75,
+    "right": 0.75
   },
   "spacing": {
     "header_after_pt": 10.0,

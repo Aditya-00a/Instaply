@@ -3,45 +3,36 @@
   "content_indent_inch": 0.08,
   "layout_attempts": [
     {
-      "font_size_pt": 10.5,
+      "font_size_pt": 11.0,
       "max_bullets_per_role": 4,
-      "margin_inches": 0.4,
-      "max_experience_items": 5,
-      "max_projects": 2,
-      "max_publications": 1,
-      "max_leadership_items": 2
-    },
-    {
-      "font_size_pt": 10.5,
-      "max_bullets_per_role": 3,
-      "margin_inches": 0.4,
-      "max_experience_items": 5,
-      "max_projects": 2,
-      "max_publications": 1,
-      "max_leadership_items": 2
-    },
-    {
-      "font_size_pt": 10.5,
-      "max_bullets_per_role": 3,
-      "margin_inches": 0.4,
-      "max_experience_items": 5,
-      "max_projects": 1,
-      "max_publications": 1,
-      "max_leadership_items": 1
-    },
-    {
-      "font_size_pt": 10.5,
-      "max_bullets_per_role": 3,
-      "margin_inches": 0.4,
+      "margin_inches": 0.35,
       "max_experience_items": 4,
-      "max_projects": 1,
+      "max_projects": 3,
+      "max_publications": 1,
+      "max_leadership_items": 2
+    },
+    {
+      "font_size_pt": 11.0,
+      "max_bullets_per_role": 3,
+      "margin_inches": 0.35,
+      "max_experience_items": 4,
+      "max_projects": 2,
+      "max_publications": 1,
+      "max_leadership_items": 2
+    },
+    {
+      "font_size_pt": 10.5,
+      "max_bullets_per_role": 3,
+      "margin_inches": 0.35,
+      "max_experience_items": 4,
+      "max_projects": 2,
       "max_publications": 1,
       "max_leadership_items": 1
     },
     {
-      "font_size_pt": 10.25,
+      "font_size_pt": 10.5,
       "max_bullets_per_role": 3,
-      "margin_inches": 0.4,
+      "margin_inches": 0.35,
       "max_experience_items": 4,
       "max_projects": 1,
       "max_publications": 1,
@@ -50,7 +41,7 @@
     {
       "font_size_pt": 10.0,
       "max_bullets_per_role": 3,
-      "margin_inches": 0.38,
+      "margin_inches": 0.35,
       "max_experience_items": 4,
       "max_projects": 1,
       "max_publications": 0,

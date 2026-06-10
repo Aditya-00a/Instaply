@@ -90,6 +90,12 @@ def _score_text(text: str, keywords: list[str], tags: list[str] | None = None) -
 def _rewrite_bullet_for_impact(bullet_text: str, jd_keywords: list[str], role_bucket: str) -> str:
     """Deterministic string transformation to make a bullet more impactful.
 
+    OFF by default (BULLET_REWRITE_ENABLED=true to opt in): the verb-swap
+    table injects words on the resume style guide's banned list
+    (Spearheaded, Leveraged, Orchestrated, Streamlined) and the
+    metric-front-loading step emits em dashes, which the style guide bans
+    everywhere. Hand-written master bullets pass through untouched.
+
     Rules applied in order:
     1. Replace weak opening verbs with strong action verbs
     2. Front-load metrics if they appear later in the bullet
@@ -97,6 +103,9 @@ def _rewrite_bullet_for_impact(bullet_text: str, jd_keywords: list[str], role_bu
     """
     if not bullet_text or not bullet_text.strip():
         return bullet_text
+    import os as _os
+    if _os.getenv("BULLET_REWRITE_ENABLED", "").strip().lower() not in ("1", "true", "yes"):
+        return bullet_text.strip()
 
     text = bullet_text.strip()
 
@@ -415,11 +424,10 @@ def _capitalize_first_alpha(text: str) -> str:
 
 def _anonymize_client_mentions(text: str) -> str:
     cleaned = _clean_sentence(text)
-    # Replace named clients with generic descriptors when the user has not
-    # explicitly opted to name-drop them. TODO(post-lift): make the allow
-    # list profile-driven (was hardcoded to keep JPMorgan Chase visible).
+    # Replace named clients with generic descriptors. JPMorgan Chase is
+    # deliberately named in the master resume (flagship pre-sales
+    # credential) and is NOT anonymized.
     replacements = [
-        (r"\bJPMorgan Chase\b|\bJPMC\b", "a major financial institution"),
         (r"\bMorgan Stanley\b", "a major financial institution"),
         (r"\bGoldman Sachs\b", "a major financial institution"),
         (r"\bBank of America\b", "a major financial institution"),
@@ -1750,7 +1758,13 @@ def tailor_resume(
             exp_out.pop("flexible_title", None)
         selected_experience.append(exp_out)
     # ATS keyword optimization: use LLM to inject missing JD keywords into bullets
-    selected_experience = _ats_optimize_bullets_llm(selected_experience, jd_text, keywords)
+    # The LLM bullet-rewrite pass is OFF by default: local models leak
+    # markdown, reorder dollar figures, and swap em dashes into otherwise
+    # human-written bullets. The master bullets are already strong.
+    # Opt back in with ATS_BULLET_LLM_ENABLED=true.
+    import os as _os
+    if _os.getenv("ATS_BULLET_LLM_ENABLED", "").strip().lower() in ("1", "true", "yes"):
+        selected_experience = _ats_optimize_bullets_llm(selected_experience, jd_text, keywords)
 
     tailored["experience"] = _sort_items_newest_first(selected_experience)
 
@@ -1821,8 +1835,8 @@ def tailor_resume(
     tailored["section_headings"] = {
         "education": "Education",
         "experience": "Experience",
-        "projects": "Project",
-        "publications": "Research Papers",
+        "projects": "Projects",
+        "publications": "Publications",
         "skills": "Skills",
         "leadership": "Leadership",
     }
