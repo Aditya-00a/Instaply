@@ -13,7 +13,10 @@ from backend.services.tailor import _clean_company_name
 
 
 FINAL_JOB_STATUSES = {"applied", "outreach_sent", "rejected"}
-PACKET_READY_STATUSES = {"packet_generated"}
+# packet_generated = already has a packet; reviewed = filled and waiting on
+# human approval. Both are skipped so a re-discovered job is never
+# re-packeted into an endless fill/approve loop.
+PACKET_READY_STATUSES = {"packet_generated", "reviewed"}
 
 
 def _parked_retailor_jobs(db_path: Path) -> list[JobRecord]:

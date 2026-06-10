@@ -608,6 +608,15 @@ async def auto_apply_batch(
                 filled_fields=autofill_result.get("filled_fields", []),
                 needs_review=autofill_result.get("needs_review", []),
             )
+            # Move the job OUT of packet_generated so the next cycle's
+            # candidate query doesn't re-pick and re-fill it. `reviewed`
+            # means "filled, waiting on human approval"; it can still
+            # transition to applied (after approval) or rejected.
+            try:
+                from backend.db.jobs_repository import transition_job_status
+                transition_job_status(job_id, "reviewed", reason="auto_apply:pending_approval")
+            except Exception as exc:
+                log.warning("Could not mark %s as reviewed: %s", title, exc)
             results.append({
                 "job_id": job_id,
                 "company": company,
