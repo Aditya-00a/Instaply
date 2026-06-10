@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import logging
+import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -456,6 +458,24 @@ async def run_job_scout(
 
     raw_jobs: list[dict] = []
     skipped_companies_due_to_cooldown = 0
+
+    # ── Concurrent fetch plan ─────────────────────────────────────────
+    # The source loops below VALIDATE their targets sequentially (cheap
+    # exclusion + cooldown checks against SQLite) and QUEUE the actual
+    # network fetch. The queued fetches then run concurrently behind a
+    # bounded semaphore — this turns a ~30-minute sequential scan over
+    # 1000+ boards into a ~3-minute one.
+    fetch_concurrency = max(1, int(os.getenv("DISCOVERY_FETCH_CONCURRENCY", "12")))
+    fetch_plan: list[dict] = []
+
+    def _plan_fetch(fetch_factory, *, company_name: str, cooldown_company: str, source_url: str) -> None:
+        fetch_plan.append({
+            "fetch": fetch_factory,
+            "company": company_name,
+            "cooldown_company": cooldown_company,
+            "source_url": source_url,
+        })
+
     for target in greenhouse_targets:
         company_name = str(target.get("company") or "").strip()
         slug = str(target.get("target") or "").strip()
@@ -472,16 +492,11 @@ async def run_job_scout(
         ):
             skipped_companies_due_to_cooldown += 1
             continue
-        fetched_jobs = await fetch_greenhouse_jobs(slug, limit=fetch_limit)
-        if company_name:
-            for job in fetched_jobs:
-                job["company"] = company_name
-        raw_jobs.extend(fetched_jobs)
-        record_company_source_scan(
-            cooldown_company,
-            "career_site",
+        _plan_fetch(
+            lambda slug=slug: fetch_greenhouse_jobs(slug, limit=fetch_limit),
+            company_name=company_name,
+            cooldown_company=cooldown_company,
             source_url=careers_url,
-            db_path=active_db_path,
         )
     for target in lever_targets:
         company_name = str(target.get("company") or "").strip()
@@ -499,16 +514,11 @@ async def run_job_scout(
         ):
             skipped_companies_due_to_cooldown += 1
             continue
-        fetched_jobs = await fetch_lever_jobs(slug, limit=fetch_limit)
-        if company_name:
-            for job in fetched_jobs:
-                job["company"] = company_name
-        raw_jobs.extend(fetched_jobs)
-        record_company_source_scan(
-            cooldown_company,
-            "career_site",
+        _plan_fetch(
+            lambda slug=slug: fetch_lever_jobs(slug, limit=fetch_limit),
+            company_name=company_name,
+            cooldown_company=cooldown_company,
             source_url=careers_url,
-            db_path=active_db_path,
         )
     for target in workday_targets:
         target_spec = _resolve_workday_target(str(target.get("target") or ""))
@@ -528,17 +538,15 @@ async def run_job_scout(
         ):
             skipped_companies_due_to_cooldown += 1
             continue
-        fetched_jobs = await fetch_workday_jobs(
-            company=target_spec["company"],
-            endpoint=target_spec["endpoint"],
-            limit=fetch_limit,
-        )
-        raw_jobs.extend(fetched_jobs)
-        record_company_source_scan(
-            cooldown_company,
-            "career_site",
+        _plan_fetch(
+            lambda spec=target_spec: fetch_workday_jobs(
+                company=spec["company"],
+                endpoint=spec["endpoint"],
+                limit=fetch_limit,
+            ),
+            company_name="",  # fetch_workday_jobs tags company itself
+            cooldown_company=cooldown_company,
             source_url=target_spec["endpoint"],
-            db_path=active_db_path,
         )
     for target in ashby_targets:
         company_name = str(target.get("company") or "").strip()
@@ -555,16 +563,11 @@ async def run_job_scout(
         ):
             skipped_companies_due_to_cooldown += 1
             continue
-        fetched_jobs = await fetch_ashby_jobs(board_url, limit=fetch_limit)
-        if company_name:
-            for job in fetched_jobs:
-                job["company"] = company_name
-        raw_jobs.extend(fetched_jobs)
-        record_company_source_scan(
-            cooldown_company,
-            "career_site",
+        _plan_fetch(
+            lambda url=board_url: fetch_ashby_jobs(url, limit=fetch_limit),
+            company_name=company_name,
+            cooldown_company=cooldown_company,
             source_url=str(target.get("careers_url") or board_url),
-            db_path=active_db_path,
         )
     for target in smartrecruiters_targets:
         company_name = str(target.get("company") or "").strip()
@@ -581,16 +584,11 @@ async def run_job_scout(
         ):
             skipped_companies_due_to_cooldown += 1
             continue
-        fetched_jobs = await fetch_smartrecruiters_jobs(board_url, limit=fetch_limit)
-        if company_name:
-            for job in fetched_jobs:
-                job["company"] = company_name
-        raw_jobs.extend(fetched_jobs)
-        record_company_source_scan(
-            cooldown_company,
-            "career_site",
+        _plan_fetch(
+            lambda url=board_url: fetch_smartrecruiters_jobs(url, limit=fetch_limit),
+            company_name=company_name,
+            cooldown_company=cooldown_company,
             source_url=str(target.get("careers_url") or board_url),
-            db_path=active_db_path,
         )
     for target in icims_targets:
         company_name = str(target.get("company") or "").strip()
@@ -607,16 +605,11 @@ async def run_job_scout(
         ):
             skipped_companies_due_to_cooldown += 1
             continue
-        fetched_jobs = await fetch_icims_jobs(board_url, limit=fetch_limit)
-        if company_name:
-            for job in fetched_jobs:
-                job["company"] = company_name
-        raw_jobs.extend(fetched_jobs)
-        record_company_source_scan(
-            cooldown_company,
-            "career_site",
+        _plan_fetch(
+            lambda url=board_url: fetch_icims_jobs(url, limit=fetch_limit),
+            company_name=company_name,
+            cooldown_company=cooldown_company,
             source_url=str(target.get("careers_url") or board_url),
-            db_path=active_db_path,
         )
     for target in jobvite_targets:
         company_name = str(target.get("company") or "").strip()
@@ -633,16 +626,11 @@ async def run_job_scout(
         ):
             skipped_companies_due_to_cooldown += 1
             continue
-        fetched_jobs = await fetch_jobvite_jobs(board_url, limit=fetch_limit)
-        if company_name:
-            for job in fetched_jobs:
-                job["company"] = company_name
-        raw_jobs.extend(fetched_jobs)
-        record_company_source_scan(
-            cooldown_company,
-            "career_site",
+        _plan_fetch(
+            lambda url=board_url: fetch_jobvite_jobs(url, limit=fetch_limit),
+            company_name=company_name,
+            cooldown_company=cooldown_company,
             source_url=str(target.get("careers_url") or board_url),
-            db_path=active_db_path,
         )
     for target in taleo_targets:
         company_name = str(target.get("company") or "").strip()
@@ -659,21 +647,50 @@ async def run_job_scout(
         ):
             skipped_companies_due_to_cooldown += 1
             continue
-        try:
-            fetched_jobs = await fetch_taleo_jobs(board_url, limit=fetch_limit)
-        except Exception as exc:
-            log.warning("Taleo fetch failed for %s: %s", company_name or board_url, exc)
-            fetched_jobs = []
-        if company_name:
-            for job in fetched_jobs:
-                job["company"] = company_name
-        raw_jobs.extend(fetched_jobs)
-        record_company_source_scan(
-            cooldown_company,
-            "career_site",
+        _plan_fetch(
+            lambda url=board_url: fetch_taleo_jobs(url, limit=fetch_limit),
+            company_name=company_name,
+            cooldown_company=cooldown_company,
             source_url=str(target.get("careers_url") or board_url),
-            db_path=active_db_path,
         )
+
+    # ── Execute the fetch plan concurrently ─────────────────────────
+    if fetch_plan:
+        log.info(
+            "Fetching %d boards (concurrency=%d)...",
+            len(fetch_plan), fetch_concurrency,
+        )
+        semaphore = asyncio.Semaphore(fetch_concurrency)
+        progress = {"done": 0}
+
+        async def _execute_fetch(item: dict) -> None:
+            async with semaphore:
+                try:
+                    fetched = await item["fetch"]()
+                except Exception as exc:
+                    log.warning(
+                        "Fetch failed for %s: %s",
+                        item["company"] or item["source_url"], exc,
+                    )
+                    fetched = []
+            if item["company"]:
+                for job in fetched:
+                    job["company"] = item["company"]
+            raw_jobs.extend(fetched)
+            record_company_source_scan(
+                item["cooldown_company"],
+                "career_site",
+                source_url=item["source_url"],
+                db_path=active_db_path,
+            )
+            progress["done"] += 1
+            if progress["done"] % 50 == 0 or progress["done"] == len(fetch_plan):
+                log.info(
+                    "  fetched %d/%d boards · %d raw jobs so far",
+                    progress["done"], len(fetch_plan), len(raw_jobs),
+                )
+
+        await asyncio.gather(*(_execute_fetch(item) for item in fetch_plan))
 
     if linkedin_keywords:
         fetched_jobs = await fetch_linkedin_jobs(
