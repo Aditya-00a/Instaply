@@ -176,24 +176,35 @@ def mark_job_rejected(job_id: str, db_path: Path | None = None) -> None:
     transition_job_status(job_id, "rejected", reason="job_rejected", db_path=db_path)
 
 
-def count_company_active_jobs(company: str, db_path: Path | None = None) -> int:
-    """Count jobs at a company that are applied, packet_generated, or outreach_sent."""
+def bulk_company_active_counts(db_path: Path | None = None) -> dict[str, int]:
+    """Active-job counts (applied/packet_generated/outreach_sent) for every company, in one query.
+
+    Discovery scans thousands of raw jobs per cycle and used to call a
+    per-company counting query (its own SQLite connection) for each one —
+    O(raw jobs) connections instead of O(unique companies). This fetches the
+    same counts, keyed by lowercased company name, in a single round trip.
+    """
     with get_connection(db_path) as conn:
-        row = conn.execute(
-            "SELECT COUNT(*) AS cnt FROM jobs WHERE LOWER(company) = LOWER(?) AND status IN ('applied', 'packet_generated', 'outreach_sent')",
-            (company.strip(),),
-        ).fetchone()
-    return int(row["cnt"]) if row else 0
+        rows = conn.execute(
+            "SELECT LOWER(company) AS company, COUNT(*) AS cnt FROM jobs "
+            "WHERE status IN ('applied', 'packet_generated', 'outreach_sent') "
+            "GROUP BY LOWER(company)"
+        ).fetchall()
+    return {row["company"]: row["cnt"] for row in rows}
 
 
-def has_applied_to_title(company: str, title: str, db_path: Path | None = None) -> bool:
-    """Check if we've already applied/generated packet for the same company+title (any location)."""
+def bulk_applied_titles(db_path: Path | None = None) -> set[tuple[str, str]]:
+    """(company, title) pairs already applied/queued, as one set fetched in a single query.
+
+    Companion to bulk_company_active_counts() — same O(raw jobs) connection
+    problem, same fix.
+    """
     with get_connection(db_path) as conn:
-        row = conn.execute(
-            "SELECT 1 FROM jobs WHERE LOWER(company) = LOWER(?) AND LOWER(title) = LOWER(?) AND status IN ('applied', 'packet_generated', 'outreach_sent') LIMIT 1",
-            (company.strip(), title.strip()),
-        ).fetchone()
-    return row is not None
+        rows = conn.execute(
+            "SELECT DISTINCT LOWER(company) AS company, LOWER(title) AS title FROM jobs "
+            "WHERE status IN ('applied', 'packet_generated', 'outreach_sent')"
+        ).fetchall()
+    return {(row["company"], row["title"]) for row in rows}
 
 
 def count_applied_jobs(db_path: Path | None = None) -> int:
