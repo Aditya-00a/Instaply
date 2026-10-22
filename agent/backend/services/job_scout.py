@@ -7,9 +7,9 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from backend.db.jobs_repository import (
+    bulk_applied_titles,
+    bulk_company_active_counts,
     company_source_scanned_recently,
-    count_company_active_jobs,
-    has_applied_to_title,
     make_job_id,
     record_company_source_scan,
     upsert_job,
@@ -725,6 +725,9 @@ async def run_job_scout(
     records: list[JobRecord] = []
     # Track per-company counts within this batch (on top of DB counts)
     batch_company_counts: dict[str, int] = {}
+    # Fetched once per cycle instead of once per raw job — see bulk_company_active_counts.
+    db_company_counts = bulk_company_active_counts(db_path=active_db_path)
+    applied_titles = bulk_applied_titles(db_path=active_db_path)
 
     for raw in raw_jobs:
         if not _is_recent_enough(raw, days=10):
@@ -734,10 +737,11 @@ async def run_job_scout(
         company = str(raw.get("company", "") or "").strip()
         title = str(raw.get("title", "") or "").strip()
         company_lower = company.lower()
+        title_lower = title.lower()
 
         # Per-company cap: check DB + batch count
         if company_lower:
-            db_count = count_company_active_jobs(company, db_path=active_db_path)
+            db_count = db_company_counts.get(company_lower, 0)
             batch_count = batch_company_counts.get(company_lower, 0)
             if db_count + batch_count >= MAX_JOBS_PER_COMPANY:
                 skipped_company_cap += 1
@@ -745,7 +749,7 @@ async def run_job_scout(
                 continue
 
         # Title dedup: skip if we already applied to same company+title (any location)
-        if company and title and has_applied_to_title(company, title, db_path=active_db_path):
+        if company and title and (company_lower, title_lower) in applied_titles:
             skipped_title_dedup += 1
             skipped += 1
             continue
